@@ -1,0 +1,10 @@
+useDynLib(Rbeast, .registration = TRUE, .fixes = "SARAH_")
+importFrom("grDevices", "x11")
+importFrom("graphics", "axis", "layout", "par", "plot", "points", "polygon", "rect", "title")
+importFrom("methods", "hasArg")
+importFrom("stats", "filter")
+export(beast)
+S3method(print,beast)
+S3method(plot, beast)
+ 
+ 
