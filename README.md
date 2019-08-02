@@ -80,7 +80,9 @@ The BEAST source code is complicated than neccessary, mainly because the same so
 We tested our source code under many common compliers (e.g., MSVC, gcc, clang, and Oracle Developer Studio) and all succesfully passed (e.g., see the [Rbeast package status report](https://cran.r-project.org/web/checks/check_results_Rbeast.html)). To complie for R, you need to make sure your machine has a C and a Fotran compiler appropriately set up. For example, see [Package Development Prerequisites](http://www.rstudio.com/ide/docs/packages/prerequisites) for the tools needed for your operating system. In particular, on Windows platforms, the most convenient option is to go with the Rtools toolkit. To complile for Matlab, the appropriate C/C++ header files (e.g., mex.h) have to be correctly specified. Below are some compliation schemes using the gnu compilers as an example.
 
 * To create the Matlab libray, run the following steps.
+
      1. Go to abc_macro.h and change the contorl macros as follows:
+     
         ```C
         #define R_INTERFACE 0       // Disable  the R interface
         #define M_INTERFACE 1       // Enable the Matlab interface
@@ -90,20 +92,25 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         #define MYRAND_LIBRARY  1   // Use our own random-number generating library (i.e.,abc_rand_pcg.c)
         #define MKLRAND_LIBRARY 0   // Don't use Intel's MKL random-number library
         #define R_RELEASE   0       // Disable the R infterface
-        ```C
-      2.Go to the folder where the sour files are saved. Complie them into object files
-      ```C
+        ```
+
+    2. Go to the folder where the sour files are saved. Complie them into object files
+      
+      ``
       gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder"
-       ```C 
+      ```
        
-      3. Compile the fortan math library
-      ```C
+    3. Compile the fortan math library
+      
+      ```
       gfortran -c -fPCI sfloatMath.f
-       ```C 
-      4. Link all the objects into the Matlab mex library
-      ```C
+       ```
+       
+    4. Link all the objects into the Matlab mex library
+    
+      ```
       gcc -shared -o beast_default.mexw64 *.o -lmx -lmex -lmat -L"Path to your local matlab static library folder"
-      ```C 
+      ```
       
 
       
