@@ -93,7 +93,7 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         #define R_RELEASE   0       // Disable the R infterface
         ```
 
-    2. Go to the folder where the sour files are saved. Complie them into object files
+    2. Go to your local folder  where the source files are saved. Complie them into object files
     
 
         `gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder (i.e., the include folders containing mex.h, etc.)"`
@@ -109,7 +109,7 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         `gcc -shared -o beast_default.mexw64 *.o -lmx -lmex -lmat -L"Path to your local matlab static library folder"`
          
 
-* To create the R libray (which is part of the R pacakge but the whole R pacakge itself), run the following steps.
+* To create the R libray (which is part of the R pacakge but not the whole R pacakge itself), run the following steps.
 
      1. Go to abc_macro.h and change the contorl macros as follows:
      
@@ -124,7 +124,7 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         #define R_RELEASE   1       // Enable the R infterface
         ```
 
-    2. Go to the folder where the sour files are saved. Complie them into object files
+    2. Go to your local folder where the source files are saved. Complie them into object files
     
         `gcc -c -fPIC *.c  -I"Path to your local R include folder (i.e., the include folders containing Rinternal.h, etc.)""`
         
