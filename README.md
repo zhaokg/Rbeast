@@ -95,28 +95,20 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         ```
 
     2. Go to the folder where the sour files are saved. Complie them into object files
-      
-      ``
-      gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder"
-      ```
-       
+    
+
+        `gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder"`
+        
     3. Compile the fortan math library
-      
-      ```
-      gfortran -c -fPCI sfloatMath.f
-       ```
+     
+        `gfortran -c -fPCI sfloatMath.f`
+        
        
     4. Link all the objects into the Matlab mex library
-    
-      ```
-      gcc -shared -o beast_default.mexw64 *.o -lmx -lmex -lmat -L"Path to your local matlab static library folder"
-      ```
-      
-
-      
-
-
-
+     
+        
+        `gcc -shared -o beast_default.mexw64 *.o -lmx -lmex -lmat -L"Path to your local matlab static library folder"`
+         
 
  
 
