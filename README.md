@@ -97,7 +97,7 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
     2. Go to the folder where the sour files are saved. Complie them into object files
     
 
-        `gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder"`
+        `gcc -c -fPIC *.c -DMATLAB_MEX_FILE  -I"Path to your local matlab include folder (i.e., the include folders containing mex.h, etc.)"`
         
     3. Compile the fortan math library
      
@@ -110,6 +110,34 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
         `gcc -shared -o beast_default.mexw64 *.o -lmx -lmex -lmat -L"Path to your local matlab static library folder"`
          
 
+* To create the R libray (which is part of the R pacakge but the whole R pacakge itself), run the following steps.
+
+     1. Go to abc_macro.h and change the contorl macros as follows:
+     
+        ```C
+        #define R_INTERFACE 1       // Enable  the R interface
+        #define M_INTERFACE 0       // Disable the Matlab interface
+        #define MYMAT_LIBRARY 1     // Use the default math libary provided in sfloatMath.f
+        #define MKL_LIBRARY   0     // don't use Intel's MKL library
+        #define MATLAB_LIBRARY 0    // Don't use Matlab's own math library
+        #define MYRAND_LIBRARY  1   // Use our own random-number generating library (i.e.,abc_rand_pcg.c)
+        #define MKLRAND_LIBRARY 0   // Don't use Intel's MKL random-number library
+        #define R_RELEASE   1       // Enable the R infterface
+        ```
+
+    2. Go to the folder where the sour files are saved. Complie them into object files
+    
+        `gcc -c -fPIC *.c  -I"Path to your local R include folder (i.e., the include folders containing Rinternal.h, etc.)""`
+        
+    3. Compile the fortan math library
+     
+        `gfortran -c -fPCI sfloatMath.f`
+        
+       
+    4. Link all the objects into the R dll library
+        
+        `gcc -shared -o Rbeast.dll *.o -lR -lRblas -lRlapack -L"Path to your local R static library folder"`
+         
  
 
 ## Reporting Bugs
