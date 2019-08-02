@@ -7,7 +7,7 @@ Interpretation of time series data is affected by model choices. Different model
 Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detect change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](http://authors.elsevier.com/c/1ZTiS7qzSnIRT) Remote Sensing of Environment, 232, 111181. 
 
 
->The core of **BEAST** was impemented through the mixed use of C and Fortran, and the source code is under "Source" folder. To run BEAST, R and Matlab interfaces are provided and can be found under the "R" and "Matlab" folders, respectively. Follow the instructions below to install and test BEAST in R or Matlab.
+>The core of **BEAST** was impemented in the mixed use of C and Fortran, and the source code is under "Source" folder. To run BEAST, R and Matlab interfaces are provided and can be found under the "R" and "Matlab" folders, respectively. Follow the instructions below to install and test BEAST in R or Matlab.
 
 ---- 
 ## R
@@ -64,16 +64,27 @@ beast_default(YOUR_DATA, YOUR_OPTION_PARAMETER)
 
 > Detailed examples on how to use BEAST in Matlab are given in the Matlab script files under "Rbeast\Matlab".
 
-
+chrome-extension://mpognobbkildjkofajifpdfhcoklimli/components/startpage/startpage.html?section=Speed-dials&activeSpeedDialIndex=0
 ---- 
 ## Additonal Notes
 
 1. Computation
-As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, compuation will be a big challenge for Desktop computer users. We suggest first testing BEAST on singles or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image.
+
+As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, compuation will be a big challenge for Desktop computer users. We suggest first testing BEAST on singles or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. We also welcome consulation with Kaiguang Zhao (lidar.rs@gmail.com) to give specific suggestions if you see some value of BEAST for your applications.
 
 2. Complifation from source code
-The BEAST source code is complicated than neccessary, mainly because the same source is used for both R and Matlab interfaces as well as for various different compliation settigns (e.g., compilers and library dependencies). The compiliation control variables are defined as MARCOs in abc_marco.h. 
-Note that the avove will install "hemiphoto2LAI" from source. Becaues hemiphoto2LAI was written in the mixed use of C/C++ and Fortran. You need to make sure your machine is able to have a C and a Fotran compiler appropriately set up. For example, see [Package Development Prerequisites](http://www.rstudio.com/ide/docs/packages/prerequisites) for the tools needed for your operating system. In particular, on Windows platforms, the most convenient option is to go with the Rtools toolkit.
+
+The BEAST source code is complicated than neccessary, mainly because the same source is used for both R and Matlab interfaces as well as for various different compliation settigns (e.g., compilers and library dependencies). The compiliation control variables are defined as MARCOs in abc_marco.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxliary files; the BEAST aglrotihim itself is coded in beast_multipleChain_fast2.c; and the R and Matlab inferfaces are coded in glue.c.
+
+
+We tested our source code under many common compliers (e.g., MSVC, gcc, clang, and Oracle Developer Studio) and all succesfully passed (e.g., see the [Rbeast package status report](https://cran.r-project.org/web/checks/check_results_Rbeast.html)). To complie for R, you need to make sure your machine has a C and a Fotran compiler appropriately set up. For example, see [Package Development Prerequisites](http://www.rstudio.com/ide/docs/packages/prerequisites) for the tools needed for your operating system. In particular, on Windows platforms, the most convenient option is to go with the Rtools toolkit. To complile for Matlab, the appropriate C/C++ header files (e.g., mex.h) have to be correctly specified. Below are some compliation schemes.
+
+* To create the Matlab libray, run the following steps:
+     1. Go to abc_macro.h and change the macros as fo
+
+
+
+
  
 
 ## Reporting Bugs
