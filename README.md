@@ -22,14 +22,14 @@ Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E.,
 
       * Windows x86 or x64
 
-		```R
+      ```R
 		install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Windows/Rbeast_0.2.1.zip" ,repos=NULL)
-		```
+      ```
 
       * Mac
-		```R
+      ```R
 		install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Mac/Rbeast_0.2.1.tgz" ,repos=NULL)
-		```
+      ```
 
 #### Run and test Rbeast
 
