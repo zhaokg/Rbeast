@@ -70,7 +70,7 @@ Download "beast_mkl.mexw64" or "beast_default.mexw64" to your local folder, say,
 
 As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, compuation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. We also welcome consulation with Kaiguang Zhao (lidar.rs@gmail.com) to give specific suggestions if you see some value of BEAST for your applications.
 
-2. Complifation from source code
+2. **Complifation from source code**
 
 The BEAST source code appears more complicated than neccessary, mainly because the same source is used for both R and Matlab interfaces as well as for various different compliation settigns (e.g., compiler variants, alternative library dependencies, cross-platform compatibility, mixed language interfaces, and Win32 API native interfaces). The compiliation control variables are defined as MARCOs in abc_marco.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxliary files; the BEAST aglrotihim itself is coded in beast_multipleChain_fast2.c; and the R and Matlab inferfaces are coded in glue.c.
 
