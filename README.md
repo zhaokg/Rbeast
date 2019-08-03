@@ -7,19 +7,19 @@ Interpretation of time series data is affected by model choices. Different model
 Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](http://authors.elsevier.com/c/1ZTiS7qzSnIRT) Remote Sensing of Environment, 232, 111181. 
 
 
->The core of **BEAST** was impemented in the mixed use of C and Fortran, and the source code is under "Source" folder. To run BEAST, R and Matlab interfaces are provided and can be found under the "R" and "Matlab" folders, respectively. Follow the instructions below to install and test BEAST in R or Matlab.
+>**BEAST** was impemented in the mixed use of C and Fortran, and the source code is under "Source" folder. To run BEAST, R and Matlab interfaces are provided and can be found under the "R" and "Matlab" folders, respectively. Follow the instructions below to install and test BEAST in R or Matlab.
 
 ---- 
 ## R
 #### Installation
 
-1. **CRAN**: The R package, named **Rbeast**, has already been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is a similar Bayesian time-series package called "beast", which has nothing to do with the BEAST algorithim. Our package name is "Rbeast".) The easist way to intall it is to run below in your R console:
+1. from **CRAN**: The R package, named **Rbeast**, has already been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is a similar Bayesian time-series package called "beast", which has nothing to do with the BEAST algorithim. Our package name is "Rbeast".) The easist way to intall it is to run below in your R console:
 
 ```R
 install.packages("Rbeast")
 ```
 
-2. **GitHub**: Pre-compiled binary package files for **Rbeast** are available at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
+2. from **GitHub**: Pre-compiled binary package files for **Rbeast** are available at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
 
 * Windows x86 or x64
 
@@ -51,7 +51,7 @@ plot(out)
 
 #### Installation and usage (Windows x64 only)
 
-We generated the Matlab mex library only for the Windows 64 OS:  `beast_default.mexw64` and `beast_mkl.mexw64` under the "Rbeast\Matlab" folder. Mex libraries for other OS systems such as Linux and Mac can be compiled from the source code files under "\Rbeast\Source". If needed, we are happy to work with you to compile for your specific OS or machines.
+We generated the Matlab mex library only for the Windows 64 OS:  `beast_default.mexw64` and `beast_mkl.mexw64` available under the "Rbeast\Matlab" folder. Mex libraries for other OS systems such as Linux and Mac can be compiled from the source code files under "\Rbeast\Source". If needed, we are happy to work with you to compile for your specific OS or machines.
 
 The two Win64 Matlab mex libraries ( `beast_default.mexw64` and `beast_mkl.mexw64`) are the same BEAST algorithm but linked against different math libs. `beast_default` is generated using the standard Lapack lib (http://www.netlib.org/lapack/) which is the 'Rbeast\Source\sfloatMath.f" Fortran file.  `beast_mkl` is generated using Intel's Math Kernel Library (mkl) (https://software.intel.com/en-us/mkl). On average, `beast_mkl` is slightly faster than `beast_default`.
 
