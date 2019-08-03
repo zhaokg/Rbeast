@@ -35,16 +35,16 @@ Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E.,
 
 The main function in Rbeast is `beast(data, option=list(),demoGUI=FALSE,...)`. The following R code snippt provides a starting point for the basic usage of Rbeast.
 
-```R
-library(Rbeast)
-data(modis_ohio) # a MODIS NDVI time series for a forest pixel in Ohio
-plot(modis_ohio) # Rbeast/BEAST can only process uniformly-spaced time 
-                 # series. Irregularly-spaced data have to be aggregated
-                 #/resampled to regular time intervals before running beast
-out=beast(modis_ohio)
-plot(out)
-?Rbeast          # See more details about the usage of `beast`                 
-```
+      ```R
+      library(Rbeast)
+      data(modis_ohio) # a MODIS NDVI time series for a forest pixel in Ohio
+      plot(modis_ohio) # Rbeast/BEAST can only process uniformly-spaced time 
+                       # series. Irregularly-spaced data have to be aggregated
+                       #/resampled to regular time intervals before running beast
+      out=beast(modis_ohio)
+      plot(out)
+      ?Rbeast          # See more details about the usage of `beast`                 
+      ```
 ---- 
 ## Matlab
 
@@ -56,10 +56,10 @@ The two Win64 Matlab mex libraries ( `beast_default.mexw64` and `beast_mkl.mexw6
 
 Download "beast_mkl.mexw64" or "beast_default.mexw64" to your local folder, say, "C:\BEAST\".  Use BEAST as follows:
 
-```Matlab
-addpath('C:\BEAST\');
-beast_default(YOUR_DATA, YOUR_OPTION_PARAMETER)
-```
+      ```Matlab
+      addpath('C:\BEAST\');
+      beast_default(YOUR_DATA, YOUR_OPTION_PARAMETER)
+      ```
 
 > Detailed examples on how to use BEAST in Matlab are given in the Matlab script files under "Rbeast\Matlab".
 
