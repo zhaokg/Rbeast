@@ -13,24 +13,24 @@ Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E.,
 ## R
 #### Installation
 
-    1. from **CRAN**: The R package, named **Rbeast**, has already been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is a similar Bayesian time-series package called "beast", which has nothing to do with the BEAST algorithim. Our package name is "Rbeast".) The easist way to intall it is to run below in your R console:
+   1. from **CRAN**: The R package, named **Rbeast**, has already been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is a similar Bayesian time-series package called "beast", which has nothing to do with the BEAST algorithim. Our package name is "Rbeast".) The easist way to intall it is to run below in your R console:
 
-```R
-install.packages("Rbeast")
-```
+    ```R
+    install.packages("Rbeast")
+    ```
 
-     2. from **GitHub**: Pre-compiled binary package files for **Rbeast** are available at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
+   2. from **GitHub**: Pre-compiled binary package files for **Rbeast** are available at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
 
-* Windows x86 or x64
+   * Windows x86 or x64
 
-```R
-install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Windows/Rbeast_0.2.1.zip" ,repos=NULL)
-```
+    ```R
+    install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Windows/Rbeast_0.2.1.zip" ,repos=NULL)
+    ```
 
-* Mac
-```R
-install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Mac/Rbeast_0.2.1.tgz" ,repos=NULL)
-```
+   * Mac
+    ```R
+    install.packages("https://raw.github.com/zhaokg/Rbeast/master/R/CompiledPackage/Mac/Rbeast_0.2.1.tgz" ,repos=NULL)
+    ```
 
 #### Run and test Rbeast
 
