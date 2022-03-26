@@ -1,14 +1,18 @@
 #pragma once
-#define r_mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1)  \
-		mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) 
+#include "abc_001_config.h"
+
+#define r_mkl_simatcopy(C, T, N, numCISample, alpha, Matrix, N1, numCISample1)  \
+		  mkl_simatcopy(C, T, N, numCISample, alpha, Matrix, N1, numCISample1) 
+
+/*******************************************************/
 #define r_ippsMaxIndx_32f				ippsMaxIndx_32f 
 #define r_ippsMinIndx_32f				ippsMinIndx_32f 
 #define r_ippsSumLn_32f					ippsSumLn_32f
 #define r_ippsMeanStdDev_32f			ippsMeanStdDev_32f
-#define r_vsPowx(n,a,b,r)				vsPowx(n,a,b,r)
-#define r_vmsLn(n,a,r,mode)			vmsLn(n,a,r,mode)
-#define r_vmsCos(n,a,r,mode)			vmsCos(n,a,r,mode)
-#define r_vmsSin(n,a,r,mode)			vmsSin(n,a,r,mode)
+#define r_vsPowx(n, a,b, r)				vsPowx(n, a, b,r)
+#define r_vmsLn(n, a, r, mode)			vmsLn(n, a, r, mode)
+#define r_vmsCos(n, a, r, mode)			vmsCos(n, a, r, mode)
+#define r_vmsSin(n, a, r, mode)			vmsSin(n, a, r, mode)
 #define r_ippsSet_8u					ippsSet_8u  
 #define r_ippsLn_32f_I					ippsLn_32f_I
 #define r_ippsSqrt_32f_I				ippsSqrt_32f_I
@@ -32,7 +36,10 @@
 #define r_cblas_ssymv					cblas_ssymv
 #define r_ippsSet_32f(value,dst,N)	    ippsSet_32f(value,dst,N)
 #define r_ippsSet_32s(value,dst,N)	    ippsSet_32s(value,dst,N)
-#define DOT(N,X,Y)						cblas_sdot(N,X,1,Y,1)
-#define r_cblas_sscal(N,alpha,X,incX)				cblas_sscal(N,alpha,X,incX);
-#define r_cblas_scopy(N,src,incX,dst,incY)			cblas_scopy(N,src,incX,dst,incY)
-#define r_ippsAddC_32s_ISfs(val,X,N,scaleFactor)		ippsAddC_32s_ISfs(val,X,N,scaleFactor)  
+#define DOT(N,X,Y)						cblas_sdot(N, X,1,Y,1)
+#define r_cblas_sscal(N, alpha, X, incX)				cblas_sscal(N, alpha, X, incX);
+#define r_cblas_scopy(N, src, incX, dst, incY)			cblas_scopy(N, src, incX, dst, incY)
+#define r_ippsAddC_32s_ISfs(val, X, N, scaleFactor)		ippsAddC_32s_ISfs(val, X, N, scaleFactor)  
+
+ 
+ 
