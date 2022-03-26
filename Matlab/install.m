@@ -1,5 +1,5 @@
 %beastPath='a:\xx\'
-eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
+%eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
 
 if ~exist('beastPath','var')
     warning("The variable 'beastPath' doesnot exist; a temporaby folder is used instead");
