@@ -1,5 +1,5 @@
 #  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
- ###  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
+ ###  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in [Zhao et al. (2019)](https://go.osu.edu/beast2019). BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
 
 > **BEAST** was impemented in C/C++. Check the "Source" folder for the source code. R and Matlab interfaces are also provided and can be found under the "R" and "Matlab" folders above. Or follow the instructions below to install and run BEAST in R or Matlab.
 
@@ -15,15 +15,14 @@
 
    2. from **GitHub**: The latest versions of package files for **Rbeast** are available here at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
 
-      * Windows x86 or x64
       ```R
+        # Windows x86 or x64 (install from binary)
         install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Windows/Rbeast_0.9.4.zip" ,repos=NULL)
-      ```
-
-      * Linux/Mac (install from source)
-      ```R
+         
+        # Linux/Mac (install from source)
         install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Rbeast_0.9.4.tar.gz", repos = NULL, type="source")
-      ```      
+      ```
+  
 
 #### Run and test Rbeast
 
@@ -72,7 +71,7 @@ Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E.,
 
 1. **Computation**
 
-As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, compuation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. We also welcome consulation with Kaiguang Zhao (lidar.rs@gmail.com) to give specific suggestions if you see some value of BEAST for your applications.
+As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, compuation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. We also welcome consulation with Kaiguang Zhao (zhao.1423@osu.edu) to give specific suggestions if you see some value of BEAST for your applications.
 
 2. **Complifation from source code**
 
