@@ -1,6 +1,10 @@
 %beastPath='a:\xx\'
 %eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
+
+clear Rbeast % just in case that an exisitng version has been loaded 
+
 if ismac()
+    %https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
     error("No mex library has been compiled for the MAC OS. You can either complile the C \n"...
           + "source code yourself or contact Kai Zhao at zhao.1423@osu.edu for help.");
 end
@@ -59,7 +63,7 @@ codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractb
            'plotbeast.m',   'printbeast.m',   'installrbeast.m'};
 
 
-for i=1:numel(datalist)
+for i=1:numel(codelist)
     fn=string(codelist{i});
     lfile=fullfile(beastPath,fn);
     rfile=rpath+fn;
@@ -72,7 +76,7 @@ addpath(datapath);
 addpath(genpath(beastPath) );
 savepath
 %%
-clc
-fprintf('... Rbeast was installed at %s\n', beastPath);
+%clc
+fprintf('\n\n... Rbeast was installed at %s\n', beastPath);
 fprintf("... '%s' and '%s' are added to the search path. \n     Make sure to add these two paths back (e.g., addpath()) after re-starting Matlab\n", beastPath, datapath);
 fprintf("... Run <strong>'help beast'</strong>, <strong>'help beast123'</strong>, or <strong>'help beast_irreg'</strong> for usage and examples\n");
