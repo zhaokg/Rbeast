@@ -42,18 +42,24 @@ The main functions in Rbeast are `beast(Y, ...)` and `beast123(Y, metadata, prio
 
 #### Installation and usage (Windows x64 only)
 
-We generated the Matlab mex library only for the Windows 64 OS:  `beast_default.mexw64` and `beast_mkl.mexw64` available under the "Rbeast\Matlab" folder. Mex libraries for other OS systems such as Linux and Mac can be compiled from the source code files under "\Rbeast\Source". If needed, we are happy to work with you to compile for your specific OS or machines.
-
-The two Win64 Matlab mex libraries ( `beast_default.mexw64` and `beast_mkl.mexw64`) are the same BEAST algorithm but linked against different math libs. `beast_default` is generated using the standard Lapack lib (http://www.netlib.org/lapack/) which is the 'Rbeast\Source\sfloatMath.f" Fortran file.  `beast_mkl` is generated using Intel's Math Kernel Library (mkl) (https://software.intel.com/en-us/mkl). On average, `beast_mkl` is slightly faster than `beast_default`.
-
-Download "beast_mkl.mexw64" or "beast_default.mexw64" to your local folder, say, "C:\BEAST\".  Use BEAST as follows:
+The C code of BEAST has also been compiled into a Matlab mex library (i.e., Rbeast.mexw64) with some wrapper matlab functions similar to the R interface, all available at the Rbeast\Matlab folder above. Download the files to your local drive and run BEAST. Alternatively, run the following Matlab code to automatically download and copy the files your local drive:
 
   ```Matlab
-  addpath('C:\BEAST\');
-  beast_default(YOUR_DATA, YOUR_OPTION_PARAMETER)
+  % Installation path of your choice; Write permission needed; the var name has to be 'beastPath'
+  beastPath = 'c:\rbeast\';                    
+  eval( webread('http://go.osu.edu/rbeast', weboptions('cert','')) );
+  help beast
+  help beast123  
   ```
 
-> Detailed examples on how to use BEAST in Matlab are given in the Matlab script files under "Rbeast\Matlab".
+The Matlab API is similar to those of R. Below is a quick example:
+  ```Matlab
+   load('Nile.mat')                     % annual streamflow of the Nile River startin from year 1871
+   out = beast(Nile, 'season', 'none','start', 1871)  % trend-only data without seasonality
+   printbeast(out)
+   plotbeast(out)
+  ```
+We generated the Matlab mex library only for the Windows 64 OS. Mex libraries for other OS systems such as Linux and Mac can be compiled from the source code files under "\Rbeast\Source". If needed, we are happy to work with you to compile for your specific OS or machines. Additional informaiton on compliation from the C source is also given below.
 
 ## Description
 Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
@@ -138,4 +144,4 @@ We tested our source code under many common compliers (e.g., MSVC, gcc, clang, a
 
 ## Reporting Bugs
 
-BEAST is distributed as is and without warranty of suitability for application. The one distribubuted above is a beta version, with potentail room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug. *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enchancements. Alternatively, you can directly email its maintainer Dr. Kaiguang Zhao at lidar.rs@gmail.com.
+BEAST is distributed as is and without warranty of suitability for application. The one distribubuted above is a beta version, with potentail room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug. *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enchancements. Alternatively, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu
