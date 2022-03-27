@@ -1,3 +1,10 @@
+% system("gcc -c -fPIC -pthread -DNDEBUG -DM_RELEASE -DMATLAB_DEFAULT_RELEASE=R2017b -I/MATLAB/extern/include -O2 -Wall  -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  *.c")
+
+% system("g++ -c -fPIC -pthread -DNDEBUG -DM_RELEASE -DMATLAB_DEFAULT_RELEASE=R2017b -I/MATLAB/extern/include  -O2 -Wall    -mfpmath=sse -msse2 -mstackrealign  *.cpp")
+
+%system("gcc -shared -pthread -L/MATLAB/bin/glnxa64 -lmx -lmex -lmat -lm -lut -lmwservices *.o -o Rbeast.mexa64")
+%
+
 %beastPath='a:\xx\'
 %eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
 
@@ -60,7 +67,7 @@ elseif isunix()
 end
 
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'install.m'};
+           'plotbeast.m',   'printbeast.m',   'installbeast.m'};
 
 
 for i=1:numel(codelist)
