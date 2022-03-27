@@ -1,14 +1,18 @@
 %beastPath='a:\xx\'
 %eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
+if ismac()
+    error("No mex library has been compiled for the MAC OS. You can either complile the C \n"...
+          + "source code yourself or contact Kai Zhao at zhao.1423@osu.edu for help.");
+end
 
 if ~exist('beastPath','var')
     warning("The variable 'beastPath' doesnot exist; a temporaby folder is used instead");
     beastPath =  tempdir()+"Rbeast\";
-    disp("BEAST installation Path: " +beastPath)
+    disp("BEAST installation Path: " +beastPath);
 end
 
 if ~exist(beastPath,"dir")
-    success=mkdir(beastPath)
+    success=mkdir(beastPath);
     if ~success
         error("Cannot create or access the beast path specified.");
     end
@@ -29,10 +33,10 @@ if ~exist(datapath,"dir")
 end
 %%
 
-rpath ="https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
-fn ="Nile.mat";
-lfile=beastPath+fn;
-rfile=rpath+fn;
+rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
+fn    = "Nile.mat";
+lfile = beastPath+fn;
+rfile = rpath+fn;
 
 datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
     'imageStack.mat',   'YellowstoneNDVI.mat'};
@@ -41,19 +45,25 @@ for i=1:numel(datalist)
     fn=string(datalist{i});
     lfile=fullfile(datapath,fn);
     rfile=rpath+"testdata/"+fn;
-    websave(lfile, rfile,weboptions('Cert',[])); 
+    websave(lfile, rfile,weboptions('Cert',[]));
     fprintf('Downloaded: %s\n', lfile);
 end
 
-codelist={ 'Rbeast.mexw64',  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-    'plotbeast.m',   'printbeast.m',   'installrbeast.m'};
+if ispc()
+   rbeastFile='Rbeast.mexw64';
+elseif isunix()
+   rbeastFile='Rbeast.mexa64';
+end
+
+codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
+           'plotbeast.m',   'printbeast.m',   'installrbeast.m'};
 
 
 for i=1:numel(datalist)
     fn=string(codelist{i});
     lfile=fullfile(beastPath,fn);
     rfile=rpath+fn;
-    websave(lfile, rfile,weboptions('Cert',[]));    
+    websave(lfile, rfile,weboptions('Cert',[]));
     fprintf('Downloaded: %s\n', lfile);
 end
 %%
