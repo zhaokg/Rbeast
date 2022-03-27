@@ -40,7 +40,7 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 #### Installation and usage (Windows and Linux)
 
-The C code of BEAST has also been compiled into a Matlab mex library (i.e., Rbeast.mexw64 for Windows and Rbeast.mexa64 for Linux) with some wrapper matlab functions (e.g.,beast.m) similar to the R interface, all available at the Rbeast\Matlab folder above. Download the files to your local drive and run BEAST. Alternatively, run the following Matlab code to automatically download and copy the files your local drive:
+The C code of BEAST has also been compiled into a Matlab mex library (i.e., Rbeast.mexw64 for Windows and Rbeast.mexa64 for Linux) with some wrapper matlab functions (e.g.,beast.m) similar to the R interface, all available at the Rbeast\Matlab folder above. Download the files to your local drive and run BEAST. Alternatively, run the following Matlab code to automatically download the files and install BEAST to your local drive:
 
   ```Matlab
   % Installation path of your choice; Write permission needed; the var name has to be 'beastPath'
