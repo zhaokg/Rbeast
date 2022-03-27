@@ -60,7 +60,7 @@ elseif isunix()
 end
 
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'installrbeast.m'};
+           'plotbeast.m',   'printbeast.m',   'install.m'};
 
 
 for i=1:numel(codelist)
