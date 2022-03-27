@@ -45,7 +45,7 @@ for i=1:numel(datalist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-codelist={   'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
+codelist={ 'Rbeast.mexw64',  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
     'plotbeast.m',   'printbeast.m',   'installrbeast.m'};
 
 
