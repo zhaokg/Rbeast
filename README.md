@@ -60,6 +60,17 @@ The Matlab API is similar to those of R. Below is a quick example:
   ```
 We generated the Matlab mex library only for the Windows 64 OS. Mex libraries for other OS systems such as Linux and Mac can be compiled from the source code files under "\Rbeast\Source". If needed, we are happy to work with you to compile for your specific OS or machines. Additional informaiton on compliation from the C source is also given below.
 
+---- 
+## Python
+
+A wrapper in Python is being developed: We wecolme contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
+
+
+---- 
+## Julia
+
+A wrapper in Julia is also being developed: We wecolme contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu
+
 ## Description
 Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
 
