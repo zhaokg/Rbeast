@@ -44,8 +44,11 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 
 <br/>
+<br/>
+<br/>
 
 ----
+
 ### Matlab
 
 [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
