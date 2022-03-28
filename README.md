@@ -6,6 +6,8 @@
 > **BEAST** was impemented in C/C++. Check the `Source` folder for the source code. R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders above. Or follow the instructions below to install and run BEAST in R or Matlab.
 
 
+
+
 ## Installation
 ### R
 
@@ -45,6 +47,8 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 ----
 ### Matlab
+
+[![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
 
 #### Installation and usage (Windows and Linux)
 
