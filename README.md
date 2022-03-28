@@ -6,7 +6,6 @@
 ## Installation
 ### R
 
-
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package name is `Rbeast`.) Install it in R using
       ```R
        install.packages("Rbeast")
@@ -25,7 +24,10 @@
 
 #### Run and test Rbeast
 
-The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.
+<img align="left"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
+<img align="right"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Ndvi.png">
+
+The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.  
 
   ```R
       library(Rbeast)
@@ -35,6 +37,8 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
       plot(out)
       ?Rbeast                          # See more details about the usage of `beast`                 
   ```
+
+
 ----
 ### Matlab
 
