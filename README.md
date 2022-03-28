@@ -3,7 +3,7 @@
 ##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
 ####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
-> **BEAST** was impemented in C/C++. Check the `Source` folder for the source code. R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders above. Or follow the instructions below to install and run BEAST in R or Matlab.
+> **BEAST** was impemented in C/C++. Check the `Source` folder at [Github](https://github.com/zhaokg/Rbeast) for the source code . R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders. Or follow the instructions below to install and run BEAST in R or Matlab.
 
 > **Quick installation**: In Matlab, run `eval(webread('http://bit.ly/loadbeast', weboptions('cert','')))`; in R, run `install.packages("Rbeast")`.
 
@@ -63,7 +63,7 @@ Install the Matlab version of BEAST automatically to a local folder of your choi
   beastPath = 'C:\rbeast\';                    
   eval(  webread( 'http://bit.ly/loadbeast', weboptions('cert','') )  );
   ```
-The above will download all the files in the Rbeast\Matlab folder at GitHub to the chosen folder: if `beastPath` is missing, a default temporary folder will be used. If the automatic script fails, please download the Matlab files from GitHub manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows and `Rbeast.mexa64` for Linux) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets.
+The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows and `Rbeast.mexa64` for Linux) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets.
 
 #### Usage (Windows and Linux)
 The Matlab API is similar to those of R. Below is a quick example:
