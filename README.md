@@ -1,7 +1,10 @@
-##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
-####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in [Zhao et al. (2019)](https://go.osu.edu/beast2019). BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
+<img align="right"  height="350" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Ndvi.png">
 
+##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
+
+####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in [Zhao et al. (2019)](https://go.osu.edu/beast2019). BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
 > **BEAST** was impemented in C/C++. Check the `Source` folder for the source code. R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders above. Or follow the instructions below to install and run BEAST in R or Matlab.
+
 
 ## Installation
 ### R
@@ -25,7 +28,6 @@
 #### Run and test Rbeast
 
 <img align="left"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
-<img align="right"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Ndvi.png">
 
 The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.  
 
@@ -38,6 +40,8 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
       ?Rbeast                          # See more details about the usage of `beast`                 
   ```
 
+
+<br/>
 
 ----
 ### Matlab
@@ -73,10 +77,10 @@ A wrapper in Python is being developed: We welcome contributions and help from i
 
 A wrapper in Julia is also being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu
 
-### Description
+## Description
 Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
 
-### Reference
+## Reference
 >Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](https://go.osu.edu/beast2019) Remote Sensing of Environment, 232, 111181. (the BEAST paper) 
 >
 >Zhao, K., Valle, D., Popescu, S., Zhang, X. and Mallick, B., 2013. [Hyperspectral remote sensing of plant biochemistry using Bayesian model averaging with variable and band selection](https://www.academia.edu/download/55199778/Hyperspectral-biochemical-Bayesian-chlorophyll-carotenoid-LAI-water-content-foliar-pigment.pdf). Remote Sensing of Environment, 132, pp.102-119. (the mcmc sampler used for BEAST)
@@ -84,7 +88,7 @@ Interpretation of time series data is affected by model choices. Different model
 >Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 ----
-### Additional Notes
+## Additional Notes
 
 1. **Computation**
 
