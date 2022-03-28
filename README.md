@@ -2,8 +2,10 @@
 
 ##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
-####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in [Zhao et al. (2019)](https://go.osu.edu/beast2019). BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
+####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
 > **BEAST** was impemented in C/C++. Check the `Source` folder for the source code. R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders above. Or follow the instructions below to install and run BEAST in R or Matlab.
+
+> **Quick installation**: In Matlab, run `eval(webread('http://bit.ly/loadbeast', weboptions('cert','')))`; in R, run `install.packages("Rbeast")`.
 
 
 
@@ -53,16 +55,17 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
 
-#### Installation and usage (Windows and Linux)
+#### Installation (Windows and Linux)
 
-The C code of BEAST has also been compiled into a Matlab mex library (i.e., `Rbeast.mexw64` for Windows and `Rbeast.mexa64` for Linux) with some wrapper matlab functions (e.g.,`beast.m`) similar to the R interface, all available at the `Rbeast\Matlab` folder above. Download the files to your local drive and run BEAST. Alternatively, run the following Matlab code to automatically download the files and install BEAST to your local drive:
-
+Install the Matlab version of BEAST automatically to a local folder of your choice by running 
   ```Matlab
   % Installation path of your choice; Write permission needed; the var name has to be 'beastPath'
   beastPath = 'C:\rbeast\';                    
   eval(  webread( 'http://bit.ly/loadbeast', weboptions('cert','') )  );
   ```
+The above will download all the files in the Rbeast\Matlab folder at GitHub to the chosen folder: if `beastPath` is missing, a default temporary folder will be used. If the automatic script fails, please download the Matlab files from GitHub manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows and `Rbeast.mexa64` for Linux) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets.
 
+#### Usage (Windows and Linux)
 The Matlab API is similar to those of R. Below is a quick example:
   ```Matlab
    help beast
