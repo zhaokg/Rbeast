@@ -33,8 +33,8 @@ function out = beast(y, varargin)
 %        a string specifier. Possible values - 'none':  trend-only data with no 
 %        seasonality; 'harmonic': the seasonal/peridoic  component modelled via 
 %        harmonic curves; 'dummy': the seasonal component  modelled via a dummy 
-%        basis (i.e., pulse-like bases); 'svd': svd-derived  bases (available only in 
-%        R not Matlab)
+%        basis (i.e., pulse-like bases); 'svd': svd-derived  bases (experimental 
+%        feature)
 %   <strong>scp.minmax</strong>: 
 %        a vector of two integers (e.g.,[0,5]); the min and max number of
 %        seasonal changepoints allowed
@@ -89,13 +89,19 @@ function out = beast(y, varargin)
 %       <strong> Experts should use the the beast123 function.</strong>
 %
 %   <strong>Examples</strong>:
-%       load('Nile')   % Nile river annual streamflow: trend-only data
+%       load('Nile.mat')             % Nile river annual streamflow: trend-only data
 %       o=beast(Nile, 'start', 1871, 'season','none') 
 %       printbeast(o)
 %       plotbeast(o)
 %
-%       load('YellowstoneNDVI')   %half-monthly NDVI at a Yellowstone site
-%       o=beast(Yellowstone, 'start', [1981,7,7],'deltat', 1/12, 'freq',23,'tcp.minmax', [0,10])
+%       load('YellowstoneNDVI.mat')  % Half-monthly NDVI at a Yellowstone site
+%       o=beast(Yellowstone, 'start', [1981,7,7],'deltat', 1/24, 'freq',24,'tcp.minmax', [0,10])
+%       printbeast(o)
+%       plotbeast(o)
+%       plotbeast(o,'ncpStat','median')
+%
+%       load('co2.mat')             % Monthly air co2 data since 1959: deltaTime=1/12 year
+%       o=beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'freq',12)
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
@@ -160,7 +166,13 @@ function out = beast(y, varargin)
        else
          metadata.period =freq *metadata.deltaTime;
        end
-   end   
+   end
+   if strcmp(metadata.season, 'svd')
+       if isempty(freq)|| freq <= 1.1 || isnan(freq)
+           error("When season=svd, freq must be specified and larger than 1.");
+       end
+       metadata.svdTerms = svdbasis(y, freq, deseasonalize);
+   end
    metadata.missingValue     = NaN;
    metadata.maxMissingRate   = 0.75;
    metadata.deseasonalize    = deseasonalize;
@@ -237,5 +249,188 @@ function value=GetValueByKey(KeyList, ValList, key,defaultValue)
        value=ValList{idx(1)};
    end
 end
+
+%% Geth SVD-based basis vector
+function U=svdbasis(x, p , residual)
+
+x  = x(:);
+n  = length(x);
+
+goodidx = find(~isnan(x));
+ngood   = length(goodidx);
+ 
+if(n==ngood)
+    SSS=getseason_polyfit(x,p,residual) ;
+else
+    SSS=getseason_polyfit_bad(x,p,goodidx,residual);
+end
+
+
+M    =  floor(n/p);
+SSS  = reshape(SSS(1:(M*p)), p,M);
+[u, s,v] = svd(SSS);    
+
+U     = zeros(n,p);
+M1    = floor((n+(p-1))/p);
+for i=1:p
+    ui=u(:,i);
+    ui=(ui-mean(ui))/std(ui);
+    ucol=repmat(ui,M1);    
+    U(:,i)=ucol(1:n);
+end
+end
+
+%%
+function beta=getbeta(X,Y)
+  XtX=X'*X;
+  XtY=X'*Y;
+  beta=linsolve(XtX,XtY);
+end
+
+function SSS=getseason_polyfit (x, p, residual)
+
+%%
+n  = length(x);
+p1 = floor(p/2);
+p2 = p-p1-1;
+
+maxTrendOder = 7;
+t            = (1:n)';
+XXX          = zeros(n, p1*2+1+maxTrendOder);
+for i = 1:p1
+    ttt = 2*pi*i*t/p;
+    XXX(:,(i-1)*2+1)=sin(ttt);
+    XXX(:, i*2)     =cos(ttt);
+end
+
+t             = t/n;
+t             =zscore(t);
+XXX(:,p1*2+1) = 1;
+y             = x(:);
+%%
+bestAIC  =1e300;
+bestOrder=0;
+for  order = 1:maxTrendOder 
+    xdim        = p1*2+1+order;
+    XXX(:, xdim)=t.^order;
+    beta        = getbeta(XXX(:,1:xdim), y);%XXX(:,1:xdim)\y;
+    yfit        = XXX(:,1:xdim)* beta;
+    res         = y-yfit;
+    newAIC      = n*log(sum(res.*res))+2*(order+1);
+    
+    if (newAIC > bestAIC+2)
+        break
+    else
+        if (newAIC < bestAIC)
+            bestAIC   =newAIC;
+            bestOrder=order;
+        end
+        
+    end
+end % for  order = 1:maxTrendOder
+%%
+ 
+XXX     = XXX(:, 1:(p1*2+bestOrder+1) );
+beta    = getbeta(XXX,y);%XXX\y;
+trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
+
+season = y-trend;
+
+if (residual)
+    seasonAvg=season;
+    for i=1:p
+        idx           =i:p:n;
+        seasonAvg(idx)=mean(season(idx));
+    end
+    SSS=season-seasonAvg;
+else
+    SSS=season;
+end
+
+end
+
+function SSS=getseason_polyfit_bad(x, p, goodIdx, residual)
+
+ngood=sum(goodIdx);
+%%
+n  = length(x);
+p1 = round(p/2);
+p2 = p-p1-1;
+
+maxTrendOder = 7;
+t            = (1:n)';
+XXX          = zeros(n, p1*2+1+maxTrendOder);
+for i = 1:p1
+    ttt = 2*pi*i*t/p;
+    XXX(:,(i-1)*2+1)=sin(ttt);
+    XXX(:, i*2)     =cos(ttt);
+end
+
+t             =  t/n;
+XXX(:,p1*2+1) = 1;
+y             = x(:);
+%%
+bestAIC  =1e300;
+bestOrder=0;
+for  order = 1:maxTrendOder
+    xdim       = p1*2+1+order;
+    XXX(:, xdim)=t.^order;
+    beta       = getbeta( XXX(goodIdx,1:xdim),  y(goodIdx) );%XXX(goodIdx,1:xdim)\y(goodIdx);
+    yfit       = XXX(goodIdx,1:xdim)* beta;
+    res        = y(goodIdx)-yfit;
+    newAIC     = ngood*log(sum(res.*res))+2*(order+1);
+    
+    if (newAIC > bestAIC+2)
+        break;
+    else
+        if (newAIC < bestAIC)
+            bestAIC   =newAIC;
+            bestOrder=order;
+        end
+        
+    end
+end % for  order = 1:maxTrendOder
+
+XXX     = XXX(:,1:(p1*2+bestOrder+1));
+beta    = getbeta(XXX(goodIdx,:),y(goodIdx));% XXX(goodIdx,:)\y(goodIdx);
+trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
+
+season = y-trend;
+
+if (residual)
+    seasonAvg=season;
+    for i=1:p
+        idx           =i:p:n;
+        seasonAvg(idx)=mean(season(idx));
+    end
+    SSS=season-seasonAvg;
+else
+    SSS=season;
+end
+
+
+XXX            = XXX(:, 1:(p1*2+bestOrder+1) );
+beta           = XXX(goodIdx,:)\y(goodIdx);
+trend          = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
+
+yfull          = XXX*beta;
+yfull(goodIdx) = y(goodIdx);
+
+season = yfull-trend;
+
+if (residual)
+    seasonAvg=season;
+    for i=1:p
+        idx           =i:p:n;
+        seasonAvg(idx)=mean(season(idx));
+    end
+    SSS=season-seasonAvg;
+else
+    SSS=season;
+end
+end
+
+
+
 
  
