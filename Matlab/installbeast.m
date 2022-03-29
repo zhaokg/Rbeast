@@ -45,7 +45,7 @@ end
 rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
 
 datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
-    'imageStack.mat',   'YellowstoneNDVI.mat'};
+    'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 for i=1:numel(datalist)
     fn    = string(datalist{i});

@@ -1,8 +1,8 @@
 %%
 function uninstallbeast()
 
-datalist={'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
-    'imageStack.mat',   'YellowstoneNDVI.mat'};
+datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
+    'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 if ispc()
    rbeastFile='Rbeast.mexw64';
