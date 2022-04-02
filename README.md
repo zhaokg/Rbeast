@@ -6,7 +6,7 @@
 > **BEAST** was impemented in C/C++ but accessible from R and Matlab. Check the `Source`, `R`, and `Matlab` folders at [Github](https://github.com/zhaokg/Rbeast) for the C, R, and Matlab code.
 
 **Quick installation**:
-   * In Matlab, run **`eval(webread('http://b.link/beast'))`**  
+   * In Matlab, run **`eval(webread('http://b.link/beast',weboptions('cert','')))`**  
    * In R,     run **`install.packages("Rbeast")`**
    * Or follow the more detailed instructions below to install and run BEAST
 
