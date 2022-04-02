@@ -18,12 +18,10 @@
 #include "abc_pthread.h"
 #include "abc_timer.h"
 //#include "abc_dir.h"
-
-
  
 #include "beastv2_io.h"
 
-#if !defined(R_RELEASE)
+#if !defined(R_RELEASE) && !defined(M_RELEASE) 
 #include "mrbeast_header.h"
 #include "mrbeast_io.h" 
 #include "sbmfast.h"
@@ -701,7 +699,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 		
  
 	}
-	#if !defined(R_RELEASE)
+	#if !defined(R_RELEASE) &&  !defined(M_RELEASE)
 	else if  (IS_STRING_EQUAL(algorithm, "mrbeast"))
 	{
 		MV_OPTIONS         option;
@@ -1060,7 +1058,15 @@ void  R_init_Rbeast(DllInfo *dll)
 ***************************************************************/
 
 #include "abc_date.h"
-void DllExport mexFunction(int nlhs, mxArray * _restrict plhs[],   int nrhs, const mxArray * _restrict prhs[]) {
+//void DllExport mexFunction(int nlhs, mxArray * _restrict plhs[],   int nrhs, const mxArray * _restrict prhs[]) {
+/* 
+   Restirct is really pf no use here. More important, the decleration of mexFunction in mex.h has no restrict keyword;
+   MVSC is OK with the difference; gcc, however, failed with a complaint of conflicting types for ‘mexFunction’. 
+   What flag can circuvume this? The best thing I could find is
+   https://stackoverflow.com/questions/66951324/conflicting-types-compiling-a-ld-preload-wrapper
+*/
+void DllExport mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
+
 	
 	//https://stackoverflow.com/questions/19813718/mex-files-how-to-return-an-already-allocated-matlab-array
 	//https://www.mathworks.com/matlabcentral/answers/77048-return-large-unchange-mxarray-from-mex

@@ -3,6 +3,7 @@
 #include "abc_001_config.h"
 #include <stdio.h>
 #include <math.h>
+#include <string.h> //memcpy
 //#include "abc_common.h"
 #include "abc_ide_util.h"
 #include "abc_ts_func.h"

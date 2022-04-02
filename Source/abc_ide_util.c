@@ -8,8 +8,13 @@
 #include "abc_date.h"
 
  
-extern void matlab_IOflush(void);
 // https:// stackoverflow.com/questions/26271154/how-can-i-make-a-mex-function-printf-while-its-running
+extern void matlab_IOflush(void);
+
+
+// C++ solution to define a keyword as a function name
+//#pragma warning(suppress: 4483)
+//extern void __identifier("?ioFlush@@YA_NXZ")(void);
 
 I08 IDE_USER_INTERRUPT;
 
@@ -53,10 +58,11 @@ void printProgress(F32 pct, I32 width, char * buf, I32 firstTimeRun)
 	if (firstTimeRun == 1)
 	{
 		r_printf("\r\n");
-		r_printf("%s", buf);
-		matlab_IOflush();
+		r_printf("%s", buf);		
+	    matlab_IOflush();
 		//mexEvalString("drawnow");
 		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
+		//mexEvalString("pause(0.0000001);drawnow");
 	}
 	else
 	{
@@ -69,6 +75,7 @@ void printProgress(F32 pct, I32 width, char * buf, I32 firstTimeRun)
 		matlab_IOflush();
 		//mexEvalString("drawnow");
 		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
+		//mexEvalString("pause(0.0000001);drawnow");
 
 	}
 
@@ -599,6 +606,7 @@ void ConsumeInterruptSignal() { return ; }
 
 //https://stackoverflow.com/questions/25998442/mex-options-when-compiling-with-visual-studio
 //https://undocumentedmatlab.com/articles/mex-ctrl-c-interrupt
+// The following 2 function are exported from libut.lib
 bool utIsInterruptPending();
 void utSetInterruptPending(bool);
 
@@ -841,7 +849,7 @@ void * CreateStructVar(FIELD_ITEM *fieldList, int nfields)
 		if (fieldList[i].ptr == NULL) continue;
 
 		if (fieldList[i].type == DATA_STRUCT){
-			mxSetField(out, 0L, fieldList[i].name, fieldList[i].ptr);
+			mxSetField(out, 0L, fieldList[i].name, (mxArray *) fieldList[i].ptr);
 			continue;
 		}
 

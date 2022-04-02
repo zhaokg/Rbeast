@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>  // for memcpy
 
 #include "abc_000_warning.h"
 

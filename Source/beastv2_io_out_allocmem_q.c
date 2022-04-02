@@ -1,6 +1,8 @@
 #include "abc_000_warning.h"
 #include "abc_001_config.h"
 
+#include <string.h>   // memset and memcpy
+
 #include "abc_ide_util.h"
 #include "abc_vec.h"
 #include "abc_mem.h"

@@ -2,23 +2,23 @@
 
 ##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
-####  BEAST is a Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
-> **BEAST** was impemented in C/C++. Check the `Source` folder at [Github](https://github.com/zhaokg/Rbeast) for the source code . R and Matlab interfaces are also provided and can be found under the `R` and `Matlab` folders. Or follow the instructions below to install and run BEAST in R or Matlab.
+####  BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
+> **BEAST** was impemented in C/C++ but accessible from R and Matlab. Check the `Source`, `R`, and `Matlab` folders at [Github](https://github.com/zhaokg/Rbeast) for the C, R, and Matlab code.
 
-> **Quick installation**: In Matlab, run `eval(webread('http://bit.ly/loadbeast', weboptions('cert','')))`; in R, run `install.packages("Rbeast")`.
-
-
-
+**Quick installation**:
+   * In Matlab, run **`eval(webread('http://b.link/beast'))`**  
+   * In R,     run **`install.packages("Rbeast")`**
+   * Or follow the more detailed instructions below to install and run BEAST
 
 ## Installation
 ### R
 
-   1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package name is `Rbeast`.) Install it in R using
+   1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
       ```R
        install.packages("Rbeast")
       ```
 
-   2. from **GitHub**: The latest versions of package files for **Rbeast** are available here at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install Rbeast are:
+   2. from **GitHub**: The latest versions of R package files are available here at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install **`Rbeast`**  are:
 
       ```R
         # Windows x86 or x64 (install from binary)
@@ -51,21 +51,22 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 ----
 
-### Matlab
+### Matlab  [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
 
-[![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
-
-#### Installation (Windows and Linux)
+#### Installation
 
 Install the Matlab version of BEAST automatically to a local folder of your choice by running 
-  ```Matlab
-  % Installation path of your choice; Write permission needed; the var name has to be 'beastPath'
-  beastPath = 'C:\rbeast\';                    
-  eval(  webread( 'http://bit.ly/loadbeast', weboptions('cert','') )  );
+  ```Matlab  
+  beastPath = 'C:\beast\'                   
+  eval( webread('http://b.link/beast') )  
+  
+  % NOTE -- Write permission needed for your chosen path; the var name must be 'beastPath'
+  % If webread has a certificate error, uncomment and run the following line instead:
+  % eval(  webread( 'http://b.link/beast', weboptions('cert','') )  );
   ```
-The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows and `Rbeast.mexa64` for Linux) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets.
+The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder (e.g., `C:\Users\$user_name$\AppData\Local\Temp\Rbeast for Windows 10`) will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows, `Rbeast.mexa64` for Linux, `Rbeast.mexmaci64` for MacOS) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets (e.g., Nile.mat, and co2.mat).
 
-#### Usage (Windows and Linux)
+#### Usage 
 The Matlab API is similar to those of R. Below is a quick example:
   ```Matlab
    help beast
@@ -75,20 +76,15 @@ The Matlab API is similar to those of R. Below is a quick example:
    printbeast(out)
    plotbeast(out)
   ```
-We generated the Matlab mex binary library for Windows and Linux only. Mex libraries for other OS systems such as Mac can be compiled from the source code files under `Rbeast\Source`. If needed, we are happy to work with you to compile for your specific OS or machines. Additional information on compilations from the C source is also given below.
+We generated the Matlab mex binary library on our own machines with Win10, Ubuntu 22.04, and macOS High Sierra. If they fail on your machine, the mex library can be compiled  from the C source code files under `Rbeast\Source`. If needed, we are happy to work with you to compile for your specific OS or machines. Additional information on compilations from the C source is also given below.
 
 ----
-### Python
+### Python/Julia
 
-A wrapper in Python is being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
-
-----
-### Julia
-
-A wrapper in Julia is also being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu
+Wrappers in Python and Julia are being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
 
 ## Description
-Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
+Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, finance, public health, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
 
 ## Reference
 >Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](https://go.osu.edu/beast2019) Remote Sensing of Environment, 232, 111181. (the BEAST paper) 
@@ -106,61 +102,45 @@ As a Bayesian algorithm, BEAST is fast and is possibly among the fastest impleme
 
 2. **Compilation from source code**
 
-The BEAST source code appears more complicated than necessary, mainly because the same source is used for both R and Matlab interfaces (also for Python and Julia) as well as for various different compilations settings (e.g., compiler variants, alternative library dependencies, cross-platform compatibility, mixed language interfaces, and Win32 API native interfaces). The complication control variables are defined as MARCOs in abc_marco.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxiliary files; the BEAST algorithm itself is coded in beastv2_COREV4.c; and the R and Matlab interfaces are coded in glue.c and abc_ide_util.c.
+The BEAST source code appears more complicated than necessary, mainly because the same source is used for both R and Matlab interfaces (also for Python and Julia) as well as for various compilations settings (e.g., compiler variants, alternative library dependencies, cross-platform compatibility, mixed language interfaces, and Win32 API native interfaces). The complication control variables are defined as MACROs in abc_macro.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxiliary files; the BEAST algorithm itself is coded in beastv2_COREV4.c; and the R and Matlab interfaces are coded in glue.c and abc_ide_util.c.
 
-We tested our source code under many common compliers (e.g., MSVC, gcc, clang, and Oracle Developer Studio) and all successfully passed (e.g., see the [Rbeast package status report](https://cran.r-project.org/web/checks/check_results_Rbeast.html)). To compile for R, you need to make sure your machine has a C compiler appropriately set up. For example, see [Package Development Prerequisites](http://www.rstudio.com/ide/docs/packages/prerequisites) for the tools needed for your operating system. In particular, on Windows platforms, the most convenient option is to go with the Rtools toolkit. To compile for Matlab, the appropriate C/C++ header files (e.g., mex.h) have to be correctly specified. Below are some compilation schemes using the gnu compilers as an example.
+We tested our source code under many common compliers (e.g., MSVC, gcc, clang, icc, mingw gcc, and Solaris) and all successfully passed (e.g., see the [Rbeast package status report](https://cran.r-project.org/web/checks/check_results_Rbeast.html)). To compile for R, you need to make sure your machine has a C compiler appropriately set up. For example, see [Package Development Prerequisites](http://www.rstudio.com/ide/docs/packages/prerequisites) for the tools needed for your operating system. In particular, on Windows platforms, the most convenient option is to go with the Rtools toolkit. To compile for Matlab, the appropriate C/C++ header files (e.g., mex.h) have to be correctly specified. Below are some compilation schemes using the gnu compilers as an example.
+
+To compile from the source, first download all the C/C++ files in the Source folder to your local folder, and go to your local folder and make it as the current working directory.
 
 * To create the Matlab library, run the following steps.
+     1.  Compile the C/C++ sources into object files and link the object file as a mex lib
+     ```C
+     gcc -shared -fPIC -pthread -DM_RELEASE -I/MATLAB/extern/include -O2 -Wall -std=gnu99 -mfpmath=sse -msse2 -mstackrealign -L/MATLAB/bin/glnxa64  -lpthread -lmx -lmex -lmat -lm -lut -lmwservices  *.c -o Rbeast.mexa64
+     ```
+     > `/MATLAB/extern/include` is the Matlab's path for the include header files such as mex.h. Replace it with the correct one for your machine. On Windows, the path is typically `"C:/Program Files/MATLAB/R2019a/extern/include"`.
+     > `/MATLAB/bin/glnxa64` is the Matlab's path for the static/import libraries such as libmex.lib and libmat.lib. Replace it with the correct one for your machine. On Windows, the path is typically `C:\Program Files\MATLAB\R2019a\extern\lib\win64\microsoft` for the Visual studio compiler and `C:\Program Files\MATLAB\R2019a\extern\lib\win64\mingw64` for the MinGW gcc compiler. Also, for Windows, the output should be `Rbeast.mexw64`.
+     2.  Alternatively, if your Matlab has the mex command correctly set up, the mex library can be compiled from
+     ```C
+     mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fPIC -O2 -Wall -std=gnu99 -march=native' -lmwservices -lut *.c -output Rbeast.mexa64
+     ```
+     3. Put the resulting Rbeast.mex library together with other m scripts (e.g., beast.m) to call Rbeast via beast or beast123; if needed, Rbeast.mex can be called directly as follows:
+     `Rbeast('beastv4',Y,metadata, prior,mcmc, extra)`      
+    
+* An R dynamic lib (which is the dll/so/dynliab file--part of the R package but not the whole R package itself) is probably never need to be created mannually. But just in case that it is needed, run the following steps.
 
-     1. Download all the files in the Source folder to your local folder
-     2. Go to your local folder and set it as the current directory. Compile the C/C++ sources into object files
+     1. Compile the C/C++ sources into object files and link them as a shared lib
 
         ```C
-        gcc -c -fPIC -pthread -DM_RELEASE -DMATLAB_DEFAULT_RELEASE=R2017b -I/MATLAB/extern/include -O2 -Wall -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  *.c
-        g++ -c -fPIC -pthread -DM_RELEASE -DMATLAB_DEFAULT_RELEASE=R2017b -I/MATLAB/extern/include -O2 -Wall            -mfpmath=sse -msse2 -mstackrealign  *.cpp
-        ```
-        > `/MATLAB/extern/include` is the Matlab's path for the include header files such as mex.h. Replace it with the correct one for your machine. On Windows, the path is typically `"C:/Program Files/MATLAB/R2019a/extern/include"`.
-
-    3. Link all the objects into the Matlab mex library
-    
-       ```
-        gcc -shared -L/MATLAB/bin/glnxa64  -lpthread -lmx -lmex -lmat -lm -lut -lmwservices *.o -o Rbeast.mexa64
-       ```
-        
-        > `/MATLAB/bin/glnxa64` is the Matlab's path for the static/import libraries such as libmex.lib and libmat.lib. Replace it with the correct one for your machine. On Windows, the path is typically `C:\Program Files\MATLAB\R2019a\extern\lib\win64\microsoft` for the Visual studio compiler and `C:\Program Files\MATLAB\R2019a\extern\lib\win64\mingw64` for the MinGW gcc compiler. Also, for Windows, the output should be `Rbeast.mexw64`.
-        
-    4. Put the Rbeast.mex library together with other m scripts (e.g., beast.m) to call Rbeast via beast or beast123; alternatively Rbeast.mex can be called directly as follows:
-   
-       `Rbeast('beastv4',Y,metadata, prior,mcmc, extra)`
-       
-    
-* To create the R dynamic library (which is part of the R package but not the whole R package itself), run the following steps.
-
-     1. Download all the files in the Source folder to your local folder
-     2. Go to your local folder and set it as the current directory. Compile the C/C++ sources into object files
-
-        ```C
-        gcc -c -fPIC -pthread -DR_RELEASE  -I/opt/R-devel/lib/R/include -O2 -Wall -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  *.c
-        g++ -c -fPIC -pthread -DR_RELEASE  -I/opt/R-devel/lib/R/include -O2 -Wall            -mfpmath=sse -msse2 -mstackrealign  *.cpp
+        gcc  -shared  -fPIC -pthread -DR_RELEASE  -I/opt/R-devel/lib/R/include -O2 -Wall -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  -L/opt/R-devel/lib/R/lib -lpthread -lm -lR *.c -o Rbeast.dll
         ```
         > `/opt/R-devel/lib/R/include` is the R's path for the include header files such as R.h. Replace it with the correct one for your machine. On Windows, the path is typically `C:\Program Files\R\R-4.1.0\include`.
-
-    3. Link all the objects into the R dll library
-    
-        `gcc -shared  -L/opt/R-devel/lib/R/lib  -lpthread -lm -lR *.o -o Rbeast.dll`
         
         > `/opt/R-devel/lib/R/lib` is the R's path for the static/import libraries such as libR.so. Replace it with the correct one for your machine. On Windows, the path is typically `C:\Program Files\R\R-4.1.0\bin\x64`. On Windows, MinGW compilers should be able to link with the R.dll file directly, but for MSVC, R.dll has to be first exported as an import library to be linked.
         
-4. The R dll library is useful ONLY if you intend to call the dll directly, as shown below.
-    
-      ```   
+    2. The R dll library is useful ONLY if you intend to call the dll directly, as shown below.
+    ```
       dyn.load("Rbeast.dll");  
       o =.Call('rexFunction',list('beastv4', co2, metadata=metadata,prior,mcmc,extra,1 ),12345 );
       dyn.unload("Rbeast.dll")
-      ```
-
+    ```
  
 
-## Reporting Bugs
+## Reporting Bugs or getting help
 
-BEAST is distributed as is and without warranty of suitability for application. The one distributed above is a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug. *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. Alternatively, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu
+BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 

@@ -230,7 +230,9 @@ static int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, void* (*s
         //https://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
         //https://stackoverflow.com/questions/7296963/gnu-source-and-use-gnu/7297011#7297011
         //https://stackoverflow.com/questions/24034631/error-message-undefined-reference-for-cpu-zero/24034698
-        #define _GNU_SOURCE
+	    #ifndef _GNU_SOURCE
+		    #define _GNU_SOURCE
+	    #endif
         #include <sched.h>  ////cpu_set_t , CPU_SET
 	    #include <pthread.h>
 

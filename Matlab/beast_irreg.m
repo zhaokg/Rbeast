@@ -2,9 +2,9 @@ function out = beast_irreg(y, varargin)
 % 
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast_irreg' to see the following
+%   USAGE: out=<strong>beast_irreg(y, ...) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%   USAGE: <strong>beast_irreg(y, ...) </strong>
 %
 %   <strong>y</strong>:  iregular time series; it should be a numeric vector. For reggular 
 %   time series, use 'beast' or 'beast123' instead. For multiple time series 
@@ -13,7 +13,7 @@ function out = beast_irreg(y, varargin)
 %   <strong> ... </strong>:  a series of paired keywords and values to  specifiy time information 
 %   or parameters for the BEAST algorithm. The keywords mimic the R version of beast
 %   <a href="matlab:
-%   web(https://rdrr.io/cran/Rbeast/man/beast.html')">rdrr.io/cran/Rbeast/man/beast.html</a>. Unlike R, Matlab doesn't support keyword-style 
+%   web(https://rdrr.io/cran/Rbeast/man/beast.irreg.html')">rdrr.io/cran/Rbeast/man/beast.irreg.html</a>. Unlike R, Matlab doesn't support keyword-style 
 %   arguments, so the beast parameters should be provided in the following forms:
 %
 %   <strong>beast(Nile, 'start', 1871, 'deltat', 1, 'season','none')</strong>
@@ -97,6 +97,40 @@ function out = beast_irreg(y, varargin)
 %       In particular, BEAST currently handles only regular time series;
 %       irregular inputs will be aggregated first before applying BEAST.
 %
+%   <strong>Result/Output</strong>: The output is a struct variable; example of the fields include
+%
+%       marg_lik: marginal likilood; the larger, the better
+%       sig2    : variance  of error
+%       trend   : the trend component; a struct variable (say, T)
+%       season  : the season componet; a stuct variable  (say,S)
+%       The subfields of trend or season:
+%       .ncpPr        : the prob distribution for number of changepoints
+%       .ncp          : mean number of changepoints in trend or seasonality
+%       .ncp_meidan   : median number of changepoints
+%       .ncp_mode     : mode from ncpPr
+%       .ncp_pct90    : 90% percentile from ncpPr
+%       .cpOccPr      : changepoint occurrance probability over time
+%       .cp           : list of all possible changepoints (many are not sigficant)
+%       .cpPr         : occurrence probability of the changepoints in cp
+%       .cpAbruptChange: the sudden changes in trend or seasonlity at cp
+%       .cpCI         : confidence interval of the cps
+%       .Y            : the fitted trend or seasonality 
+%       .SD           : standard deviation of the fitted Y
+%       .CI           : Credible interval of the fittted Y
+%       .order   : the mean harmonic or polynomial orders estimated to fit the seasonal and trend     
+%       trend.slp     : slope of the trend 
+%       trend.slpSD   : standard dev of the estimated slope
+%       trend.slpSgnPosPr: time-varying probability of the slope being postive
+%       trend.slpSgnZeroPr: time-varying probability of the slope being 0
+%       season.amp     : amplitue of the estiamted seasonality overtime
+%       season.ampSD   : standard ev of the estiamated amplitude
+%
+%   <strong>More help</strong>:  
+%      The terse doc sucks (I know); so far, the best details are still the
+%      R help doc, available at https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf.
+%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's beast(freq=1) 
+%      beast('freq',1).
+%      
 %   <strong>Examples</strong>:
 %
 %       load('ohioNDVI')   %an unevenly-spaced Landsat NDVI time series

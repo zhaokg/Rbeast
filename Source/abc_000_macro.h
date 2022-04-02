@@ -19,7 +19,9 @@
 #define PCGRAND_LIBRARY 1
 #define MKLRAND_LIBRARY 0
 
- 
+
+
+
 #ifdef R_RELEASE
         // For R interface
 		#undef   R_INTERFACE
@@ -33,9 +35,26 @@
 		#define MYMAT_LIBRARY 1
 	    #define MKL_LIBRARY   0
 
-	   #define PCGRAND_LIBRARY 1
-       #define MKLRAND_LIBRARY 0
+	    #define PCGRAND_LIBRARY 1
+        #define MKLRAND_LIBRARY 0
 #endif
+
+/*
+*  Note for compling mex using max in Matlab:
+*  mex can't handle the mixed inputs of C and CPP. Check these
+*  https://stackoverflow.com/questions/57579194/matlab-r2016b-mex-fails-to-compile-c-code
+*  https://www.mathworks.com/matlabcentral/answers/827145-how-can-i-split-c-c-code-in-multiple-files-and-still-use-mex
+*  mex accept a wildcard for source files (*.c) but not a wildcard for object files (*.o)
+* 
+* mex -v -c CFLAGS='$CFLAGS -DM_RELEASE  -Wall -v -Wl,-v'      *.c     // compiling all the C source
+* mex -v -c CXXFLAGS='$CXXFLAGS -DM_RELEASE -Wall -v -Wl,-v'  *.cpp   // compiling all the C source
+* mex -v  CFLAGS='$CFLAGS  -Wall -Wl,-v' -lmwservices -lut abc_ioFlush.o *.o -output Rbeast  // for some reason, the output is bad
+* 
+* Below is my solution:
+  system("gcc -c -fPIC  -pthread -DNDEBUG -DM_RELEASE   -DMATLAB_DEFAULT_RELEASE=R2017b  -DMATLAB_MEX_FILE  -I/MATLAB/extern/include   -O2 -Wall  -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  *.c")
+  system("g++ -c -fPIC  -pthread -DNDEBUG -DM_RELEASE   -DMATLAB_DEFAULT_RELEASE=R2017b  -I/MATLAB/extern/include   -O2 -Wall    -mfpmath=sse -msse2 -mstackrealign  *.cpp")
+  system("gcc -shared -pthread  -L/MATLAB/bin/glnxa64 -lmx -lmex -lmat -lm  -lut -lmwservices *.o -o Rbeast.mexa64")
+*/
 
 #ifdef M_RELEASE
         // For Matlab interface
@@ -50,8 +69,13 @@
 		#define MYMAT_LIBRARY 1
 	    #define MKL_LIBRARY   0
 
-	   #define PCGRAND_LIBRARY 1
-       #define MKLRAND_LIBRARY 0
+	    #define PCGRAND_LIBRARY 1
+        #define MKLRAND_LIBRARY 0
+        
+        #ifndef MATLAB_MEX_FILE
+			#define MATLAB_MEX_FILE
+        #endif
+        #define MATLAB_DEFAULT_RELEASE  R2017b
 #endif
 /*------------------------------------------------------------*/
 
@@ -85,12 +109,16 @@
 #if defined(__linux__) 
 	//https://stackoverflow.com/questions/142508/how-do-i-check-os-with-a-preprocessor-directive
 	#define LINUX_OS
-	#define _GNU_SOURCE // for including CPU_ZERO in sched.h
+    #ifndef _GNU_SOURCE
+		#define _GNU_SOURCE // for including CPU_ZERO in sched.h
+    #endif
 #endif
 
 #if (defined(unix) || defined(__unix__) || defined(__unix) ) && !defined(__APPLE__)
 	#define UNIX_OS
-	#define _GNU_SOURCE // for including CPU_ZERO in sched.h
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE // for including CPU_ZERO in sched.h
+	#endif
 #endif
 
 #if defined(sun) && defined(__sun) && defined(__SVR4) 

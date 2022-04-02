@@ -564,8 +564,9 @@ end
 function plot_order(I,ytitle, has, clr,x, t, t2t,Order, ncp, cp)
 cla;  hold on; 
 plot( t,   Order,  'color',clr );
-maxp=max(max(Order),1);
-set(gca,'ylim',[0,maxp]);
+maxp=max(max(Order),1.05);
+minp=-0.05;
+set(gca,'ylim',[minp,maxp]);
 
 for i = 1 : ncp
     plot( [cp(i),cp(i)], get(gca,'Ylim'), 'color', 'k');

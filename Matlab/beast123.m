@@ -2,9 +2,9 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %  
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast123' to see the following
+%   USAGE: out=<strong>beast123(Y, metadata, prior, mcmc, extra) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%   USAGE: <strong>beast123(Y, metadata, prior, mcmc, extra) </strong>
 %
 %   <strong>Y</strong>:  input time series being regular or inrregular; it could be a numeric vector,
 %    2D matrix (e.g., multiple time series of the same length), or 3D array time series (e.g.,
@@ -120,8 +120,6 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %   extra.numParThreads        : specify the number of total concurrent
 %                              threads
 %
-%   <strong>beast(Nile, 'start', 1871, 'deltat', 1, 'season','none')</strong>
-%   <strong>beast(Yellowstone, 'start', [1981,7,7], 'tcp.minmax', [0,10], 'deltat', 1/12)</strong> 
 %
 %   <strong>Note</strong>:
 %       beast, beast_irreg, and beast123 calls the same library
@@ -129,7 +127,40 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %       In particular, BEAST currently handles only regular time series;
 %       irregular inputs will be first aggregated  before applying BEAST.
 %
-%      
+%   <strong>Result/Output</strong>: The output is a struct variable; example of the fields include
+%
+%       marg_lik: marginal likilood; the larger, the better
+%       sig2    : variance  of error
+%       trend   : the trend component; a struct variable (say, T)
+%       season  : the season componet; a stuct variable  (say,S)
+%       The subfields of trend or season:
+%       .ncpPr        : the prob distribution for number of changepoints
+%       .ncp          : mean number of changepoints in trend or seasonality
+%       .ncp_meidan   : median number of changepoints
+%       .ncp_mode     : mode from ncpPr
+%       .ncp_pct90    : 90% percentile from ncpPr
+%       .cpOccPr      : changepoint occurrance probability over time
+%       .cp           : list of all possible changepoints (many are not sigficant)
+%       .cpPr         : occurrence probability of the changepoints in cp
+%       .cpAbruptChange: the sudden changes in trend or seasonlity at cp
+%       .cpCI         : confidence interval of the cps
+%       .Y            : the fitted trend or seasonality 
+%       .SD           : standard deviation of the fitted Y
+%       .CI           : Credible interval of the fittted Y
+%       .order   : the mean harmonic or polynomial orders estimated to fit the seasonal and trend     
+%       trend.slp     : slope of the trend 
+%       trend.slpSD   : standard dev of the estimated slope
+%       trend.slpSgnPosPr: time-varying probability of the slope being postive
+%       trend.slpSgnZeroPr: time-varying probability of the slope being 0
+%       season.amp     : amplitue of the estiamted seasonality overtime
+%       season.ampSD   : standard ev of the estiamated amplitude
+%
+%   <strong>More help</strong>:  
+%      The terse doc sucks (I know); so far, the best details are still the
+%      R help doc, available at https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf.
+%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's beast(freq=1) 
+%      beast('freq',1).
+%           
 %   <strong>Examples</strong> :   
 %
 %       load('Nile')   % Nile river annual streamflow: trend-only data
