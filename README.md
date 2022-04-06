@@ -1,4 +1,4 @@
-<img align="right"  height="350" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Ndvi.png">
+<img align="right"  height="570" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png">
 
 ##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
@@ -122,7 +122,7 @@ To compile from the source, first download all the C/C++ files in the Source fol
      3. Put the resulting Rbeast.mex library together with other m scripts (e.g., beast.m) to call Rbeast via beast or beast123; if needed, Rbeast.mex can be called directly as follows:
      `Rbeast('beastv4',Y,metadata, prior,mcmc, extra)`      
     
-* An R dynamic lib (which is the dll/so/dynliab file--part of the R package but not the whole R package itself) is probably never need to be created mannually. But just in case that it is needed, run the following steps.
+* An R dynamic lib (which is the dll/so/dynliab file--part of the R package but not the whole R package itself) probably never needs to be created mannually. But just in case that it is needed, run the following steps.
 
      1. Compile the C/C++ sources into object files and link them as a shared lib
 
