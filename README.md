@@ -1,6 +1,8 @@
-<img align="right"  height="570" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png">
+
 
 ##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
+
+<img align="right"  height="550" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png">
 
 ####  BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation
 > **BEAST** was impemented in C/C++ but accessible from R and Matlab. Check the `Source`, `R`, and `Matlab` folders at [Github](https://github.com/zhaokg/Rbeast) for the C, R, and Matlab code.
