@@ -69,7 +69,7 @@ elseif ismac()
 end
 
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-                     'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m'};
+                     'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m', 'readme.txt'};
 
 for i=1:numel(codelist)
     fn    = string(codelist{i});

@@ -244,15 +244,14 @@ for i =1:length(vars)
     
     
     if (var=='o' )
-        [Y,SD,CI, Amp,AmpSD, Order] = get_O(x,hasAmp,hasSOrder);
-        plot_o( i,ytitle,has, clr,x, t, t2t,Slp,SlpSD)
+        [Y,SD,CI ]  = get_O(x );
+        plot_o( i,ytitle,has, clr,x, t, t2t,Slp,SlpSD);
         
     end
     
     if (var=='ocp' )
-        [Y,SD,CI, Amp,AmpSD, Order] = get_ocp(x,hasAmp,hasSOrder);
-        plot_oprob(i,ytitle, has, clr,x, t, t2t,Slp,SlpSD)
-        
+       [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_ocp(x,ncpStat);
+       plot_oprob(i,ytitle, has, clr,x, t, t2t, Prob1, Prob,ncp,cp );        
     end
     
     if (var=='error' )        
@@ -274,10 +273,11 @@ for i =1:length(vars)
     if(i==nPlots)
 	  xlabel('time');
     else
-        set(H(i),'xticklabel',[]);
-    end
-      
-      ylabel(ytitle);
+      set(H(i),'xticklabel',[]);
+    end   
+   
+    ylabel(ytitle);
+    
 end
 end
 %%
@@ -334,7 +334,7 @@ if hasSeason
 end
 
 if hasOutlier
-    Yts  =- Yts+x.outlier.Y;
+    Yts  =  Yts+x.outlier.Y;
     SD2  =  SD2+x.outlier.SD.^2;
 end
 
@@ -417,7 +417,7 @@ cpChange= cmpnt.cpAbruptChange;
 Prob    = cmpnt.cpOccPr;
 Prob1   = [Prob;Prob-Prob];
 end
-% ###########################################################
+%% ###########################################################
 function  [Y,SD,CI, Amp,AmpSD, Order] = get_S(x,hasAmp,hasSOrder)
 Y      = x.season.Y;
 tmp    = Y+x.season.SD;
@@ -446,6 +446,22 @@ else
 end
 end
 
+
+%% ###########################################################
+function  [Y,SD,CI ] = get_O(x)
+Y      = x.outlier.Y;
+tmp    = Y+x.outlier.SD;
+SD     =[Y-x.outlier.SD;  tmp(end:-1:1)];
+
+if isfield(x.outlier,'CI') &  ~isempty(x.outlier.CI)
+    tmp = x.outlier.CI(:,2);
+    CI  = [x.outlier.CI(:,1); tmp(end:-1:1)] ;
+else
+    CI  =SD;
+end
+end
+ 
+    
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function  [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_scp(x,ncpStat)
 
@@ -507,7 +523,7 @@ end
 ncp    = round(ncp);
 ncpPr  = cmpnt.ncpPr;
 cpPr   = cmpnt.cpPr;
-cpChange= cmpnt.cpAbruptChange;
+cpChange= []; % no delta_change for the outlier component
 
 Prob    = cmpnt.cpOccPr;
 Prob1   = [Prob;Prob-Prob];
@@ -536,10 +552,12 @@ end
 fill( t2t, CI,clr,'LineStyle','none','FaceAlpha',0.1) ;
 
 plot(t,Y,clr);
-
+ylim=get(gca,'ylim');
 for i = 1 : ncp
-    plot( [cp(i),cp(i)], get(gca,'Ylim'), 'color', 'k');
+    plot( [cp(i),cp(i)], ylim, 'color', 'k');
 end
+
+set(gca,'ylim',ylim);
 
 end
 
@@ -616,7 +634,7 @@ alpha=0.2
 %plot( c(t2t[1],t2t), c(0.22,Prob1),type = 'n', ann=FALSE, xaxt='n', yaxt='n');
 %# polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
 %# points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
-stem(t,Y,'marker','none','color',clr);
+stem(t,Prob,'marker','none','color',clr);
 end
 
 function plot_error( I,ytitle,has, clr,x, t, t2t, Yerr)

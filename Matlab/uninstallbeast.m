@@ -10,7 +10,7 @@ elseif isunix()
    rbeastFile='Rbeast.mexa64';
 end
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m'};
+           'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m' , 'readme.txt'};
 %%
 flist = path();
 flist = split(flist,pathsep());
