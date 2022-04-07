@@ -235,7 +235,6 @@ function out = beast(y, varargin)
 	prior.outlierMaxKnotNum=ocp;
    end
      
-	 hasOutlierCmpnt
    prior.precValue        = 1.500000;
    prior.precPriorType    = 'uniform';
 %......End of displaying pripr ......
