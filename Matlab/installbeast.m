@@ -68,7 +68,8 @@ elseif ispc()
    rbeastFile='Rbeast.mexw64';   
 end
 
-codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
+% on the safe side, get all the mx library for all file systems
+codelist={'Rbeast.mexw64', 'Rbeast.mexa64','Rbeast.mexmaci64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
                      'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m', 'readme.txt'};
 
 for i=1:numel(codelist)

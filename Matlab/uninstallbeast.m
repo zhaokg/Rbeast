@@ -12,7 +12,7 @@ elseif ispc()
    rbeastFile='Rbeast.mexw64';   
 end
 
-codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
+codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
            'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m' , 'readme.txt'};
 %%
 flist = path();
