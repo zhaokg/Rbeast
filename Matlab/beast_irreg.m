@@ -178,7 +178,7 @@ function out = beast_irreg(y, varargin)
    
    torder_minmax   = GetValueByKey(KeyList, ValList, 'torder.minmax', [0,1]); 
    tcp_minmax      = GetValueByKey(KeyList, ValList, 'tcp.minmax',    [0,10]); 
-   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  10); 
+   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  []); 
    
    mcmc_seed       =GetValueByKey(KeyList, ValList, 'mcmc.seed',  0);         
    mcmc_samples    =GetValueByKey(KeyList, ValList, 'mcmc.samples',  8000);

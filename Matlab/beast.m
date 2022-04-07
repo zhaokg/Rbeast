@@ -174,7 +174,7 @@ function out = beast(y, varargin)
    
    torder_minmax   = GetValueByKey(KeyList, ValList, 'torder.minmax', [0,1]); 
    tcp_minmax      = GetValueByKey(KeyList, ValList, 'tcp.minmax',    [0,10]); 
-   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  10); 
+   tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',     []); 
    
    ocp             = GetValueByKey(KeyList, ValList, 'ocp',  []); 
    hasOutlierCmpnt = ~isempty(ocp);
