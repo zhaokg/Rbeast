@@ -21,7 +21,7 @@ clear Rbeast % just in case that an exisitng version has been loaded
 
 if ~exist('beastPath','var')
     warning("The variable 'beastPath' doesnot exist; a temporaby folder is used instead");
-    beastPath =  tempdir()+"Rbeast";
+    beastPath =  fullfile(tempdir(), "Rbeast");
     disp("BEAST installation Path: " + beastPath);
 end
 

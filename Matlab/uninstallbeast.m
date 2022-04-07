@@ -8,6 +8,8 @@ if ispc()
    rbeastFile='Rbeast.mexw64';
 elseif isunix()
    rbeastFile='Rbeast.mexa64';
+elseif ismac()
+   rbeastFile='Rbeast.mexmaci64';   
 end
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
            'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m' , 'readme.txt'};

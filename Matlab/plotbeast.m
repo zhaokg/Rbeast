@@ -245,7 +245,7 @@ for i =1:length(vars)
     
     if (var=='o' )
         [Y,SD,CI ]  = get_O(x );
-        plot_o( i,ytitle,has, clr,x, t, t2t,Slp,SlpSD);
+        plot_o( i,ytitle,has, clr,x, t, t2t,Y,SD);
         
     end
     
