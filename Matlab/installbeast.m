@@ -60,12 +60,12 @@ for i=1:numel(datalist)
 end
 
 %https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
-if ispc()
-   rbeastFile='Rbeast.mexw64';
-elseif isunix()
+if ismac()
+   rbeastFile='Rbeast.mexmaci64';
+elseif isunix() % true for linux and mac
    rbeastFile='Rbeast.mexa64';
-elseif ismac()
-   rbeastFile='Rbeast.mexmaci64';   
+elseif ispc()
+   rbeastFile='Rbeast.mexw64';   
 end
 
 codelist={rbeastFile,  'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
