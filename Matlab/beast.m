@@ -185,6 +185,7 @@ function out = beast(y, varargin)
    mcmc_burnin     =GetValueByKey(KeyList, ValList, 'mcmc.burnin',  200);
    mcmc_chainNumber=GetValueByKey(KeyList, ValList, 'mcmc.chains',   3);  
    
+   ci               =GetValueByKey(KeyList, ValList, 'ci',   false);   
    printProgressBar =GetValueByKey(KeyList, ValList, 'print.progress',  true);     
    printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);           
 %% Convert the opt parameters to the individual option parameters (e.g.,
@@ -257,7 +258,7 @@ function out = beast(y, varargin)
    extra = [];
    extra.dumpInputData        = true;
    extra.whichOutputDimIsTime = 1;
-   extra.computeCredible      = true;
+   extra.computeCredible      = ci;
    extra.fastCIComputation    = true;
    extra.computeSeasonOrder   = true;
    extra.computeTrendOrder    = true;
