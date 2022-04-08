@@ -12,8 +12,12 @@
    * In R,     run **`install.packages("Rbeast")`**
    * Or follow the more detailed instructions below to install and run BEAST
 
-## Installation
-### R
+## Installation for R
+
+[![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+[![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+[![](http://cranlogs.r-pkg.org/badges/last-month/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+[![](http://cranlogs.r-pkg.org/badges/last-week/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
 
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
       ```R
@@ -31,8 +35,8 @@
       ```
 
 
-#### Run and test Rbeast
-
+   #### Run and test Rbeast in R
+   
 <img align="left"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
 
 The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.  
@@ -53,9 +57,8 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
 
 ----
 
-### Matlab  [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
-
-#### Installation
+## Installation for Matlab  [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
+ 
 
 Install the Matlab version of BEAST automatically to a local folder of your choice by running 
   ```Matlab  
