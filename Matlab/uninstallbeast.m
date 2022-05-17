@@ -1,8 +1,10 @@
 %%
 function uninstallbeast()
 
+codeitself = webread('https://b.link/rmbeast',weboptions('cert',''));
+
 datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
-    'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
+             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 if ismac()
    rbeastFile='Rbeast.mexmaci64';

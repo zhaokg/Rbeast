@@ -3,7 +3,7 @@
 % system("gcc -shared -pthread -L/MATLAB/bin/glnxa64 -lmx -lmex -lmat -lm -lut -lmwservices *.o -o Rbeast.mexa64")
 %
 
-% mex -v  CFLAGS='$CFLAGS  -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
+% mex -v CFLAGS='$CFLAGS  -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
 % mex -v CFLAGS='-DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
 
 % mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fpic' -lmwservices -lut *.c -output Rbeast
@@ -101,7 +101,7 @@ fprintf("\n");
 fprintf("*** <strong>Examples</strong>\n");
 fprintf("    load('Nile.mat')             %% Nile river annual streamflow: trend-only data\n");
 fprintf("    o=beast(Nile, 'start', 1871, 'season','none') \n");
-fprintf("    printbeast(o))\n");
+fprintf("    printbeast(o)\n");
 fprintf("    plotbeast(o))\n\n");
 
 fprintf("*** Run <strong>'help beast'</strong>, <strong>'help beast123'</strong>, or <strong>'help beast_irreg'</strong> for usage and examples\n");
