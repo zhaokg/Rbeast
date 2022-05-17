@@ -102,7 +102,7 @@ fprintf("*** <strong>Examples</strong>\n");
 fprintf("    load('Nile.mat')             %% Nile river annual streamflow: trend-only data\n");
 fprintf("    o=beast(Nile, 'start', 1871, 'season','none') \n");
 fprintf("    printbeast(o)\n");
-fprintf("    plotbeast(o))\n\n");
+fprintf("    plotbeast(o)\n\n");
 
 fprintf("*** Run <strong>'help beast'</strong>, <strong>'help beast123'</strong>, or <strong>'help beast_irreg'</strong> for usage and examples\n");
 %%
