@@ -16,8 +16,7 @@
 
 [![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/last-month/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/last-week/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+
 
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
       ```R
@@ -47,7 +46,10 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
       out = beast(Nile, season='none') #  'none': trend-only data without seasonlaity   
       print(out)                   
       plot(out)
-      ?Rbeast                          # See more details about the usage of `beast`                 
+      ?Rbeast                          # See more details about the usage of `beast`    
+      
+      tetris()                         # if you dare to waste a few moments of your life 
+      minesweeper()                    # if you dare to waste a few more moments of your life 
   ```
 
 
@@ -148,4 +150,4 @@ To compile from the source, first download all the C/C++ files in the Source fol
 
 ## Reporting Bugs or getting help
 
-BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
+BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
