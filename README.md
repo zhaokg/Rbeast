@@ -16,8 +16,7 @@
 
 [![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/last-month/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/last-week/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+
 
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
       ```R
@@ -47,7 +46,10 @@ The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `be
       out = beast(Nile, season='none') #  'none': trend-only data without seasonlaity   
       print(out)                   
       plot(out)
-      ?Rbeast                          # See more details about the usage of `beast`                 
+      ?Rbeast                          # See more details about the usage of `beast`    
+      
+      tetris()                         # if you dare to waste a few moments of your life 
+      minesweeper()                    # if you dare to waste a few more moments of your life 
   ```
 
 
@@ -103,7 +105,7 @@ Interpretation of time series data is affected by model choices. Different model
 
 1. **Computation**
 
-As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, computation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. In any case, for stacked time-series images, do not use `beast` or `beast.irreg` and use **`beast123`** instead, which can handle 3D data cubes and allow parallel computing.  We also welcome consultation with Kaiguang Zhao (zhao.1423@osu.edu) to give specific suggestions if you see some value of BEAST for your applications.
+As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. (But it is slower, compared to nonBayesian methods.) For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, computation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. In any case, for stacked time-series images, do not use `beast` or `beast.irreg` and use **`beast123`** instead, which can handle 3D data cubes and allow parallel computing.  We also welcome consultation with Kaiguang Zhao (zhao.1423@osu.edu) to give specific suggestions if you see some value of BEAST for your applications.
 
 2. **Compilation from source code**
 
@@ -148,4 +150,4 @@ To compile from the source, first download all the C/C++ files in the Source fol
 
 ## Reporting Bugs or getting help
 
-BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, *Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
+BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
