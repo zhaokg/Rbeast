@@ -37,6 +37,9 @@ function H = plotbeast(o, varargin )
 %   plotbeast(o, 'index',3)
 %   plotbeast(o, 'index',[3,5])
 %
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
+%
 %%
 if ~strcmp(o.class,'beast')
     error('the input has to be an output from the BEAST functions');

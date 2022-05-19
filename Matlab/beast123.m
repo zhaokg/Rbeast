@@ -255,6 +255,10 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %      printbeast(o,[2,4]) %print the result at row 2 and col 4     
 %      plotbeast(o,'index',[2,4]) %plot the result at row 2 and col 4     
 %
+%
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
+%
 %   See also beast_irreg, beast, printbeast, plotbeast, extractbeast
 
 %Check the second argument -- the option parameter

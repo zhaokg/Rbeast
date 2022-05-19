@@ -143,6 +143,9 @@ function out = beast_irreg(y, varargin)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
 %
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
+%
 %   See also beast123, beast, printbeast, plotbeast, extractbeast
 
 

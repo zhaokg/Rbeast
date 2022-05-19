@@ -9,7 +9,10 @@ function x=printbeast(o, index)
 %   If o is the result for a 3D stacked cube, index will be a vector of 2
 %   integer to specify the row and col of the desired pixel. If o contains
 %   only one time series, index will be ignored
-
+%
+%   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+%   at <strong>zhao.1423@osu.edu</strong>.
+%
  if strcmp(o.class,'beast')
      if nargin==1
          index=1;
