@@ -69,7 +69,7 @@ Install the Matlab version of BEAST automatically to a local folder of your choi
   
   % NOTE:
   % 1. Write permission needed for your chosen path; the variable name must be 'beastPath'
-  % 2. If webread has a certificate error, uncomment and run the following line instead:
+  % 2. If webread has a certificate error, run the following line instead:
   %     eval(  webread( 'http://b.link/beast', weboptions('cert','') )  );
   ```
 The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder (e.g., `C:\Users\$user_name$\AppData\Local\Temp\Rbeast for Windows 10`) will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows, `Rbeast.mexa64` for Linux, `Rbeast.mexmaci64` for MacOS) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets (e.g., Nile.mat, and co2.mat).
@@ -102,7 +102,7 @@ Interpretation of time series data is affected by model choices. Different model
 >Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 ----
-## Selected peer-viewed studies using BEAST/Rbeast
+## Selected peer-reviewed studies using BEAST/Rbeast
 | Discipline | Publication Title |
 | --- | --- |
 |  Population Ecology | *Henderson, P. A. (2021). Southwood's Ecological Methods (5th edition). Oxford University Press., page 475-476*|
