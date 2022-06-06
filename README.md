@@ -38,7 +38,7 @@ Cran Task View: [[Time Series Analysis]](https://cran.r-project.org/web/views/Ti
 
    #### Run and test Rbeast in R
    
-<img align="left"  height="300" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
+<img align="left"  height="330" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
 
 The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.  
 
