@@ -102,10 +102,11 @@ Interpretation of time series data is affected by model choices. Different model
 >Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 ----
-## Selected peer-reviewed studies using BEAST/Rbeast
+## Selected publications using BEAST/Rbeast
 | Discipline | Publication Title |
 | --- | --- |
 |  Population Ecology | *Henderson, P. A. (2021). Southwood's Ecological Methods (5th edition). Oxford University Press., page 475-476*|
+| Social Science|*Linnell, K., Fudolig, M., Schwartz, A., Ricketts, T.H., O'Neil-Dunne, J.P., Dodds, P.S. and Danforth, C.M., 2022. Spatial changes in park visitation at the onset of the pandemic. arXiv preprint arXiv:2205.15937.*|
 | Hydrology | *Zohaib, M. and Choi, M., 2020. Satellite-based global-scale irrigation water use and its contemporary trends. Science of The Total Environment, 714, p.136719.* |
 | Energy Engineering |*Lindig, S., Theristis, M. and Moser, D., 2022. Best practices for photovoltaic performance loss rate calculations. Progress in Energy, 4(2), p.022003.*|
 |Virology|*Shen, L., Sun, M., Song, S., Hu, Q., Wang, N., Ou, G., Guo, Z., Du, J., Shao, Z., Bai, Y. and Liu, K., 2022. The impact of anti‐COVID‐19 nonpharmaceutical interventions on hand, foot, and mouth disease—A spatiotemporal perspective in Xi'an, northwestern China. Journal of medical virology.*|
