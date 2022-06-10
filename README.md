@@ -17,7 +17,7 @@
 [![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
 
-Cran Task View: [[Time Series Analysis]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling) and [[Bayesian inference]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models)
+In CRAN-Task-View: [[Time Series Analysis]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling) and [[Bayesian inference]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models)
 
 
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
@@ -25,12 +25,11 @@ Cran Task View: [[Time Series Analysis]](https://cran.r-project.org/web/views/Ti
        install.packages("Rbeast")
       ```
 
-   2. from **GitHub**: The latest versions of R package files are available here at [GitHub](https://github.com/zhaokg/Rbeast). Alternative ways to install **`Rbeast`**  are:
+   2. from **GitHub**: The latest R versions are also available here at [GitHub](https://github.com/zhaokg/Rbeast) and can be installed using
 
       ```R
         # Windows x86 or x64 (install from binary)
-        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Windows/Rbeast_0.9.4.zip" ,repos=NULL)
-         
+        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Windows/Rbeast_0.9.4.zip" ,repos=NULL)         
         # Linux/Mac (install from source)
         install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Rbeast_0.9.4.tar.gz", repos = NULL, type="source")
       ```
@@ -108,6 +107,7 @@ Interpretation of time series data is affected by model choices. Different model
 | Discipline | Publication Title |
 | --- | --- |
 |  Population Ecology | *Henderson, P. A. (2021). Southwood's Ecological Methods (5th edition). Oxford University Press., page 475-476*|
+| Finance|*Candelaria, Christopher A., Shelby M. McNeill, and Kenneth A. Shores. (2022). What is a School Finance Reform? Uncovering the ubiquity and diversity of school finance reforms using a Bayesian changepoint estimator.(EdWorkingPaper: 22-587). Retrieved from Annenberg Institute at Brown University: https://doi.org/10.26300/4vey-3w10*|
 | Social Science|*Linnell, K., Fudolig, M., Schwartz, A., Ricketts, T.H., O'Neil-Dunne, J.P., Dodds, P.S. and Danforth, C.M., 2022. Spatial changes in park visitation at the onset of the pandemic. arXiv preprint arXiv:2205.15937.*|
 | Hydrology | *Zohaib, M. and Choi, M., 2020. Satellite-based global-scale irrigation water use and its contemporary trends. Science of The Total Environment, 714, p.136719.* |
 | Energy Engineering |*Lindig, S., Theristis, M. and Moser, D., 2022. Best practices for photovoltaic performance loss rate calculations. Progress in Energy, 4(2), p.022003.*|
