@@ -182,6 +182,9 @@ function out = beast_irreg(y, varargin)
    torder_minmax   = GetValueByKey(KeyList, ValList, 'torder.minmax', [0,1]); 
    tcp_minmax      = GetValueByKey(KeyList, ValList, 'tcp.minmax',    [0,10]); 
    tseg_min        = GetValueByKey(KeyList, ValList, 'tseg.min',  []); 
+
+   ocp             = GetValueByKey(KeyList, ValList, 'ocp',  []); 
+   hasOutlierCmpnt = ~isempty(ocp);
    
    mcmc_seed       =GetValueByKey(KeyList, ValList, 'mcmc.seed',  0);         
    mcmc_samples    =GetValueByKey(KeyList, ValList, 'mcmc.samples',  8000);
@@ -213,7 +216,7 @@ function out = beast_irreg(y, varargin)
    metadata.maxMissingRate   = 0.75;
    metadata.deseasonalize    = deseasonalize;
    metadata.detrend          = detrend;
-   metadata.hasOutlierCmpnt  = 0;
+   metadata.hasOutlierCmpnt  = hasOutlierCmpnt;
 %........End of displaying MetaData ........
 
 %......Start of displaying 'prior' ......
@@ -231,7 +234,11 @@ function out = beast_irreg(y, varargin)
    prior.trendMinKnotNum  = tcp_minmax(1);
    prior.trendMaxKnotNum  = tcp_minmax(2);
    prior.trendMinSepDist  = tseg_min;
-      
+   
+   if hasOutlierCmpnt
+	prior.outlierMaxKnotNum=ocp;
+   end      
+   
    prior.precValue        = 1.500000;
    prior.precPriorType    = 'uniform';
 %......End of displaying pripr ......
