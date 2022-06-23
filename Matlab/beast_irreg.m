@@ -203,6 +203,10 @@ function out = beast_irreg(y, varargin)
    metadata = [];
    metadata.isRegularOrdered = false;
    metadata.season           = season;
+   if strcmp(metadata.season, 'svd')
+     warning("season=svd is supported only for regular time series in beast()! 'harmonic' is used instead.");
+	 metadata.season  = 'harmonic';
+   end
    metadata.time            = time;
    metadata.deltaTime        = deltat;
    if ~strcmp(metadata.season, 'none')
@@ -246,7 +250,7 @@ function out = beast_irreg(y, varargin)
 %......Start of displaying 'mcmc' ......
    mcmc = [];
    mcmc.seed                      = mcmc_seed;
-   mcmc.samples                   =  mcmc_samples;
+   mcmc.samples                   = mcmc_samples;
    mcmc.thinningFactor            = mcmc_thin;
    mcmc.burnin                    = mcmc_burnin;
    mcmc.chainNumber               = mcmc_chainNumber;
