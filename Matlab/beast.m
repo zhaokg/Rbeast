@@ -240,7 +240,7 @@ function out = beast(y, varargin)
    end
      
    prior.precValue        = 1.500000;
-   prior.precPriorType    = 'uniform';
+   prior.precPriorType    = 'componentwise';
 %......End of displaying pripr ......
 
 %......Start of displaying 'mcmc' ......
