@@ -1,6 +1,6 @@
 function rbeast_uninstall()
 %%
-codeitself = webread('https://b.link/rmbeast',weboptions('cert',''));
+codeitself = webread('https://b.link/delbeast',weboptions('cert',''));
 %%
 if ismac()
    rbeastFile='Rbeast.mexmaci64';
@@ -14,9 +14,11 @@ datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
              'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
          
 codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', ...
+           'plotbeast.m',   'printbeast.m',   'rbeast_uninstall.m' , 'rbeast_update.m', ...
            'rbeast_version.m','rbeast_path.m', 'readme.txt'};
-       
+
+
+%'installrbeast.m' is only available online and not downloaded to local paths       
 oldcodelist={'installbeast.m', 'uninstallbeast.m'};
 %%
 beastpath = rbeast_path();

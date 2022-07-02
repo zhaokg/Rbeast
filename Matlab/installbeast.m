@@ -45,9 +45,9 @@ datapath = fullfile(beastPath,'testdata');
 if ~exist(datapath,"dir")
     mkdir(datapath);
 end
-%%
-rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
 
+rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
+%%
 datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
@@ -59,7 +59,7 @@ for i=1:numel(datalist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-%https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
+% https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
 if ismac()
    rbeastFile='Rbeast.mexmaci64';
 elseif isunix() % true for linux and mac
@@ -68,11 +68,12 @@ elseif ispc()
    rbeastFile='Rbeast.mexw64';   
 end
 
-% on the safe side, get all the mx library for all file systems
+%% on the safe side, get all the mx library for all file systems
 codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', ...
+           'plotbeast.m',   'printbeast.m',   'rbeast_uninstall.m' , 'rbeast_update.m', ...
            'rbeast_version.m','rbeast_path.m', 'readme.txt'};
        
+% 'installrbeast.m' is only available online and not downloaded to local paths     
 
 for i=1:numel(codelist)
     fn    = string(codelist{i});

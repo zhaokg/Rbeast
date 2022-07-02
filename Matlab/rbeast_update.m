@@ -18,7 +18,7 @@ if(remoteVersion>localVersion)
     y = input(str,'s');
     if strcmp(y,'y')
         beastPath=rbeast_path();
-        rbeast_install;
+        eval(webread('http://b.link/beast',weboptions('cert','')));
     end
 else
     fprintf('The latest version is being used and no update is available from GitHub. \n' );
