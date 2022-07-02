@@ -24,7 +24,7 @@
    METHOD 1: Simply delete all the downloaded files manually
    METHOD 2: Automatically remove the files by running:
            
-             > uninstallbeasts
+             > rbeast_uninstall
 
  
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -32,11 +32,12 @@
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 *** Major functions available:
-    beast: handle a single regular time series
-    beast_irreg: handle a single irregular time series
-    beast123: handle one or more time seires or stacked images 
-    uninstallbeast: remove the installed files from the harddisk
-
+    beast:            handle a single regular time series
+    beast_irreg:      handle a single irregular time series
+    beast123:         handle one or more time seires or stacked images 
+    rbeast_uninstall: remove the installed files from the harddisk
+    rbeast_update:    check github and update to the latest BEAST version\n");
+fprintf("\n");
 *** Examples
     load('Nile.mat')             % Nile river annual streamflow: trend-only data
     o=beast(Nile, 'start', 1871, 'season','none') 

@@ -1,11 +1,7 @@
+function rbeast_uninstall()
 %%
-function uninstallbeast()
-
 codeitself = webread('https://b.link/rmbeast',weboptions('cert',''));
-
-datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
-             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
-
+%%
 if ismac()
    rbeastFile='Rbeast.mexmaci64';
 elseif isunix() % true for linux and mac
@@ -14,51 +10,21 @@ elseif ispc()
    rbeastFile='Rbeast.mexw64';   
 end
 
+datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
+             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
+         
 codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m' , 'readme.txt'};
+           'plotbeast.m',   'printbeast.m',   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', ...
+           'rbeast_version.m','rbeast_path.m', 'readme.txt'};
+       
+oldcodelist={'installbeast.m', 'uninstallbeast.m'};
 %%
-flist = path();
-flist = split(flist,pathsep());
-
-bpath1=[];
-bpath2=[];
-for i=1:numel(flist)
-    [f1,f2,f3]=fileparts(flist{i}); 
-    if strcmp(f2,'testdata') && ~strcmp(lower(f1),lower('F:\rpk\mat'))
-        bpath1=flist{i};
-        bpath2=f1;
-        
-        datapath=bpath1;
-        
-        isBeastFolder=1;
-        for j=1:numel(datalist)
-            fn=string(datalist{j});
-            lfile=fullfile(datapath,fn);             
-            if ~exist(lfile,'file')
-                isBeastFolder=0;
-                break;
-            end
-        end %i=1:numel(datalist)
-        
-        % found the correct folder
-        if isBeastFolder
-            break;
-        end
-    end
-end
-
-if isempty(bpath1)
-    error('Cannot find the BEAST installtion path...');
-end
-
-datapath=bpath1;
-codepath=bpath2;
-%%
-
-
-for i=1:numel(datalist)
-    fn=string(datalist{i});
-    lfile=fullfile(datapath,fn);    
+beastpath = rbeast_path();
+codepath  = beastpath;
+datapath  = fullfile(beastpath,'testdata');
+ 
+for i=1:numel(datalist) 
+    lfile=fullfile(datapath,  string(datalist{i}) );    
     if exist(lfile,'file')
         delete(lfile);
         fprintf('Removing %s\n', lfile);
@@ -69,13 +35,20 @@ end
 
 
 for i=1:numel(codelist)
-    fn=string(codelist{i});
-    lfile=fullfile(codepath,fn);    
+    lfile=fullfile(codepath, string(codelist{i}));    
     if exist(lfile,'file')
         delete(lfile);
         fprintf('Removing %s\n', lfile);
     else
         fprintf('Cann''t find %s\n', lfile);
+    end
+end
+
+for i=1:numel(oldcodelist)
+    lfile=fullfile(codepath, string(oldcodelist{i}));    
+    if exist(lfile,'file')
+        delete(lfile);
+        fprintf('Removing %s\n', lfile);
     end
 end
 %%

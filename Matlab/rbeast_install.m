@@ -48,8 +48,8 @@ end
 %%
 rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
 
-datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
-    'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
+datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
+            'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 for i=1:numel(datalist)
     fn    = string(datalist{i});
@@ -69,8 +69,10 @@ elseif ispc()
 end
 
 % on the safe side, get all the mx library for all file systems
-codelist={'Rbeast.mexw64', 'Rbeast.mexa64','Rbeast.mexmaci64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-                     'plotbeast.m',   'printbeast.m',   'installbeast.m', 'uninstallbeast.m', 'readme.txt'};
+codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
+           'plotbeast.m',   'printbeast.m',   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', ...
+           'rbeast_version.m','rbeast_path.m', 'readme.txt'};
+       
 
 for i=1:numel(codelist)
     fn    = string(codelist{i});
@@ -90,13 +92,15 @@ savepath
 fprintf('\n\n');
 fprintf('*** <strong>Rbeast</strong> was installed at %s\n', beastPath);
 fprintf("*** '%s' and '%s' are added to the search path. \n", beastPath, datapath);
-fprintf("     Make sure to add these two paths back (e.g., addpath()) after re-starting Matlab\n");
+% Not needed bcz savepath will save the searach path permanantly
+% fprintf("     Make sure to add these two paths back (e.g., addpath()) after re-starting Matlab\n");
 fprintf('\n');
 fprintf("*** <strong>Major functions available</strong>:\n");
 fprintf("    <strong>beast</strong>: handle a single regular time series\n");
 fprintf("    <strong>beast_irreg</strong>: handle a single irregular time series\n");
 fprintf("    <strong>beast123</strong>: handle one or more time seires or stacked images \n");
-fprintf("    <strong>uninstallbeast</strong>: remove the installed files from the harddisk\n");
+fprintf("    <strong>rbeast_uninstall</strong>: remove the installed files from the harddisk\n");
+fprintf("    <strong>rbeast_update</strong>: check github and update to the latest BEAST version, if any\n");
 fprintf("\n");
 fprintf("*** <strong>Examples</strong>\n");
 fprintf("    load('Nile.mat')             %% Nile river annual streamflow: trend-only data\n");
