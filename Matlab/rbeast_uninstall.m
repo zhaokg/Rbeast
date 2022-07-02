@@ -22,6 +22,9 @@ codelist={'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'bea
 oldcodelist={'installbeast.m', 'uninstallbeast.m'};
 %%
 beastpath = rbeast_path();
+if isempty(beastpath)
+    error('Cannot find the BEAST installtion path...');
+end
 codepath  = beastpath;
 datapath  = fullfile(beastpath,'testdata');
  

@@ -32,7 +32,7 @@ for i=1:numel(flist)
 end
 
 if isempty(beastpath)
-    error('Cannot find the BEAST installtion path...');
+    %warning('Cannot find the BEAST installtion path...');
 end
 %datapath=bpath1;
 %codepath=bpath2;
