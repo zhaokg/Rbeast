@@ -18,6 +18,7 @@ if(remoteVersion>localVersion)
     y = input(str,'s');
     if strcmp(y,'y')
         beastPath=rbeast_path();
+		rbeast_uninstall();
         eval(webread('http://b.link/beast',weboptions('cert','')));
     end
 else
