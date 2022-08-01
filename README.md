@@ -106,6 +106,7 @@ Interpretation of time series data is affected by model choices. Different model
 ## Selected publications using BEAST/Rbeast
 | Discipline | Publication Title |
 | --- | --- |
+| Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon. Environmental Research Letters.*|
 |   Population Ecology  | *Henderson, P. A. (2021). Southwood's Ecological Methods (5th edition). Oxford University Press., page 475-476*|
 |Political Science|*Reuning, K., Whitesell, A. and Hannah, A.L., 2022. Facebook algorithm changes may have amplified local republican parties. Research & Politics, 9(2), p.20531680221103809.*|
 | Finance|*Candelaria, Christopher A., Shelby M. McNeill, and Kenneth A. Shores. (2022). What is a School Finance Reform? Uncovering the ubiquity and diversity of school finance reforms using a Bayesian changepoint estimator.(EdWorkingPaper: 22-587). Retrieved from Annenberg Institute at Brown University: https://doi.org/10.26300/4vey-3w10*|
