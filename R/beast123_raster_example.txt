@@ -1,0 +1,53 @@
+#---An example on the use of beast123 to analyze GeoTiff images imported via the raster package-------------#
+
+  zipfile = system.file("extdata/ndvi.zip", package="Rbeast") # the path of ndvi.zip
+  tmpfld  = file.path(tempdir(), "RbeastTmpDir" )             # get a temp folder
+  dir.create(tmpfld)                                          # create a tmp folder
+  unzip(zipfile, exdir= normalizePath(tmpfld))                # unzip the images to the tmp folder
+ 
+  filelist=list.files(path=tmpfld, pattern='*.tif', full.names=TRUE)  # the tiff filenames
+  ndvi3d  = stack(filelist)                                           # create a rasterstack object 
+  inMemory(ndvi3d)            # image data not read yet
+  ndvi3d  = readAll(ndvi3d)   # To use beast, make sure all the data is read into memory
+                              # 'raster' is slow with the reading,even for our small images
+  ndvi3d  = brick(ndvi3d)     # Convert the stack to a RasterBrick object
+  inMemory(ndvi3d)            # Now, all the image data is in memory
+  dims    = dim(ndvi3d)       # WARNING: the 'raster' package reports a dim of 12 x 9 x 437 
+                              #corresponding to row x col x band/time. But 'raster' seems to 
+                              # use a row-major storage mode. So internally, the RasterBrick image
+                              # data is 9 x 12 x 437 in term of R's column-major storage mode:
+                              #  beast also use the col-major mode.
+  Y        = values(ndvi3d)
+  dim(Y)   = c(9, 12, 437)    # Assign the correct column-major dim
+  datestr  = names(ndvi3d)    # the time strings
+
+  # Now the image data is read into Y (a 9x12x437 array); then set up some BEAST parameters
+ 
+  metadata                  = list()        
+  metadata$isRegularOrdered = FALSE    # IRREGULAR input
+  metadata$whichDimIsTime   = 3        # 437 is the ts length, so set it to '3' here.
+  metadata$time$datestr     = datestr  # date info is contained in the file names
+  metadata$time$strfmt      = 'LT05_018032_20080311.yyyy-mm-dd'
+  metadata$deltaTime        = 1/12     # Aggregate Y into a monthly ts: 1/12 year
+  metadata$period           = 1.0      # The period is 1 year: deltaTime*freq=1/12*12=1.0
+
+  extra = list()
+  extra$numThreadsPerCPU    = 3   # Each cpu core will spawn 3 threads
+  extra$numParThreads       = 30  # A total of 30 threads used, each processing individual
+                                  #  time series. For a computer with 100 cores, only the 
+                                  # first 30/3=10 cores will be used; if the computer has 5 
+                                  # cores only, then each core will spawn 30/5=6 threads 
+                                  # instead of numThreadsPerCPU=3. 
+
+  o=beast123(Y, metadata=metadata,extra=extra) # Default values used for missing parameters 
+
+  #WARNING: bcz the input ts is from a RasterBrick object that has a row-major storage mode, 
+  #the beast output will be of size 9 x 12 for each band/time. That is, the row and col are
+  #reversed, compared to the raster package. This is a glitch only with the raster package.
+  #The beast output dim is consistent with the dim of the input Y.
+ 
+  image(o$trend$ncp)                       # number of changepoints over space
+  grid::grid.raster( o$trend$ncpPr[,,1:3]) # an pseduo-RGB image composed from the prob of 
+                                           # having 0, 1, and 2 trend changepoints.
+  plot(o,c(4,5))
+  unlink(tmpfld, recursive = TRUE)         # Delete the tmp folder and extracted tif files 
