@@ -1,6 +1,6 @@
 #---An example on the use of beast123 to analyze GeoTiff images imported via the raster package-------------#
-# Handle 3D stacked images of irregular and unordered time-series: imagestack is a 3D 
-# array of size 12x9x1066, each pixel being a time series of length 1066
+# Handle 3D stacked images of irregular time-series : 'ndvi.zip' is  a zip file of 
+# 437 NDIV tiff image files, each having a dim of 12 x 9.
 
   zipfile = system.file("extdata/ndvi.zip", package="Rbeast") # the path of ndvi.zip
   tmpfld  = file.path(tempdir(), "RbeastTmpDir" )             # get a temp folder
