@@ -29,9 +29,9 @@ In CRAN-Task-View: [[Time Series Analysis]](https://cran.r-project.org/web/views
 
       ```R
         # Windows x86 or x64 (install from binary)
-        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Windows/Rbeast_0.9.4.zip" ,repos=NULL)         
+        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Windows/Rbeast_0.9.5.zip" ,repos=NULL)         
         # Linux/Mac (install from source)
-        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Rbeast_0.9.4.tar.gz", repos = NULL, type="source")
+        install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Rbeast_0.9.5.tar.gz", repos = NULL, type="source")
       ```
 
 
