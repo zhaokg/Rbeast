@@ -106,6 +106,7 @@ Interpretation of time series data is affected by model choices. Different model
 ## Selected publications using BEAST/Rbeast
 | Discipline | Publication Title |
 | --- | --- |
+| Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement. Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
 | Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon. Environmental Research Letters.*|
 |   Population Ecology  | *Henderson, P. A. (2021). Southwood's Ecological Methods (5th edition). Oxford University Press., page 475-476*|
 |Political Science|*Reuning, K., Whitesell, A. and Hannah, A.L., 2022. Facebook algorithm changes may have amplified local republican parties. Research & Politics, 9(2), p.20531680221103809.*|
