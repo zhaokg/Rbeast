@@ -15,9 +15,9 @@
 ## Installation for R
 
 [![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
+[![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)  
 
-In CRAN-Task-View: [[Time Series Analysis]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling) and [[Bayesian inference]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models)
+In CRAN-Task-View: [[**Time Series Analysis**]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling), [[**Bayesian inference**]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models), and [[**Environmetrics**]](https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series)
 
 
    1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
