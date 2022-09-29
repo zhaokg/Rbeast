@@ -8,23 +8,21 @@
 #include "beastv2_header.h"
 
  
-static int TT_04(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST * ptr) {
+static int TT_03(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST * ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
 	
-	I32  Npad = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32  Nseg = seg->R2 - seg->R1 + 1L;
-	
-	//the trend order starts from 0: 0, 1, 2, ..
-	I32  Kterms = (seg->ORDER2 - seg->ORDER1) + 1;
+	I32    Npad   = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32    Nseg   = seg->R2 - seg->R1 + 1L;		
+	I32    Kterms = (seg->ORDER2 - seg->ORDER1) + 1; //the trend order starts from 0: 0, 1, 2, ..	
+	F32PTR TERMS  = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
+	F32    scale  = TREND.INV_SQR[(Nseg)-1];
 
-	r_ippsSet_32f(0, X, Kterms*Npad);	
-	F32PTR TERMS = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
-	F32    scale = TREND.INV_SQR[(Nseg)-1];
-
-	I32  k = 0;
+	r_ippsSet_32f(0, X, Kterms * Npad);
+		
 	//...Calcuate new terms........		
-	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++)
-	{
+	I32  k = 0;
+	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++) {
+
 		if (order == 0) {
 			//If there is only a global trend (.tNum=1) & it'sY a consant term (j=1), do not normalize it.
 			//if (numOfSeg != 1) f32_normalize_inplace(Xt, N);
@@ -87,28 +85,29 @@ static int TT_04(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST * ptr) {
 		*/
 	#undef TREND
 }
-static int TT_1(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int TT_1( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
 	
-	I32  Npad = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32  Nseg = seg->R2 - seg->R1 + 1L;
-	
-	//the trend order starts from 0: 0, 1, 2, ..
-	I32  Kterms = (seg->ORDER2 - seg->ORDER1) + 1;
+	I32    Npad   = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32    Nseg   = seg->R2 - seg->R1 + 1L;		
+	I32    Kterms = (seg->ORDER2 - seg->ORDER1) + 1; //the trend order starts from 0: 0, 1, 2, ..	
+	F32PTR TERMS  = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
+	F32    scale  = TREND.INV_SQR[(Nseg)-1];
 
-	r_ippsSet_32f(0, X, Kterms*Npad);	
-	F32PTR TERMS = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
-	F32    scale = TREND.INV_SQR[(Nseg)-1];
-
-	I32  k = 0;
+	r_ippsSet_32f(0, X, Kterms * Npad);
+		
 	//...Calcuate new terms........		
-	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++) 	{
+	I32  k = 0;
+	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++) {
 		r_cblas_scopy(Nseg, TERMS, 1, X + seg->R1 - 1, 1);
 		// if there is only a global trend (.tNum=1) and it is the consant term (j=1), do not normalize it.
 		if (order != 0) {
+			/*
 			F32 sum;
 			r_ippsSum_32f(X + seg->R1 - 1, Nseg, &sum, ippAlgHintAccurate);
-			//r_ippsSubC_32f_I(sum / Nseg, X + r1 - 1, Nseg); //centering the data vector
+			r_ippsSubC_32f_I(sum / Nseg, X + seg->R1 - 1, Nseg); //centering the data vector
+			*/
+			r_ippsSubC_32f_I( *(X + seg->R1 - 1), X + seg->R1 - 1, Nseg); //put the start to zero
 		}
 		k++;
 		X     += Npad;
@@ -118,21 +117,19 @@ static int TT_1(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef TREND
 }
-static int TT_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int TT_2( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
 	
-	I32  Npad = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32  Nseg = seg->R2 - seg->R1 + 1L;
-	
-	//the trend order starts from 0: 0, 1, 2, ..
-	I32  Kterms = (seg->ORDER2 - seg->ORDER1) + 1;
+	I32    Npad   = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32    Nseg   = seg->R2 - seg->R1 + 1L;		
+	I32    Kterms = (seg->ORDER2 - seg->ORDER1) + 1; //the trend order starts from 0: 0, 1, 2, ..	
+	F32PTR TERMS  = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
+	F32    scale  = TREND.INV_SQR[(Nseg)-1];
 
-	r_ippsSet_32f(0, X, Kterms*Npad);	
-	F32PTR TERMS = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
-	F32    scale = TREND.INV_SQR[(Nseg)-1];
-
-	I32  k = 0;
+	r_ippsSet_32f(0, X, Kterms * Npad);
+		
 	//...Calcuate new terms........		
+	I32  k = 0;
 	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++) {
  		r_cblas_scopy(Nseg, TERMS, 1, X + seg->R1 - 1, 1);
 		// if there is only a global trend (.tNum=1) and it is the consant term (j=1), do not normalize it.
@@ -146,35 +143,8 @@ static int TT_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef TREND
 }
-static int TT_3(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
-	#define TREND  (*((TREND_CONST*)ptr))	
-	
-	I32  Npad = ((N + 7L) / 8L) * 8L;  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32  Nseg = seg->R2 - seg->R1 + 1L;
-	
-	//the trend order starts from 0: 0, 1, 2, ..
-	I32  Kterms = (seg->ORDER2 - seg->ORDER1) + 1;
 
-	r_ippsSet_32f(0, X, Kterms*Npad);	
-	F32PTR TERMS = TREND.TERMS + seg->ORDER1 * N + seg->R1 - 1L;
-	F32    scale = TREND.INV_SQR[(Nseg)-1];
-
-	I32  k = 0;
-	//...Calcuate new terms........		
-	for (I32 order = seg->ORDER1; order <= seg->ORDER2; ++order) {
- 		r_cblas_scopy(Nseg, TERMS, 1, X + seg->R1 - 1, 1);
-		// if there is only a global trend (.tNum=1) and it is the consant term (j=1), do not normalize it.
-		if ( Nseg != N || order != 0) f32_normalize_inplace(X, N);
-
- 		k++;
-		X     += Npad;
-		TERMS += N;
-	} //for (rI32 j = 1; j <= ORDER; j++)
-
-	return k;
-#undef TREND
-}
-static int DD_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int DD_0( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	// seg->ORDER1 and ORDER2 are not used
 	#define dummy (*((DUMMY_CONST*)ptr))
@@ -210,7 +180,7 @@ static int DD_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return Kterms;
 #undef dummy
 }
-static int VV_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int VV_0( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 #define SVD  (*((SVD_CONST*)ptr))
 
@@ -244,7 +214,7 @@ static int VV_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef SEASON
 }
-static int SS_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int SS_0( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	#define SEASON  (*((SEASON_CONST*)ptr))
 
@@ -261,8 +231,7 @@ static int SS_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	// that season_csum[r2]-season_csum[r1-1] will be working
 
 	I32    k = 0;
-	for (I32 j = seg->ORDER1; j <= seg->ORDER2; j++)
-	{
+	for (I32 j = seg->ORDER1; j <= seg->ORDER2; j++) 	{
 		//memset(Xt, 0, (r1 - 1)*sizeof(F32));
 		//f32_normalize_inplace(Xt + r1 - 1, segLength );r_cblas_sscal(segLength , scale, Xt + r1 - 1, 1);
 		//memset(Xt + (r2 + 1) - 1, 0, (N - r2)*sizeof(F32));
@@ -295,7 +264,7 @@ static int SS_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef SEASON
 }
-static int SS_1(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+static int SS_1( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	#define SEASON  (*((SEASON_CONST*)ptr))
 
@@ -326,6 +295,10 @@ static int SS_1(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef SEASON
 }
+
+/*
+// Get rid of this basis type because it is almost equivalent to SS_0 and also because
+// it makes less sense to introduce an offset shift to the sin/cos terms
 static int SS_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	#define SEASON  (*((SEASON_CONST*)ptr))
@@ -343,13 +316,9 @@ static int SS_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	// that season_csum[r2]-season_csum[r1-1] will be working
 
 	I32    k = 0;
-	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++)
-	{
-  
-		r_cblas_scopy(Nseg, TERM, 1, X + seg->R1 - 1, 1);
-		f32_normalize_inplace(X, N);
-		r_cblas_scopy(Nseg, TERM + N, 1, X + Npad + seg->R1 - 1, 1);
-		f32_normalize_inplace(X+Npad, N);
+	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++) {  
+		r_cblas_scopy(Nseg, TERM,     1, X + seg->R1 - 1,        1);  		f32_normalize_inplace(X, N);
+		r_cblas_scopy(Nseg, TERM + N, 1, X + Npad + seg->R1 - 1, 1);		f32_normalize_inplace(X+Npad, N);
 		k    += 2;
 		TERM += N * 2;
 		X    += Npad * 2;
@@ -359,62 +328,42 @@ static int SS_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 	return k;
 #undef SEASON
 }
-static int SS_3(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
+ */
 
-	#define SEASON  (*((SEASON_CONST*)ptr))
-
-	//...Calcuate new terms........	
-	I32     Npad = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32     Nseg = seg->R2 - seg->R1 + 1L;
-	//the season order starts from 1: sin/cos
-	I32 kTerms = ((seg->ORDER2 - seg->ORDER1) + 1) * 2;
-	r_ippsSet_32f(0, X, kTerms * Npad);
-
-	F32PTR TERM        = SEASON.TERMS    + N * (seg->ORDER1-1) * 2 +  seg->R1 - 1;
-    F32PTR season_csum = SEASON.SQR_CSUM + 1L + (N + 1) * (seg->ORDER1-1)*2;
-	// !L is needed bcz each col is  padded with an exta zero at the beginning so 
-	// that season_csum[r2]-season_csum[r1-1] will be working
-
-	I32    k = 0;
-	for (I32 order = seg->ORDER1; order <= seg->ORDER2; order++)
-	{
-  
-		r_cblas_scopy(Nseg, TERM, 1, X + seg->R1 - 1, 1);
-		f32_normalize_inplace(X, N);
-		r_cblas_scopy(Nseg, TERM + N, 1, X + Npad + seg->R1 - 1, 1);
-		f32_normalize_inplace(X+Npad, N);
-		k    += 2;
-		TERM += N * 2;
-		X    += Npad * 2;
-		season_csum += (N + 1L) * 2;
-	}
-
-	return k;
-#undef SEASON
-}
 static int OO_0(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* bConst) {
-	I32 Npad   = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32 kTerms = 1;
-
-	F32 sqrt_n      = bConst->outlier.SQRTN;
+	I32 Npad        = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32 Kterms      = 1L; 
 	I32 knotOutlier = seg->outlierKnot;
-	r_ippsSet_32f(0, X, kTerms * N);	
-	X[knotOutlier - 1] = sqrt_n;
+
+	r_ippsSet_32f(0, X, Kterms * N);	
+	X[knotOutlier - 1] =bConst->outlier.SQRTN;;
 	return 1;
 }
 static int OO_1(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* bConst) {
+	I32 Npad        = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32 Kterms      = 1L;
+	I32 knotOutlier = seg->outlierKnot;
 
-	I32 Npad       = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
-	I32 kTerms     = 1;
+	r_ippsSet_32f(0, X, Kterms * N);
+	X[knotOutlier - 1] = 1.0;
+	return 1;
+}
+/*
+//Get rid of this one becaust it introduces a global shift to the  outlier term
+static int OO_2(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* bConst) {
+
+	I32 Npad   = ((N + 7L) / 8L) * 8L; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32 Kterms = 1;
 
 	F32 sqrt_n1     = bConst->outlier.SQRTN_1;
 	I32 knotOutlier = seg->outlierKnot;
 
-	r_ippsSet_32f(-1/ sqrt_n1, X, kTerms * N);	
+	r_ippsSet_32f(-1/ sqrt_n1, X, Kterms * N);
 	X[knotOutlier-1] = sqrt_n1; 
  
 	return 1;
 }
+*/
 pfnGenTerms Get_GenTerms(I08 id, BEAST2_PRIOR_PTR prior) {
 	switch (id) {
 	case DUMMYID:
@@ -424,14 +373,13 @@ pfnGenTerms Get_GenTerms(I08 id, BEAST2_PRIOR_PTR prior) {
 	case SEASONID:
 		if      (prior->seasonBasisFuncType==0)		    return SS_0;
 		else if (prior->seasonBasisFuncType == 1) 		return SS_1;
-		else if (prior->seasonBasisFuncType == 2)		return SS_2;
-		else if (prior->seasonBasisFuncType == 3)		return SS_3;
+		//else if (prior->seasonBasisFuncType == 2)		return SS_2; 
 	case TRENDID:  
-		if		(prior->trendBasisFuncType == 0)		return TT_04;
+		if		(prior->trendBasisFuncType == 0)		return TT_03;
 		else if (prior->trendBasisFuncType == 1)		return TT_1;
 		else if (prior->trendBasisFuncType == 2)		return TT_2;
-		else if (prior->trendBasisFuncType == 3)		return TT_3;
-		if		(prior->trendBasisFuncType == 4)		return TT_04;
+		else if (prior->trendBasisFuncType == 3)		return TT_03;
+		
 	case OUTLIERID: 
 		if		(prior->outlierBasisFuncType == 0)		return OO_0;
 		else if (prior->outlierBasisFuncType == 1)		return OO_1;			

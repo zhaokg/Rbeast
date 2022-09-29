@@ -586,23 +586,25 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 
 		F32 cp[200];
 		F32 cpPr[200];
+		if (GetData(GetField(cmpnt, "cp"))) {
+			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-		Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
-		memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
-		oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
-		memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
+			Nvec = min(200L, Nvec);
 
-		Nvec = min(200L, Nvec);
-
-		int ncp_all=0;
-		for (int i = 0; i < Nvec; i++) {
-			ncp_all = ncp_all + (cp[i] == cp[i]);
+			int ncp_all=0;
+			for (int i = 0; i < Nvec; i++) {
+				ncp_all = ncp_all + (cp[i] == cp[i]);
+			}
+			for (int i = 0; i < ncp_all; i++) {
+				cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
+			}	 
 		}
-		for (int i = 0; i < ncp_all; i++) {
-			cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
-		}	 
+
 		cat(".-------------------------------------------------------------------.\n\n");
 			
 	}
@@ -672,22 +674,24 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		F32 cp[200];
 		F32 cpPr[200];
 
-		Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
-		memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
+		if (GetData(GetField(cmpnt, "cp"))) {
+			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-		oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
-		memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
-		Nvec = min(200L, Nvec);
+			Nvec = min(200L, Nvec);
 
-		int ncp_all=0;
-		for (int i = 0; i < Nvec; i++) {
-			ncp_all = ncp_all + (cp[i] == cp[i]);
+			int ncp_all=0;
+			for (int i = 0; i < Nvec; i++) {
+				ncp_all = ncp_all + (cp[i] == cp[i]);
+			}
+			for (int i = 0; i < ncp_all; i++) {
+				cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
+			}	
 		}
-		for (int i = 0; i < ncp_all; i++) {
-			cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
-		}	 
 		cat(".-------------------------------------------------------------------.\n\n");
 			
 	}
@@ -757,22 +761,24 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		F32 cp[200];
 		F32 cpPr[200];
 
-		Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
-		memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
+		if (GetData(GetField(cmpnt, "cp"))) {
+			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-		oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
-		memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
-		Nvec = min(200L, Nvec);
+			Nvec = min(200L, Nvec);
 
-		int ncp_all=0;
-		for (int i = 0; i < Nvec; i++) {
-			ncp_all = ncp_all + (cp[i] == cp[i]);
+			int ncp_all=0;
+			for (int i = 0; i < Nvec; i++) {
+				ncp_all = ncp_all + (cp[i] == cp[i]);
+			}
+			for (int i = 0; i < ncp_all; i++) {
+				cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
+			}	
 		}
-		for (int i = 0; i < ncp_all; i++) {
-			cat("|%-18d|%-27.6f|%-20.5f|\n", i + 1, cp[i], cpPr[i]);
-		}	 
 		cat(".-------------------------------------------------------------------.\n\n");
 
 	}

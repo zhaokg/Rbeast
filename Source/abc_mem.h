@@ -4,6 +4,12 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
 
+typedef struct {
+	void** addr;
+	int    size;
+	int    align;
+} MemNode;
+
 typedef struct MemPointers MemPointers;
 struct MemPointers
 {
@@ -20,6 +26,7 @@ struct MemPointers
 	void       (*init)(     MemPointers *  self);
 	VOID_PTR   (*alloc)(    MemPointers *  self, I64 size, U08 alignment);
 	VOID_PTR   (*alloc0)(   MemPointers *  self, I64 size, U08 alignment);
+	void       (*alloclist) (MemPointers* self, MemNode* list, int aggregatedAllocation, VOIDPTR* nodesRemove);
 	void       (*free_all)( MemPointers *  self);
 	I32        (*verify_header)(MemPointers* self);
 };

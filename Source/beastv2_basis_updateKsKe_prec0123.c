@@ -4,8 +4,8 @@
 #include "beastv2_header.h"
  
 
-static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
-{
+static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis) {
+
 	/***************************************************************
 	// Determine the start and end indices for each seasonal segment
 	***************************************************************/
@@ -48,7 +48,7 @@ static void VV_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
 	I16PTR     KE    = basis->ke;
 
 	int NUM_OF_SEG = basis->nKnot + 1L; // Number of seasonal segment		
-	int kCounter = 1L;                  // A counter for basis terms
+	int kCounter   = 1L;                  // A counter for basis terms
 	for (I32 i = 1; i <= NUM_OF_SEG; i++) {
 		//The start index is k
 		*KS++ = kCounter;

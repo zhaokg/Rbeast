@@ -1,14 +1,12 @@
-#include <string.h>
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#include "beastv2_header.h"
-
-
- 
-
+#include <string.h>
 #include "abc_vec.h"   // for i08_sum_binvec only
 #include "abc_blas_lapack_lib.h" //r_ippsSet_8u
+
+
+#include "beastv2_header.h"
 
 static int DSVT(U08PTR good, I32 N, TKNOT_PTR KNOT, I64 nKnot, KNOT2BINVEC * info)
 {
@@ -32,9 +30,8 @@ static int OO(U08PTR good, I32 N,TKNOT_PTR KNOT, I64 nKnot, KNOT2BINVEC* info)
 
 	/////////////////////////////////////////
 	memset(good, 1, N);
-	for (int i = 0; i < nMissing; i++) {
-		I32 idx       = rowsMissing[i];
-		good[idx - 1] = 0;
+	for (int i = 0; i < nMissing; i++) { 
+		good[rowsMissing[i]] = 0;  //rowMissing is zero-based
 	}
 	for (int i = 0; i < nKnot; i++) {
 		I32 idx       = KNOT[i];

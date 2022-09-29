@@ -637,7 +637,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 			 #else
 				pthread_create(&thread_id[i], &attr, beast2_main_corev4_mthrd, (void*)NULL);
 			 #endif
-				r_printf("Parallel computing: thread#%-d generated ... \n", i+1);
+				r_printf("Parallel computing: thread#%-02d generated ... \n", i+1);
 			}
 			r_printf("Rbeast: Waiting on %d threads...\n", NUM_THREADS);
 			pthread_attr_destroy(&attr);
@@ -671,17 +671,18 @@ void * mainFunction(void *prhs[], int nrhs) {
 					 
 				}
 
-				if (IDE_USER_INTERRUPT == 0) printProgress2(1.0, 0, option.extra.consoleWidth, BUF, 0);
-				r_printf("\n");
+				if (IDE_USER_INTERRUPT == 0) printProgress2(1.0, 0, option.extra.consoleWidth, BUF, 0);				
 				free(BUF);
 			}  
 
 			// Wait for all threads to complete
+			r_printf("\nFinalizing ... \n");
 			for (I32 i = 0; i < NUM_THREADS; i++) {
 				//pthread_join(thread_id[i], NULL);
 				I64 ret=0;
 				pthread_join(thread_id[i], &ret);
 				//r_printf("\nstack size %d.\n", ret/1024/1024);
+				r_printf("Rbeast: Thread #%-02d finished ... \n", i);
 			}
 			if (IDE_USER_INTERRUPT==0)
 				r_printf("\nRbeast: Waited on %d threads. Done.\n", NUM_THREADS);

@@ -7,13 +7,11 @@
 #include "abc_mat.h" //f32_transpose_inplace
 
 
-
-static void PrepareCiInfo(CI_PARAM *cinfo, U32 nSamples, U32 N_rowLength, MemPointers * MEM)
+static void PrepareCiInfo(CI_PARAM *cinfo, U32 nSamples,  MemPointers * MEM)
 {
  	    U32 stripWidth;
 		U32 nStrips;
  
-
 		stripWidth     = (U32)ceil(sqrt((F64)nSamples));
 		nStrips        = (U32)floor( nSamples / stripWidth);
 
@@ -29,16 +27,19 @@ static void PrepareCiInfo(CI_PARAM *cinfo, U32 nSamples, U32 N_rowLength, MemPoi
 		cinfo->nSamples = nSamples;
 		cinfo->nStrips  = nStrips;
 
-		//N_rowlength is not used in this function and is passed to be assinged to to cinfo.N only.
-		cinfo->N        = N_rowLength;
 }
-static void AllocateMemForCISorting(CI_PARAM * cinfo, CI_RESULT *CI, int NUM_VARS,  MemPointers* MEM)
+static void AllocateMemForCISorting(CI_PARAM * cinfo, CI_RESULT *CI, int Nrowlength, int NUM_VARS,  MemPointers* MEM)
 {
-	U32  N         = cinfo->N;
+	
 	U32  nSamples  = cinfo->nSamples;
 	U32  nStrips   = cinfo->nStrips;
-
+		
 	for (I32 i = 0; i < NUM_VARS; i++) {
+		
+		U32  N = Nrowlength;
+
+		CI[i].N = N;
+
 		CI[i].CI95              = MyALLOC((*MEM), N*nSamples, F32, 0);
 		CI[i].minIdxPerStrip    = MyALLOC((*MEM), N*nStrips, int, 0);
 		CI[i].minValPerStrip    = MyALLOC((*MEM), N*nStrips, F32, 0);
@@ -74,21 +75,25 @@ void ConstructCIStruct(F32 alpahLevel, I32 MCMC_SAMPLES,  I32 N, I32 numCIVars, 
 		}
 
 		// Allocate the memory and calculte stripNumRows and   // stripOffets	   
-		PrepareCiInfo(ciInfo, nSamples, N, MEM);
+		PrepareCiInfo(ciInfo, nSamples, MEM);
 
 		// Allocate the memory for saving CI samples
-		AllocateMemForCISorting(ciInfo, CI, numCIVars, MEM); 
+		AllocateMemForCISorting(ciInfo, CI, N, numCIVars, MEM); 
 
  
 }
 
-static void CalcInitialCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci) {
 
-	I64     N = info->N;
-	I64     nStrips = info->nStrips;
+
+
+static void CalcInitialCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci) {
+// When enough samples are inserted, cacluate the inital min and max; this is 
+// the first time that CI are computed
+	
+	I64     nStrips  = info->nStrips;
 	I64     nSamples = info->nSamples;
 
-	F32PTR CI95 = ci->CI95;
+	F32PTR CI95           = ci->CI95;
 	F32PTR minValPerStrip = ci->minValPerStrip;
 	I32PTR minIdxPerStrip = ci->minIdxPerStrip;
 
@@ -97,6 +102,7 @@ static void CalcInitialCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci) {
 	F32PTR maxValPerStrip = ci->maxValPerStrip;
 	I32PTR maxIdxPerStrip = ci->maxIdxPerStrip;
 
+	I64     N             = ci->N;
 	for (I64 i = 0; i < N; i++)
 	{ //ippsMaxIndx_32f(const Ipp64f* pSrc, int len, Ipp64f* pMax, int* pIndx);
 
@@ -121,27 +127,32 @@ static void CalcInitialCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci) {
 	}
 }
 
-void InsertInitialRows(CI_PARAM* _restrict info, CI_RESULT* _restrict ci, I32 subSampleIndex)
-{
-	
-	I32 N      = info->N;
-	I64 offset = (subSampleIndex - 1) * N;
-	//At this point, MEMBUF1 stores the rate-of-change signal 
+ 
 
-	F32PTR  newDataRow = ci->newDataRow	;
-	r_cblas_scopy(N, newDataRow, 1, ci->CI95 + offset, 1); //season
-
-	I32 nSamples = info->nSamples;
-	if (subSampleIndex == nSamples) {
-		r_mkl_simatcopy('C', 'T', N, nSamples, 1, ci->CI95, N, nSamples);
-		//make a copy of cred_upper into "cred_lower"
-		r_cblas_scopy(N*nSamples, ci->CI95, 1L, ci->CI05, 1L);
-		CalcInitialCI(info, ci);
-	}//(sample == numCISample)
-}
 void InsertNewRowToUpdateCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci)
 {
+	I64     N          = ci->N;
 	F32PTR  newDataRow = ci->newDataRow;
+
+	if (ci->samplesInserted < info->nSamples) {
+		//Insert the inital nSamples rows 
+		I64 offset = ci->samplesInserted * N;
+		r_cblas_scopy(N, newDataRow, 1, ci->CI95 + offset, 1); 
+		ci->samplesInserted++;
+
+		I32 nSamples = info->nSamples;
+		if (ci->samplesInserted == nSamples) {
+			r_mkl_simatcopy('C', 'T', N, nSamples, 1, ci->CI95, N, nSamples);
+			//make a copy of cred_upper into "cred_lower"
+			r_cblas_scopy(N * nSamples, ci->CI95, 1L, ci->CI05, 1L);
+			CalcInitialCI(info, ci);
+		}
+
+		return;
+	}
+
+	// No need to increate samplesInserted further because it won't be needed for the update code below
+	// ci->samplesInserted++;
 
 	F32PTR CI95           = ci->CI95;
 	I32PTR minIdxPerStrip = ci->minIdxPerStrip;
@@ -151,7 +162,7 @@ void InsertNewRowToUpdateCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci)
 	I32PTR maxIdxPerStrip = ci->maxIdxPerStrip;
 	F32PTR maxValPerStrip = ci->maxValPerStrip;
 
-	I64     N       = info->N;
+	
 	I64     nStrips = info->nStrips;
 
 	for (I64 i = 0; i < N; i++) {

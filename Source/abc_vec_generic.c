@@ -558,6 +558,26 @@ void gen_f32_seq(F32PTR p, F32 x0, F32 dX, int N)
 #undef UNROLL_NUMBER
 }
 
+void gen_i32_seq(I32PTR p, I32 x0, I32 dX, int N)
+{
+#define UNROLL_NUMBER  4 
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	int i = 0;
+	const I32 dX2 = dX + dX;
+	const I32 dX3 = dX2 + dX;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		p[i]     = x0;
+		p[i + 1] = x0 + dX;
+		p[i + 2] = x0 + dX2;
+		p[i + 3] = x0 + dX3;
+		x0 = x0 + dX3 + dX;
+	}
+	for (; i < N; ++i) {
+		p[i] = x0;
+		x0 += dX;
+	}
+#undef UNROLL_NUMBER
+}
 void gen_f32_to_f64_inplace(F32PTR data32, int N) {
 
 	#define UNROLL_NUMBER  4 
@@ -654,14 +674,11 @@ I32 gen_i08_sum_binvec(U08PTR binvec, I32 N) {
 	I32	  i   = 0;
 	U08PTR binvec_old = binvec;
 	//|8bytees|8bytees|8bytees|8bytees|
-	for (; i < N - (32-1); i+=32) {
-		I64 sum1 = *((I64PTR)binvec)   + *((I64PTR)binvec + 1);
-		I64 sum2 = *((I64PTR)binvec+2) + *((I64PTR)binvec + 3);
-		I64 sum  = sum1 + sum2;
+	for (; i < N - (32-1); i+=32) {		
+		I64 sum  = *((I64PTR)binvec) + *((I64PTR)binvec + 1) + *((I64PTR)binvec + 2) + *((I64PTR)binvec + 3);
 		*((I32PTR)&sum) = *((I32PTR)&sum) + *((I32PTR)&sum + 1);
 		*((I16PTR)&sum) = *((I16PTR)&sum) + *((I16PTR)&sum + 1);
 		*((I08PTR)&sum) = *((I08PTR)&sum) + *((I08PTR)&sum + 1);
-
 		SUM = SUM + *((I08PTR)&sum);
 		binvec += 32;
 	}
@@ -672,8 +689,7 @@ I32 gen_i08_sum_binvec(U08PTR binvec, I32 N) {
 		*((I08PTR)&sum) = *((I08PTR)&sum) + *((I08PTR)&sum + 1);
 		SUM = SUM + *((I08PTR)&sum);
 		binvec			+= 8;
-	}
- 
+	} 
 	for (; i < N; ++i ) { 
 		SUM = SUM + binvec_old[i];
 	}
@@ -933,6 +949,21 @@ void gen_f32_gemm_XYt2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int l
     }
 }
 
+static  void gen_f32_axpy_inplace(const F32 c, const F32PTR x, F32PTR y, const int N) {
+#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	I32 i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		y[i] += x[i] * c;
+		y[i + 1] += x[i + 1] * c;
+		y[i + 2] += x[i + 2] * c;
+		y[i + 3] += x[i + 3] * c;
+	}
+	for (; i < N; ++i)
+		y[i] += x[i] * c;
+
+}
+
 static INLINE void _f32_axpy_inplace(const F32 c, const F32PTR x, F32PTR y, const int N) {
 #define UNROLL_NUMBER  4
 	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
@@ -1001,7 +1032,7 @@ I32 gen_f32_findindex(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag flag)
     switch (flag) {
         case CMP_LT:
             for (; i < regularPart; i += UNROLL_NUMBER) {
-                int keep1 = x[i] <= value; indices[cnt] = i;        cnt += keep1;
+                int keep1 = x[i] <= value;    indices[cnt] = i;     cnt += keep1;
                 int keep2 = x[i + 1] < value; indices[cnt] = i + 1; cnt += keep2;
                 int keep3 = x[i + 2] < value; indices[cnt] = i + 2; cnt += keep3;
                 int keep4 = x[i + 3] < value; indices[cnt] = i + 3; cnt += keep4;
@@ -1151,6 +1182,69 @@ void gen_f32_scale_inplace(const F32 gain, const F32 offset, const F32PTR x, con
 	}
 
 }
+
+
+void gen_f32_hinge_pos(const F32PTR X, const F32PTR Y, const F32 knot, const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+    int  i   = 0;
+    for (; i < regularPart; i += UNROLL_NUMBER) {
+		Y[i]   = X[i]   >= knot ? X[i]-knot:0;
+		Y[i+1] = X[i+1] >= knot ? X[i+1] - knot : 0;
+		Y[i+2] = X[i+2] >= knot ? X[i+2] - knot : 0;
+		Y[i+3] = X[i+3] >= knot ? X[i+3] - knot : 0;
+    }   
+	for (; i < N; ++i) {
+		Y[i] = X[i] >= knot ? X[i] - knot : 0;
+	}
+}
+
+void gen_f32_hinge_neg(const F32PTR X, const F32PTR Y, const F32 knot, const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+    int  i   = 0;
+    for (; i < regularPart; i += UNROLL_NUMBER) {
+		Y[i]   = X[i]   <= knot ? knot - X[i]   : 0;
+		Y[i+1] = X[i+1] <= knot ? knot - X[i+1] : 0;
+		Y[i+2] = X[i+2] <= knot ? knot - X[i+2] : 0;
+		Y[i+3] = X[i+3] <= knot ? knot - X[i+3] : 0;
+    }   
+	for (; i < N; ++i) {
+		Y[i] = X[i] <= knot ? knot - X[i] : 0;
+	}
+}
+
+void gen_f32_step_pos(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+    int  i   = 0;
+    for (; i < regularPart; i += UNROLL_NUMBER) {
+		Z[i]   = X[i]   >= knot ? Y[i] : 0;
+		Z[i+1] = X[i+1] >= knot ? Y[i+1] : 0;
+		Z[i+2] = X[i+2] >= knot ? Y[i+2] : 0;
+		Z[i+3] = X[i+3] >= knot ? Y[i+3] : 0;
+    }   
+	for (; i < N; ++i) {
+		Z[i] = X[i] >= knot ? Y[i] : 0;
+	}
+}
+
+void gen_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z,const F32 knot, const int N) {
+#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+	int  i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		Z[i]     = X[i]     >= knot ? 0 : Y[i];
+		Z[i + 1] = X[i + 1] >= knot ? 0 : Y[i+1];
+		Z[i + 2] = X[i + 2] >= knot ? 0 : Y[i+2];
+		Z[i + 3] = X[i + 3] >= knot ? 0 : Y[i+3];
+	}
+	for (; i < N; ++i) {
+		Z[i] = X[i] >= knot ? 0 : Y[i];
+	}
+}
+
+
 #include "abc_vec.h"
 
 void SetupVectorFunction_Generic() {
@@ -1193,6 +1287,7 @@ void SetupVectorFunction_Generic() {
     f32_minidx    = &gen_f32_minidx;
     f32_diff_back   = & gen_f32_diff_back;
     f32_seq   = & gen_f32_seq;
+	i32_seq    = &gen_i32_seq;
     f32_to_f64_inplace   = & gen_f32_to_f64_inplace;
 	f64_to_f32_inplace = &gen_f64_to_f32_inplace;
     i32_to_f32_scaleby_inplace    = &gen_i32_to_f32_scaleby_inplace;
@@ -1216,7 +1311,13 @@ void SetupVectorFunction_Generic() {
 	f32_scatter_vec_byindex           = gen_f32_scatter_vec_byindex;
     f32_gatherVec_scatterVal_byindex  = gen_f32_gatherVec_scatterVal_byindex;
     f32_gather2Vec_scatterVal_byindex = gen_f32_gather2Vec_scatterVal_byindex;
-	f32_scale_inplace = gen_f32_scale_inplace;
+	f32_scale_inplace				  = gen_f32_scale_inplace;
+	f32_hinge_pos                     = gen_f32_hinge_pos;
+	f32_hinge_neg                     = gen_f32_hinge_neg;
+	f32_step_pos                      = gen_f32_step_pos;
+	f32_step_neg                      = gen_f32_step_neg;
+
+	f32_axpy_inplace = gen_f32_axpy_inplace;
 }
 
 

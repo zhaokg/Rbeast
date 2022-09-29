@@ -26,4 +26,3 @@ extern void BEAST2_print_options(BEAST2_OPTIONS_PTR  opt);
 /****************beastv2_out_write******************/
 extern void  BEAST2_WriteOutput(BEAST2_OPTIONS_PTR opt, BEAST2_RESULT_PTR result, I64 pixelIndex);
 
-void  MR_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelIndex);

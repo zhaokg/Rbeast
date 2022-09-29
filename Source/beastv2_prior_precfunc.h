@@ -10,12 +10,11 @@
 #include "abc_mcmc.h"
 #include "abc_ts_func.h"
 
-extern void InitPrecPriorMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointers* MEM);
 typedef struct PREC_FUNC {
 	void (*IncreasePrecValues)(        BEAST2_MODEL_PTR model);
 	void (*GetNumTermsPerPrecGrp)(     BEAST2_MODEL_PTR model);
 	void (*GetXtXPrecDiag)(            BEAST2_MODEL_PTR model);
-	void (*UpdateXtXPrec_nTermsPerGrp)(BEAST2_MODEL_PTR model, BEAST2_BASIS_PTR basis, NEWTERM_PTR new);
+	void (*UpdateXtXPrec_nTermsPerGrp)(BEAST2_MODEL_PTR model, BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol);
 	//F32  (*ComputeLog_det_prior)(BEAST2_MODEL_PTR model, I08PTR nTermsPerPrecGrp, I32 K);
 	void (*ComputeMargLik)(            BEAST2_MODELDATA_PTR data, BEAST2_MODEL_PTR model,BEAST2_YINFO_PTR yInfo, BEAST2_HyperPar_PTR hyperPar);
 	void (*ResamplePrecValues)(        BEAST2_MODEL_PTR model,    BEAST2_HyperPar* hyperPar,VOID_PTR stream);

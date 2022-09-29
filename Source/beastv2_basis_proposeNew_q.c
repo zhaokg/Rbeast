@@ -79,7 +79,7 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation, F32PTR avgDeviation, P
 				if (idxMissing<nMissing && (i) == rowsMissing[idxMissing])  ////rowMissing is 0-based
 					deviation[i] = nan, 	idxMissing++;
 				else {
-					F32 error    = fabsf(  Y[i] - (Ypred1[i]+Ypred2[i]+ Ypred3[i]) * invsample );
+					F32 error    = fabsf(  Y[i] - (Ypred1[i]+Ypred2[i]+ Ypred3[i]*0) * invsample );
 					deviation[i] = error;
 					sumError     += error;
 				}
@@ -143,7 +143,7 @@ static INLINE void _CalcDevExtremPos(PROP_DATA_PTR info ) {
 	__CalcExtremKnotPos_ST_BirthOnly(model->extremePosVec, model->deviation, info->N, threshold);
 }
 
-static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR info)
+static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
 {	
 	I32					goodNum = basis->goodNum;
 	I16					nKnot   = basis->nKnot;
@@ -474,14 +474,14 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 			//The range of terms to be removed from Xt_mars		   
 			// No new term will be added or removed for NoChangeFixGlobal
 			// so new->KnewTerm=0;
-			new->k1_old = basis->K+1;
-			new->k2_old = basis->K;
+			newcol->k1     = basis->K+1;
+			newcol->k2_old = basis->K;
 			//The range of terms to be added to Xt_mars_prop		
 			//new->k2_new = new->k1_new + new->Knewterm - 1L;
 		}	else {
 			//The range of terms to be removed from Xt_mars		   
-			new->k1_old = KS_old[(newIdx)-1];
-			new->k2_old = KE_old[(endIdx)-1];
+			newcol->k1     = KS_old[(newIdx)-1];
+			newcol->k2_old = KE_old[(endIdx)-1];
 			//The range of terms to be added to Xt_mars_prop		
 			//new->k2_new = new->k1_new + new->Knewterm - 1L;
 		}
@@ -494,14 +494,14 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 		
 		if (new->newOrder <= new->oldOrder) { // if (newOrder < oldOrder): remove one or two existing terms
 			//NEW.numSeg = 0;	NEW.r[0] = -999;
-			new->k2_old = KE_old[newIdx - 1];
-			new->k1_old = basis->type == SEASONID ? /*season*/(new->k2_old - 1) :/*trend*/ new->k2_old;
+			newcol->k2_old  = KE_old[newIdx - 1];
+			newcol->k1      = basis->type == SEASONID ? /*season*/(newcol->k2_old - 1) :/*trend*/ newcol->k2_old;
 			//new->k2_new = new->k1_old - 1;
 			//Knewterm = k2_new - k1_new + 1; //Equal to 0, meaning no new terms will be added
 		}
 		else {// (NEW. newOrder > oldOrder): Add new terms					
-			new->k2_old = KE_old[newIdx - 1];    //the term immediately preceding the start of the next segment
-			new->k1_old = new->k2_old + 1;       //the term immediately following the end of the selected segment
+			newcol->k2_old = KE_old[newIdx - 1];    //the term immediately preceding the start of the next segment
+			newcol->k1     = newcol->k2_old + 1;       //the term immediately following the end of the selected segment
 
 			//new->k2_new = basis->type == SEASONID ? (new->k1_new + 1) : new->k1_new;
 			//Knewterm    = k2_new - k1_new + 1; //Knewterm is either 1 or 2, depending on the new term being a trend or season cmpnt
@@ -577,7 +577,7 @@ static void OO_ReAdjustGoodVec(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 
 
 
-static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
+static int __OO_NewKnot_BirthMove_old(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 		
 	I32 N                   = info->N;
 	I32 Npad16              = info->Npad16;
@@ -667,7 +667,71 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 	}
 	return maxIdx + 1;
 }
+static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info, I32PTR maxIndex) {
+		
+	I32 N                   = info->N;
+	I32 Npad16              = info->Npad16;
+	BEAST2_MODEL_PTR model  = info->model;
+	BEAST2_RANDSEEDPTR PRND = info->pRND;
 
+	// TODO: reconstruct the goodVec array on-the-fly, which means the existing goodVec is dicarded.
+	I08PTR goodvec = (I08PTR) basis->goodvec; 
+	memset(goodvec, 1, N);
+
+	for (int J = 0; J < model->NUMBASIS; J++) {
+
+		TKNOT_PTR KNOT    = model->b[J].KNOT;
+		I32       nKnot   = model->b[J].nKnot;
+
+		if (model->b[J].type == OUTLIERID) {
+			// Exclude the current outlier chgt
+			for (int i = 0; i < nKnot; ++i) goodvec[KNOT[i] - 1] = 0;		
+		}  
+	} // for (int J = 0; J < model->NUMBASIS; J++)
+
+	I32PTR IndicesLargeDeviation = info->mem;   // mem points to Xnewterm, used here a tmp buff
+	I32    numLargeDev       = 0;
+	F32PTR deviation         = model->deviation;
+	F32    threshold         = info->yInfo->q==1
+							   ? model->avgDeviation[0]* info->outlierSigFactor
+							   : info->outlierSigFactor;
+
+	F32 maxValue = 0;
+	I32 maxIdx   =-1;	
+	
+	for (I32 i = 0; i < N; i++) {
+		F32 value = deviation[i];
+		if ( !goodvec[i] || IsNaN (value) ) {
+			continue;
+		}
+
+		value = fabsf(value);
+		if ( value > maxValue) {
+			// if no points have DEV larger than the threshold, then choose the point with the largest DEV
+			maxValue = value;
+			maxIdx   = i;
+		}
+
+		if (value > threshold) {
+			// if large than the threshold or already being a TCP or SCP
+			IndicesLargeDeviation[numLargeDev++] = i;
+		}
+	}
+
+	int newKnot=-1L;
+	if (numLargeDev > 1) {	
+		I32 rndIdx = RANDINT(1, (U16)numLargeDev, *(PRND->rnd16)++);
+		newKnot = IndicesLargeDeviation[rndIdx - 1];
+	} else if (numLargeDev == 1) {
+		newKnot = IndicesLargeDeviation[0];
+	}
+
+	if (maxIdx < 0) {
+		r_printf("__OO_NewKnot_BirthMove: maxIdx=-1, and there must be something wrong!");
+	}
+	*maxIndex = maxIdx+1L;
+	return newKnot+1L;
+}
 static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 		
 	I32 N                  = info->N;
@@ -695,7 +759,7 @@ static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 	}
 	return minIdx + 1;
 }
-static void OO_Propose_0(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR info)
+static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
 {	
 	I32  goodNum = basis->goodNum; // not used in this function
 	I16  nKnot = basis->nKnot;
@@ -742,13 +806,13 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 	I32 newIdx;      // , endIdx;
  		
 	/*****************************************************************************************/
-
+	
 	switch (flag)
 	{
 	case BIRTH:
 	{
 		
-		new->newKnot   = __OO_NewKnot_BirthMove(basis, info);;
+		new->newKnot   = __OO_NewKnot_BirthMove_old(basis, info);
 		new->numSeg    = 1;
 		new->SEG[0].R1 = new->newKnot;
 		new->SEG[0].R2 = new->newKnot;
@@ -790,7 +854,7 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 		//new->newKnot = i08_find_nth_onebyte_binvec(basis->goodvec, (I32)Npad16, randLoc);
 
 		newIdx         = __OO_NewIdx_MoveDeath(basis, info);
-		new->newKnot   = __OO_NewKnot_BirthMove(basis, info);;
+		new->newKnot   = __OO_NewKnot_BirthMove_old(basis, info);;
 		new->numSeg = 1;
 		new->SEG[0].R1         = new->newKnot;
 		new->SEG[0].R2         = new->newKnot;
@@ -819,21 +883,173 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 	if (flag == BIRTH) {
 		//The range of terms to be removed from Xt_mars		
 		I32 nKnot = basis->nKnot;
-		new->k2_old  = KE_old[nKnot - 1];
-		new->k1_old  = new->k2_old + 1;
+		newcol->k2_old = KE_old[nKnot - 1];
+		newcol->k1     = newcol->k2_old + 1;
 	}
 	else if (flag == DEATH) {
-		new->k2_old = KE_old[newIdx - 1];
-		new->k1_old = KS_old[newIdx - 1];
+		newcol->k2_old = KE_old[newIdx - 1];
+		newcol->k1     = KS_old[newIdx - 1];
 	}
 	else if (flag == MOVE) {
-		new->k2_old = KE_old[newIdx - 1];
-		new->k1_old = KS_old[newIdx - 1];
+		newcol->k2_old = KE_old[newIdx - 1];
+		newcol->k1     = KS_old[newIdx - 1];
 	}
 
 	new->jumpType = flag;
 }
-static void OO_Propose_1(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR info)
+static void OO_Propose_01(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
+{	
+	I32  goodNum = basis->goodNum; // not used in this function
+	I16  nKnot = basis->nKnot;
+
+	BEAST2_RANDSEEDPTR PRND = info->pRND;
+	/*********************************************************************/
+	//  DETERMINE WHICH PROPOSAL STEPTO MOVE: MAKE A NEW PROPOSAL		
+	/**********************************************************************/
+	MOVETYPE flag;
+	{
+		I32  Ktotal                   = info->model->curr.K;
+		I32  MAXKNOTNUM               = basis->prior.maxKnotNum;
+		I32  MAX_K_StopAddingNewTerms = basis->mcmc_Kstopping;
+		U08  rnd                      = *(PRND->rnd08)++;
+		if (rnd < basis->propprob.birth) { //birth					
+			flag = BIRTH;
+			if (nKnot >= MAXKNOTNUM )	           flag = MOVE;			
+			if (Ktotal > MAX_K_StopAddingNewTerms) flag = (nKnot == 0) ? BIRTH : MOVE;			
+		} else if (rnd < basis->propprob.move)   //move							
+			flag = nKnot == 0 ? BIRTH : MOVE;		
+		else //if (unifRnd <= basis->propprob.death)  //death
+			flag = nKnot == 0 ? BIRTH : DEATH;
+ 
+	}  // DONE WITH MAKING A NEW PROPOSAL	 
+
+	////////////////////////////////////////////////////////////////////
+	I32              samples = info->samples[0];	
+	if (samples > 0) { // this should be always the case bcz OID is picked up only if samples >0
+	 //  Here, we need only the deviation for the outlire proposal but as a side effect,
+	 //  we also update the extremKnotPos vector.
+		_CalcDevExtremPos(info);
+		info->nSample_ExtremVecNeedUpdate = samples + 40L;
+	}
+	////////////////////////////////////////////////////////////////////
+
+
+	/*****************************************************************************************/
+	// IMPLEMENT THE NEW PROPOSED BASIS
+	// Define local variables here to avoid allocating duplicate stack variables	
+	//*****************************************************************************************/
+	TKNOT_PTR  knotList = basis->KNOT;
+	//TORDER_PTR orderList = basis->ORDER;  
+
+	I32 newIdx;      // , endIdx;
+ 		
+	/*****************************************************************************************/
+	I32 maxIdx;
+	switch (flag)
+	{
+	case BIRTH:
+	{
+		
+		new->newKnot   = __OO_NewKnot_BirthMove(basis, info,&maxIdx);
+		if (new->newKnot == 0 && nKnot==0) {
+			new->newKnot = maxIdx;
+		}
+		if (new->newKnot > 0) {
+			new->numSeg = 1;
+			new->SEG[0].R1 = new->newKnot;
+			new->SEG[0].R2 = new->newKnot;
+			new->SEG[0].outlierKnot = new->newKnot; //knotBirth is only used for the outlier compnent
+
+			//new->orders2[1] = new->orders2[0] = orderList[(newIdx)-1];
+
+			//implicit conversion from 'int' to 'I16' (aka 'short') changes value from -9999999 to 27009 [-Wconstant-conversion]
+			//new->newIdx       = -9999999;            // not used at alll
+			new->newIdx = -9999;            // not used at alll
+			new->nKnot_new = nKnot + 1;
+		}	else {
+			// Death
+			flag = DEATH;			 
+		}
+		
+		break;
+	}
+
+	case MOVE: //MOVE
+	{
+		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
+
+		// Randomly choose a good loc: newKnot is the newly chosen breakpoint		
+		//rI32 randLoc = RANDINT(1, (I32)goodNum, *(PRND->rnd32)++); // will fail if goodNum=0
+		//I32  Npad16  = info->Npad16;
+		//new->newKnot = i08_find_nth_onebyte_binvec(basis->goodvec, (I32)Npad16, randLoc);
+
+		newIdx         = __OO_NewIdx_MoveDeath(basis, info);
+		new->newKnot   = __OO_NewKnot_BirthMove(basis, info,&maxIdx);
+		if (new->newKnot > 0) {
+			new->numSeg = 1;
+			new->SEG[0].R1 = new->newKnot;
+			new->SEG[0].R2 = new->newKnot;
+			new->SEG[0].outlierKnot = new->newKnot; //knotBirth is only used for the outlier compnent
+
+			//endIdx = newIdx + 1;
+			//endIdx = newIdx + 1L;
+			new->newIdx = newIdx;
+			new->nKnot_new = nKnot;
+			
+		}	else {
+			flag = DEATH;
+		}
+		break;
+	}//flag=move MOVE MOVE
+
+	}
+
+ 	if (flag== DEATH)
+	{
+		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
+		newIdx = __OO_NewIdx_MoveDeath(basis, info);
+		new->newKnot = knotList[newIdx - 1];
+		new->numSeg = 0;
+
+		//new->r1[0] = knotList[(newIdx - 1) - 1];
+		//new->r2[0] = knotList[(newIdx + 1) - 1]  -1L;
+		//new->orders2[0] = orderList[(newIdx + 1L) - 1]; // ------1|-----------2(newIdx:deleted)|----order kept----(3)|-----
+
+		//endIdx = newIdx;
+		//endIdx = newIdx + 1L;
+		new->newIdx = newIdx;
+		new->nKnot_new = nKnot - 1;
+	 
+	}//flag==2/2
+
+	/*******************************************/
+	//Get k1_old, k2_old, k1_new and k2_new		
+	/*******************************************/
+ 
+	//I16 k1_old, k2_old;	//The range of terms to be removed from Xt_mars		   			
+	//I16 k1_new, k2_new; //The range of terms to be added to Xt_mars_prop			
+
+	I16PTR  KS_old = basis->ks;
+	I16PTR  KE_old = basis->ke;
+
+	if (flag == BIRTH) {
+		//The range of terms to be removed from Xt_mars		
+		I32 nKnot = basis->nKnot;
+		newcol->k2_old = KE_old[nKnot - 1];
+		newcol->k1     = newcol->k2_old + 1;
+	}
+	else if (flag == DEATH) {
+		newcol->k2_old  = KE_old[newIdx - 1];
+		newcol->k1      = KS_old[newIdx - 1];
+	}
+	else if (flag == MOVE) {
+		newcol->k2_old = KE_old[newIdx - 1];
+		newcol->k1     = KS_old[newIdx - 1];
+	}
+
+	new->jumpType = flag;
+}
+static void OO_Propose_2(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
 {	
 	I32  goodNum = basis->goodNum; // not used in this function
 	I16  nKnot = basis->nKnot;
@@ -889,7 +1105,7 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 		//new->newKnot = i08_find_nth_onebyte_binvec(basis->goodvec, (I32)Npad16, randLoc);
 
 		newIdx       = -9999;
-		new->newKnot = __OO_NewKnot_BirthMove(basis, info);
+		new->newKnot = __OO_NewKnot_BirthMove_old(basis, info);
 		
 		//newIdx = 1;	for (rTKNOT_PTR tmpList = knotList; *tmpList++ < new->newKnot; newIdx++);
 		//Now, newIdx is the position of the newKnot relative to the old bks.
@@ -931,7 +1147,7 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 		//I32  Npad16  = info->Npad16;
 		//new->newKnot = i08_find_nth_onebyte_binvec(basis->goodvec, (I32)Npad16, randLoc);
 		newIdx       = __OO_NewIdx_MoveDeath(basis, info);
-		new->newKnot = __OO_NewKnot_BirthMove(basis, info);;
+		new->newKnot = __OO_NewKnot_BirthMove_old(basis, info); 
 
 		new->numSeg    = 1;
 		new->SEG[0].R1 = 1;       // new->newKnot;
@@ -959,16 +1175,16 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, PROP_DATA_PTR
 	if (flag == BIRTH) {
 		//The range of terms to be removed from Xt_mars		
 		I32 nKnot = basis->nKnot;
-		new->k2_old = KE_old[nKnot - 1];
-		new->k1_old	= new->k2_old + 1;
+		newcol->k2_old = KE_old[nKnot - 1];
+		newcol->k1     = newcol->k2_old + 1;
 	}
 	else if (flag == DEATH) {
-		new->k2_old = KE_old[newIdx - 1];
-		new->k1_old = KS_old[newIdx - 1];
+		newcol->k2_old  = KE_old[newIdx - 1];
+		newcol->k1      = KS_old[newIdx - 1];
 	}
 	else if (flag == MOVE) {
-		new->k2_old = KE_old[newIdx - 1];
-		new->k1_old = KS_old[newIdx - 1];
+		newcol->k2_old = KE_old[newIdx - 1];
+		newcol->k1     = KS_old[newIdx - 1];
 	}
 
 	new->jumpType = flag;
@@ -981,8 +1197,8 @@ void * Get_Propose(I08 id, BEAST2_OPTIONS_PTR opt) {
 	case TRENDID: 
 		return DSVT_Propose;
 	case OUTLIERID: {
-		if      (opt->prior.outlierBasisFuncType==0) 			return OO_Propose_0;
-		else if (opt->prior.outlierBasisFuncType == 1)			return OO_Propose_1;
+		if      (opt->prior.outlierBasisFuncType==0) 			return OO_Propose_01;
+		else if (opt->prior.outlierBasisFuncType == 1)			return OO_Propose_01;
 	}
 	}
 	return NULL;

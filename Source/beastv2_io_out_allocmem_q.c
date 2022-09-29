@@ -210,7 +210,7 @@ static void __ExtendDims_SwitchTimeDim_3D(FIELD_ITEM* fld, int outTimDim, int RO
 	    // Apend the nuMTS at the end
 		fld->dims[ndim  ] = ROW;
 		fld->dims[ndim+1] = COL;
-		fld->ndim+=2;
+		fld->ndim  +=2;
 	} else if (outTimDim == 3) {
 	   // Insert the numTS at the start
 		for (int i = ndim - 1; i >= 0; i--) {fld->dims[i + 2] = fld->dims[i];}
@@ -354,7 +354,7 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	//{ "time",    dtype, 2, { N,               1, 0L, 0L }, &mat->time },
 	//{ "scp",	   dtype, 2, { mxKnotNumSeason, M, },        & mat->scp },
 
-		int isMultiVariate = (io->q == 1) ? 0L : 1L;
+	int isMultiVariate = (io->q == 1) ? 0L : 1L;
 	#define _q(name, ...)                 {#name, dtype, NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name, isMultiVariate }
 	#define _q1(name, ...)                _q(name, __VA_ARGS__)  
 	#define _q2(name1,name2, ...)         _q(name1, __VA_ARGS__),  _q(name2, __VA_ARGS__)   
@@ -366,11 +366,11 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	// For univariate time series, _q() is the same as _()
 	FIELD_ITEM  fieldList[] = {
 			_5(ncp, ncp_median, ncp_mode, ncp_pct90, ncp_pct10,    1),
-			_(ncpPr,                     mxKnotNum + 1),
+			_1(ncpPr,            mxKnotNum + 1),
 			_2(cpOccPr, order,   N),
 			_2(cp,  cpPr,        mxKnotNum),
 			_q(cpAbruptChange,   mxKnotNum),
-			_(cpCI,				 mxKnotNum, 2),
+			_1(cpCI,			 mxKnotNum, 2),
 
 			_q2(Y, SD,   N),
 			_q(CI,       N,2),
@@ -408,6 +408,7 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	#undef NUMARGS
     #undef NARGS
     #undef _
+	#undef _1
 	#undef _2
 	#undef _3
 	#undef _4
@@ -454,11 +455,11 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 
 	FIELD_ITEM  fieldList[] = {
 			_5(ncp, ncp_median, ncp_mode, ncp_pct90,  ncp_pct10,   1),
-			_(ncpPr,    mxKnotNum + 1),				
+			_1(ncpPr,    mxKnotNum + 1),				
 			_2(cpOccPr, order, N),													
 			_2(cp,  cpPr,  mxKnotNum),
            	_q(cpAbruptChange, mxKnotNum),
-			_(cpCI,			   mxKnotNum, 2 ),
+			_1(cpCI,			   mxKnotNum, 2 ),
 
 			_q2(Y ,SD,   N   ),
 			_q(CI,       N,2),
@@ -490,6 +491,7 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 	#undef NUMARGS
     #undef NARGS
     #undef _
+	#undef _1
 	#undef _2
 	#undef _3
 	#undef _4
@@ -537,11 +539,11 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 
 	FIELD_ITEM  fieldList[ ]= {
 			_5(ncp, ncp_median, ncp_mode, ncp_pct90, ncp_pct10,  1),
-			_(ncpPr,   mxKnotNum + 1),
-			_(cpOccPr, N),
+			_1(ncpPr,   mxKnotNum + 1),
+			_1(cpOccPr, N),
 
 			_2(cp, cpPr,  mxKnotNum),
-			_(cpCI,       mxKnotNum, 2),
+			_1(cpCI,       mxKnotNum, 2),
 
 			_q2(Y, SD, N),
 			_q(CI,     N,2),
@@ -571,6 +573,7 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 	#undef NUMARGS
     #undef NARGS
     #undef _
+    #undef _1
 	#undef _2
 	#undef _3
 	#undef _4
@@ -728,8 +731,8 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 	const I08 hasTrendCmpnt   = 1;
 	const I08 hasAlways       = 1;
 
-	const I32 N = opt->io.N;
-	const I32 q = opt->io.q;
+	const I32 N  = opt->io.N;
+	const I32 q  = opt->io.q;
 	const I32 Nq = N * q;
 
 	const I32 seasonMaxKnotNum  = opt->prior.seasonMaxKnotNum;
@@ -738,154 +741,181 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 
 	*result = (BEAST2_RESULT){0, }; //memset result to zero
 
-	result->time     =NULL; // No need to allocate mem for time bcz Pits values were directly set in the mat->time
-	if (opt->extra.dumpInputData) {
-		result->data = MEM->alloc(MEM, sizeof(F32) * Nq, 0);
-	}
+	MemNode nodes[250];
+	int     nid    = 0;
 
-	result->marg_lik = MEM->alloc(MEM, sizeof(F32) * 1,   0);
-	result->sig2	 = MEM->alloc(MEM, sizeof(F32) * q*q, 0);
-	result->R2		 = MEM->alloc(MEM, sizeof(F32) * q,   0);
-	result->RMSE	 = MEM->alloc(MEM, sizeof(F32) * q,   0);
+	result->time   =  NULL; // No need to allocate mem for time bcz Pits values were directly set in the mat->time
 
+	nodes[nid++] = (MemNode){ &result->marg_lik,	 sizeof(F32) * 1,      .align = 64 };
+	nodes[nid++] = (MemNode){ &result->sig2,	     sizeof(F32) * q * q,  .align = 4 };
+	nodes[nid++] = (MemNode){ &result->R2,	         sizeof(F32) * q  ,    .align = 4 };
+	nodes[nid++] = (MemNode){ &result->RMSE,	     sizeof(F32) * q  ,    .align = 4 };
+ 
 	if (hasSeasonCmpnt) {
-		result->sncp         = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->sncp_median  = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->sncp_mode    = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->sncp_pct90   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->sncp_pct10   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->sncpPr       = MEM->alloc(MEM, sizeof(I32) * (seasonMaxKnotNum + 1), 64);
-		result->scpOccPr     = MEM->alloc(MEM, sizeof(I32) * N, 64);
-		result->sY           = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
-		result->sSD          = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
+		nodes[nid++] = (MemNode){ &result->sncp,	      sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sncp_median,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sncp_mode,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sncp_pct90,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sncp_pct10,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sncpPr,	      sizeof(I32) * (seasonMaxKnotNum + 1), .align = 4 };
+		nodes[nid++] = (MemNode){ &result->scpOccPr,	  sizeof(I32) * N,       .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sY,	          sizeof(I32) * Nq,      .align = 64 };
+		nodes[nid++] = (MemNode){ &result->sSD,	          sizeof(I32) * Nq,      .align = 64 };
+ 
 		if (opt->extra.computeSeasonOrder)
-			result->sorder   = MEM->alloc(MEM, sizeof(U32) * N, 64);
-		if (opt->extra.computeSeasonAmp)
-			result->samp     = MEM->alloc(MEM, sizeof(F32) * Nq, 64),  //NEWLY ADDED
-			result->sampSD   = MEM->alloc(MEM, sizeof(F32) * Nq, 64);  //NEWLY ADDED
+			nodes[nid++] = (MemNode){ &result->sorder,	          sizeof(U32) * N,      .align = 64 };			
+		if (opt->extra.computeSeasonAmp) {
+			nodes[nid++] = (MemNode){ &result->samp,	          sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+			nodes[nid++] = (MemNode){ &result->sampSD,	          sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+		}
 	}
 	/////////////////////////////////////////////////////////////
 
 	if (hasTrendCmpnt) {
-		result->tncp         = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->tncp_median  = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->tncp_mode    = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->tncp_pct90   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->tncp_pct10   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->tncpPr       = MEM->alloc(MEM, sizeof(I32) * (trendMaxKnotNum + 1), 64);
-		result->tcpOccPr     = MEM->alloc(MEM, sizeof(I32) * N, 64);
-		result->tY           = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
-		result->tSD          = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
+		nodes[nid++] = (MemNode){ &result->tncp,	      sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tncp_median,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tncp_mode,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tncp_pct90,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tncp_pct10,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tncpPr,	      sizeof(I32) * (trendMaxKnotNum + 1), .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tcpOccPr,	  sizeof(I32) * N,       .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tY,	          sizeof(I32) * Nq,      .align = 64 };
+		nodes[nid++] = (MemNode){ &result->tSD,	          sizeof(I32) * Nq,      .align = 64 };
+
 		if (opt->extra.computeTrendOrder)
-			result->torder = MEM->alloc(MEM, sizeof(U32) * N, 64);
-		if (opt->extra.computeTrendSlope)
-			result->tslp          = MEM->alloc(MEM, sizeof(F32) * Nq, 64),
-			result->tslpSD        = MEM->alloc(MEM, sizeof(F32) * Nq, 64),
-			result->tslpSgnPosPr  = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-			result->tslpSgnZeroPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64);
+			nodes[nid++] = (MemNode){ &result->torder,	          sizeof(U32) * N,      .align = 64 };
+		if (opt->extra.computeTrendSlope) {
+			nodes[nid++] = (MemNode){ &result->tslp,	          sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+			nodes[nid++] = (MemNode){ &result->tslpSD,	          sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+			nodes[nid++] = (MemNode){ &result->tslpSgnPosPr,	  sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+			nodes[nid++] = (MemNode){ &result->tslpSgnZeroPr,	  sizeof(F32) * Nq,      .align = 64 };  //NEWLY ADDED
+		} 
 	}
 	/////////////////////////////////////////////////////////////
 
 	if (hasOutlierCmpnt) {
-		result->oncp         = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->oncp_median  = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->oncp_mode    = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->oncp_pct90   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->oncp_pct10   = MEM->alloc(MEM, sizeof(F32) * 1, 0);
-		result->oncpPr       = MEM->alloc(MEM, sizeof(I32) * (outlierMaxKnotNum + 1), 64);
-		result->ocpOccPr     = MEM->alloc(MEM, sizeof(I32) * N, 64);
-		result->oY           = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
-		result->oSD          = MEM->alloc(MEM, sizeof(F32) * Nq, 64);
+		nodes[nid++] = (MemNode){ &result->oncp,	      sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oncp_median,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oncp_mode,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oncp_pct90,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oncp_pct10,	  sizeof(F32) * 1,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oncpPr,	      sizeof(I32) * (outlierMaxKnotNum + 1), .align = 4 };
+		nodes[nid++] = (MemNode){ &result->ocpOccPr,	  sizeof(I32) * N,       .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oY,	          sizeof(I32) * Nq,      .align = 64 };
+		nodes[nid++] = (MemNode){ &result->oSD,	          sizeof(I32) * Nq,      .align = 64 };
 	}
 
 	/////////////////////////////////////////////////////////////
 	if (opt->extra.computeCredible){
-		if (hasSeasonCmpnt)  result->sCI   = MEM->alloc(MEM, sizeof(F32) * Nq * 2, 64);
-		if (hasTrendCmpnt)   result->tCI   = MEM->alloc(MEM, sizeof(F32) * Nq * 2, 64);
-		if (hasOutlierCmpnt) result->oCI  = MEM->alloc(MEM, sizeof(F32) * Nq * 2, 64);
+		if (hasSeasonCmpnt)  nodes[nid++] = (MemNode){ &result->sCI,    sizeof(F32) * Nq * 2,      .align = 4 };
+		if (hasTrendCmpnt)   nodes[nid++] = (MemNode){ &result->tCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (hasOutlierCmpnt) nodes[nid++] = (MemNode){ &result->oCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
 	}
 
 
 	if (opt->extra.computeSeasonChngpt && hasSeasonCmpnt) {
-		result->scp               = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum, 64),
-		result->scpPr             = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum, 64),
-		result->scpAbruptChange   = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum*q, 64),
-		result->scpCI             = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * 2, 64);	}	
-	if (opt->extra.computeTrendChngpt && hasTrendCmpnt)
-		result->tcp               = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum, 64),
-		result->tcpPr             = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum, 64),
-		result->tcpAbruptChange   = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum*q, 64),
-		result->tcpCI             = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * 2, 64);
-
-	if (opt->extra.computeOutlierChngpt && hasOutlierCmpnt)
-		result->ocp              = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum, 64),
-		result->ocpPr            = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum, 64),
-		result->ocpCI            = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * 2, 64);
-
+		nodes[nid++] = (MemNode){ &result->scp,				sizeof(U32) * seasonMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->scpPr,			sizeof(U32) * seasonMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->scpAbruptChange,	sizeof(U32) * seasonMaxKnotNum * q,   .align = 4 };
+		nodes[nid++] = (MemNode){ &result->scpCI,			sizeof(U32) * seasonMaxKnotNum * 2,   .align = 4 };
+  	}	
+	if (opt->extra.computeTrendChngpt && hasTrendCmpnt) {
+		nodes[nid++] = (MemNode){ &result->tcp,				sizeof(U32) * trendMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tcpPr,			sizeof(U32) * trendMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tcpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,   .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tcpCI,			sizeof(U32) * trendMaxKnotNum * 2,   .align = 4 };
+	}
+	if (opt->extra.computeOutlierChngpt && hasOutlierCmpnt) {
+		nodes[nid++] = (MemNode){ &result->ocp,				sizeof(U32) * outlierMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->ocpPr,			sizeof(U32) * outlierMaxKnotNum,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->ocpCI,			sizeof(U32) * outlierMaxKnotNum * 2,   .align = 4 };
+	}
+		
 	/////////////////////////////////////////////////////////////	
 
-	if (opt->extra.tallyPosNegSeasonJump && hasSeasonCmpnt)
-		result->spos_ncp     = MEM->alloc(MEM, sizeof(F32) * 1*q, 0),
-		result->sneg_ncp     =  MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->spos_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (seasonMaxKnotNum + 1) * q, 64),
-		result->sneg_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (seasonMaxKnotNum + 1) * q, 64),
-		result->spos_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->sneg_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->spos_cp      = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->sneg_cp      = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->spos_cpPr    = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->sneg_cpPr    = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->spos_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->sneg_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * q, 64),
-		result->spos_cpCI   = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * 2 * q, 64),
-		result->sneg_cpCI   = MEM->alloc(MEM, sizeof(U32) * seasonMaxKnotNum * 2 * q, 64);
+	if (opt->extra.tallyPosNegSeasonJump && hasSeasonCmpnt) {
+		nodes[nid++] = (MemNode){ &result->spos_ncp,				sizeof(F32) * 1*q,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->spos_ncpPr,				sizeof(I32) * (seasonMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_ncpPr,				sizeof(I32) * (seasonMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->spos_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
 
-	if (opt->extra.tallyPosNegTrendJump && hasTrendCmpnt)
-		result->tpos_ncp   = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->tneg_ncp   = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->tpos_ncpPr = MEM->alloc(MEM, sizeof(I32) * (trendMaxKnotNum + 1) * q, 64),
-		result->tneg_ncpPr = MEM->alloc(MEM, sizeof(I32) * (trendMaxKnotNum + 1) * q, 64),
-		result->tpos_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->tneg_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->tpos_cp      = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tneg_cp      = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tpos_cpPr    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tneg_cpPr    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tpos_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tneg_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tpos_cpCI   = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * 2 * q, 64),
-		result->tneg_cpCI   = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * 2 * q, 64);
+		nodes[nid++] = (MemNode){ &result->spos_cp,				sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_cp,				sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->spos_cpPr,			sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_cpPr,			sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->spos_cpAbruptChange,	sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_cpAbruptChange,	sizeof(U32) * seasonMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->spos_cpCI,			sizeof(U32) * seasonMaxKnotNum * 2*q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->sneg_cpCI,			sizeof(U32) * seasonMaxKnotNum * 2*q,     .align = 4 };
 
-	if (opt->extra.tallyIncDecTrendJump && hasTrendCmpnt)
-		result->tinc_ncp     = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->tdec_ncp     = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->tinc_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (trendMaxKnotNum + 1) * q, 64),
-		result->tdec_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (trendMaxKnotNum + 1) * q, 64),
-		result->tinc_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->tdec_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->tinc_cp      = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tdec_cp      = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tinc_cpPr    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tdec_cpPr    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tinc_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tdec_cpAbruptChange = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * q, 64),
-		result->tinc_cpCI    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * 2 * q, 64),
-		result->tdec_cpCI    = MEM->alloc(MEM, sizeof(U32) * trendMaxKnotNum * 2 * q, 64);
+	}
+ 
 
+	if (opt->extra.tallyPosNegTrendJump && hasTrendCmpnt) {
+		nodes[nid++] = (MemNode){ &result->tpos_ncp,				sizeof(F32) * 1*q,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tpos_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tpos_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
 
-	if (opt->extra.tallyPosNegOutliers && hasOutlierCmpnt)
-		result->opos_ncp     = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->oneg_ncp     = MEM->alloc(MEM, sizeof(F32) * 1 * q, 0),
-		result->opos_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (outlierMaxKnotNum + 1) * q, 64),
-		result->oneg_ncpPr   = MEM->alloc(MEM, sizeof(I32) * (outlierMaxKnotNum + 1) * q, 64),
-		result->opos_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->oneg_cpOccPr = MEM->alloc(MEM, sizeof(I32) * Nq, 64),
-		result->opos_cp      = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * q, 64),
-		result->oneg_cp      = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * q, 64),
-		result->opos_cpPr    = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * q, 64),
-		result->oneg_cpPr    = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * q, 64),
-		result->opos_cpCI    = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * 2 * q, 64),
-		result->oneg_cpCI    = MEM->alloc(MEM, sizeof(U32) * outlierMaxKnotNum * 2 * q, 64);
+		nodes[nid++] = (MemNode){ &result->tpos_cp,				sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_cp,				sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tpos_cpPr,			sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_cpPr,			sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tpos_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tpos_cpCI,			sizeof(U32) * trendMaxKnotNum * 2*q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tneg_cpCI,			sizeof(U32) * trendMaxKnotNum * 2*q,     .align = 4 };
+	}
+		 
+
+	if (opt->extra.tallyIncDecTrendJump && hasTrendCmpnt) {
+		nodes[nid++] = (MemNode){ &result->tinc_ncp,				sizeof(F32) * 1 * q,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tinc_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tinc_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+
+		nodes[nid++] = (MemNode){ &result->tinc_cp,				sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_cp,				sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tinc_cpPr,			sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_cpPr,			sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tinc_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tinc_cpCI,			sizeof(U32) * trendMaxKnotNum * 2 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->tdec_cpCI,			sizeof(U32) * trendMaxKnotNum * 2 * q,     .align = 4 };
+	}
+  
+
+	if (opt->extra.tallyPosNegOutliers && hasOutlierCmpnt) {
+		nodes[nid++] = (MemNode){ &result->opos_ncp,				sizeof(F32) * 1 * q,      .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->opos_ncpPr,				sizeof(I32) * (outlierMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_ncpPr,				sizeof(I32) * (outlierMaxKnotNum + 1) * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->opos_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_cpOccPr,			sizeof(I32) * Nq,     .align = 4 };
+
+		nodes[nid++] = (MemNode){ &result->opos_cp,				sizeof(U32) * outlierMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_cp,				sizeof(U32) * outlierMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->opos_cpPr,			sizeof(U32) * outlierMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_cpPr,			sizeof(U32) * outlierMaxKnotNum * q,     .align = 4 };
+		//nodes[nid++] = (MemNode){ &result->tpos_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		//nodes[nid++] = (MemNode){ &result->tneg_cpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->opos_cpCI,			sizeof(U32) * outlierMaxKnotNum * 2 * q,     .align = 4 };
+		nodes[nid++] = (MemNode){ &result->oneg_cpCI,			sizeof(U32) * outlierMaxKnotNum * 2 * q,     .align = 4 };
+	}
+		
+	if (opt->extra.dumpInputData) {
+		nodes[nid++] = (MemNode){ &result->data,				sizeof(F32) * Nq,      .align = 4 };		
+	}
+
+	nodes[nid++] = (MemNode){ NULL,		};
+ 
+	MEM->alloclist(MEM, nodes, AggregatedMemAlloc, NULL);
 }
 
 void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F32 nan)

@@ -57,6 +57,10 @@ I32 strcicmp(char const * _restrict a, char const * _restrict b) {
 
 I32 strcicmp_nfirst(char const* _restrict a, char const* _restrict b, int nfirst) {
 	// only compare the strings up to the first 'nfirst' bytes
+	if (nfirst == 0) {
+		nfirst = strlen(a) + 1;
+	}
+
 	int i = 0;
 	for (;; a++, b++) {
 		I32 d = ((*a) | (U08)32) - ((*b) | (U08)32);
@@ -66,6 +70,16 @@ I32 strcicmp_nfirst(char const* _restrict a, char const* _restrict b, int nfirst
 		}		
 	}
 }
+I32 strmatch(char const* _restrict full, char const* _restrict part) {
+	for (;; full++, part++) {
+		I32 d = ((*full) | (U08)32) - ((*part) | (U08)32);
+		if (d != 0 || !*part) {
+			return (!*part)? 0: d;
+		}
+		
+	}
+}
+
 F32 DeterminePeriod(F32PTR Y, I32 N)
 {
 	F32PTR TMP   = (F32PTR)malloc(sizeof(F32)*N * 6);
@@ -450,7 +464,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 			continue;
 		} else	{  
 			// If the current peak has a larer magnitude than the previously identified cp plus 
-			// it is within a distance less than minSeptDist , then replace the old changepoint
+			// it is within a distance less than minSepDist , then replace the old changepoint
 			// with the new peak
 			/*
 			if (maxVal >= cpfromProb_Val[numCpt - 1]){
@@ -609,7 +623,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 			continue;
 		}
 		else {
-			//if it is within a distance less than minSeptDist PLUS the current peak has 
+			//if it is within a distance less than minSepDist PLUS the current peak has 
 			// a larer magnitude than the previously identified cp then replace the old changepoint
 			// with the new peak.			
 			if (sump[i] >= cpfromSumP_Val[numCpt - 1]) {
@@ -646,7 +660,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 		cpfromProb_Val[i] = maxVal;
 
 	}
-	//cpfromProb_Pos may contian changepoinss that are within a distance of minSeptDist from each other
+	//cpfromProb_Pos may contian changepoinss that are within a distance of minSepDist from each other
  
 	if (numCpt == 0) { return numCpt; }
 

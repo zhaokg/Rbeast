@@ -1018,7 +1018,7 @@ I32 avx2_f32_maxidx1(const F32PTR x, const int N, F32PTR val) {
         __m256  vec     = load(x + i);
         __m256  cmpmask = _mm256_cmp_ps(maxVec, vec, _CMP_LE_OQ);
 
-         maxVec  = _mm256_blendv_ps(maxVec,  vec, cmpmask); //o: take a, 1: take from vec        
+         maxVec  = _mm256_blendv_ps(maxVec,  vec, cmpmask); //0: take a, 1: take from vec        
          maxIdx  = _mm256_blendv_epi8(maxIdx, idx, _mm256_castps_si256(cmpmask));        
     }        
  
@@ -1221,6 +1221,31 @@ void avx2_f32_seq(F32PTR p, F32 x0, F32 dX, int N) {
     }     
     _mm256_zeroupper();    
 }
+
+void avx2_i32_seq(I32PTR p, I32 x0, I32 dX, int N) {
+
+    __m256i X;
+    {
+        __m128i tmp    = _mm_cvtsi64_si128(0x0706050403020100);
+        __m256i v1to7  = _mm256_cvtepu8_epi32(tmp);
+        //__m256  v1to7  = _mm256_cvtepi32_ps(tmp256);
+        __m256i  DX     = _mm256_mullo_epi32(v1to7, set1_i32(dX)); //https://stackoverflow.com/questions/28479429/multiply-two-vectors-of-32bit-integers-producing-a-vector-of-32bit-result-eleme
+
+        X = addi32(set1_i32(x0), DX);
+    }
+    __m256i DX8 = set1_i32(dX * 8);
+    int i = 0;
+    for (; i < N - (NF - 1); i += NF) {
+        storei(p + i, X);
+        X = addi32(X, DX8);
+    }
+    int n = N - i;
+    if (n > 0) {
+        maskstorei(p + i, GetMoveMask(n), X);
+    }
+    _mm256_zeroupper();
+}
+
 void avx2_f32_to_f64_inplace(F32PTR data32, int N) {
 
     F64PTR data64 = data32;
@@ -1753,7 +1778,27 @@ static INLINE void fma_f32_axpy_inplace( const F32 a, const F32PTR x, F32PTR y, 
     _mm256_zeroupper();
     //for (; i < N; i++)         x[i] += c;
 }
-static INLINE void avx2_f32_axpy_inplace(const F32 a, const F32PTR x, F32PTR y, const int N) {
+
+static  void avx2_f32_axpy_inplace(const F32 a, const F32PTR x, F32PTR y, const int N) {
+    //y=a*x+y;
+    __m256  C = set1(a);
+    int i = 0;
+    for (; i < N - (NF3 - 1); i += NF3)
+        store(y + i, add(mul(load(x + i), C), load(y + i))),
+        store(y + i + 8, add(mul(load(x + i + 8), C), load(y + i + 8))),
+        store(y + i + 16, add(mul(load(x + i + 16), C), load(y + i + 16)));
+    //store(y + i+24, add(mul(load(x + i+24), C), load(y + i+24)));
+    for (; i < N - (NF - 1); i += NF)
+        store(y + i, add(mul(load(x + i), C), load(y + i)));
+    int n = N - i;
+    if (n > 0) //TODO:BUGGY, loadi should also been a masked load. If not, it may fail during the page bnd
+        maskstore(y + i, GetMoveMask(n), add(mul(load(x + i), C), load(y + i)));
+    _mm256_zeroupper();
+    //for (; i < N; i++)         x[i] += c;
+}
+
+
+static INLINE void __avx2_f32_axpy_inplace(const F32 a, const F32PTR x, F32PTR y, const int N) {
     //y=a*x+y;
     __m256  C = set1(a);
     int i = 0;
@@ -1771,7 +1816,7 @@ static INLINE void avx2_f32_axpy_inplace(const F32 a, const F32PTR x, F32PTR y, 
     //for (; i < N; i++)         x[i] += c;
 }
 
-static INLINE void avx2_f32_ax1ax2py_inplace(const F32PTR a, const F32PTR x1, const F32PTR x2, F32PTR y, const int N) {
+static INLINE void __avx2_f32_ax1ax2py_inplace(const F32PTR a, const F32PTR x1, const F32PTR x2, F32PTR y, const int N) {
     //y=a*x+y;
     __m256  C1 = set1(a[0]);
     __m256  C2 = set1(a[1]);
@@ -1804,20 +1849,20 @@ void avx2_f32_gemv_Xb(int N, int K, F32PTR X, int lda, F32PTR b, F32PTR C)
     for (; row < N - (256 * 2 -1); row += 256*2) {
         int col = 0;
         for (; col < K-1; col+=2) {
-            avx2_f32_ax1ax2py_inplace(b+col, X + col * lda + row, X + (col+1) * lda + row, C + row, 256 * 2);
+            __avx2_f32_ax1ax2py_inplace(b+col, X + col * lda + row, X + (col+1) * lda + row, C + row, 256 * 2);
             //avx2_f32_axpy_inplace_v2(b[col], X + col * lda+row, C+row, 256);
         }
         if(col<K)
-            avx2_f32_axpy_inplace(b[col], X + col * lda + row, C + row, 256 * 2);
+            __avx2_f32_axpy_inplace(b[col], X + col * lda + row, C + row, 256 * 2);
     }
     int n = N - row;
     if (n > 0) {
         int col = 0;
         for (; col < K-1; col+=2) {
-            avx2_f32_ax1ax2py_inplace(b+col, X + col * lda + row, X + (col+1) * lda + row, C + row, n);
+            __avx2_f32_ax1ax2py_inplace(b+col, X + col * lda + row, X + (col+1) * lda + row, C + row, n);
         }
         if(col<K)
-            avx2_f32_axpy_inplace(b[col], X + col * lda + row, C + row, n);
+            __avx2_f32_axpy_inplace(b[col], X + col * lda + row, C + row, n);
     }
     
 
@@ -2254,6 +2299,90 @@ void avx2_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, con
     _mm256_zeroupper();
     //for (; i < N; i++)         x[i] += c;
 }
+
+void avx2_f32_hinge_pos(const F32PTR X, const F32PTR Y, const F32 knot, const int N){    
+    __m256  O = set0();
+    __m256  C = set1(knot);
+    int i = 0;
+    for (; i < N - (NF4 - 1); i += NF4) {
+        __m256 d1 = sub(load(X + i),    C);   store(Y + i,       _mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d2 = sub(load(X + i+NF), C);   store(Y + i + NF,  _mm256_blendv_ps(O, d2, _mm256_cmp_ps(d2, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d3 = sub(load(X + i+NF2), C);  store(Y + i + NF2, _mm256_blendv_ps(O, d3, _mm256_cmp_ps(d3, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d4 = sub(load(X + i+NF3), C);  store(Y + i + NF3, _mm256_blendv_ps(O, d4, _mm256_cmp_ps(d4, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    for (; i < N - (NF - 1); i += NF) {
+        __m256 d1 = sub(load(X + i), C);   store(Y + i, _mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    
+    int n = N - i;
+    if (n > 0) {//TODO:BUGGY, loadi should also been a masked load. If not, it may fail during the page bnd        
+        __m256 d1 = sub(load(X + i), C);   maskstore(Y + i, GetMoveMask(n),_mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    _mm256_zeroupper();    
+}
+void avx2_f32_hinge_neg(const F32PTR X, const F32PTR Y, const F32 knot, const int N){    
+    __m256  O = set0();
+    __m256  C = set1(knot);
+    int i = 0;
+    for (; i < N - (NF4 - 1); i += NF4) {
+        __m256 d1 = sub(C, load(X + i));      store(Y + i,       _mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d2 = sub(C, load(X + i+NF));   store(Y + i + NF,  _mm256_blendv_ps(O, d2, _mm256_cmp_ps(d2, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d3 = sub(C, load(X + i+NF2));  store(Y + i + NF2, _mm256_blendv_ps(O, d3, _mm256_cmp_ps(d3, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d4 = sub(C, load(X + i+NF3));  store(Y + i + NF3, _mm256_blendv_ps(O, d4, _mm256_cmp_ps(d4, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    for (; i < N - (NF - 1); i += NF) {
+        __m256 d1 = sub(C,load(X + i));   store(Y + i, _mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    
+    int n = N - i;
+    if (n > 0) {//TODO:BUGGY, loadi should also been a masked load. If not, it may fail during the page bnd        
+        __m256 d1 = sub(C,load(X + i));   maskstore(Y + i, GetMoveMask(n),_mm256_blendv_ps(O, d1, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    _mm256_zeroupper();    
+}
+
+void avx2_f32_step_pos(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
+    __m256  O = set0();
+    __m256  I = set1(1.0);
+    __m256  C = set1(knot);
+    int i = 0;
+    for (; i < N - (NF4 - 1); i += NF4) {
+        __m256 d1 = sub(load(X + i),    C);   store(Z + i,       _mm256_blendv_ps(O, load(Y + i),       _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d2 = sub(load(X + i+NF), C);   store(Z + i + NF,  _mm256_blendv_ps(O, load(Y + i+NF),    _mm256_cmp_ps(d2, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d3 = sub(load(X + i+NF2), C);  store(Z + i + NF2, _mm256_blendv_ps(O, load(Y + i+NF2),   _mm256_cmp_ps(d3, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d4 = sub(load(X + i+NF3), C);  store(Z + i + NF3, _mm256_blendv_ps(O, load(Y + i+NF3),   _mm256_cmp_ps(d4, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    for (; i < N - (NF - 1); i += NF) {
+        __m256 d1 = sub(load(X + i), C);     store(Z + i,       _mm256_blendv_ps(O, load(Y + i),        _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    
+    int n = N - i;
+    if (n > 0) {//TODO:BUGGY, loadi should also been a masked load. If not, it may fail during the page bnd        
+        __m256 d1 = sub(load(X + i), C);   maskstore(Z + i, GetMoveMask(n),_mm256_blendv_ps(O, load(Y + i), _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    _mm256_zeroupper();    
+}
+void avx2_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
+    __m256  O = set0();
+    __m256  I = set1(1.0);
+    __m256  C = set1(knot);
+    int i = 0;
+    for (; i < N - (NF4 - 1); i += NF4) {
+        __m256 d1 = sub(load(X + i),    C);   store(Z + i,       _mm256_blendv_ps(load(Y + i ),      O, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d2 = sub(load(X + i+NF), C);   store(Z + i + NF,  _mm256_blendv_ps(load(Y + i + NF),  O, _mm256_cmp_ps(d2, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d3 = sub(load(X + i+NF2), C);  store(Z + i + NF2, _mm256_blendv_ps(load(Y + i + NF2), O, _mm256_cmp_ps(d3, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+        __m256 d4 = sub(load(X + i+NF3), C);  store(Z + i + NF3, _mm256_blendv_ps(load(Y + i + NF3), O, _mm256_cmp_ps(d4, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    for (; i < N - (NF - 1); i += NF) {
+        __m256 d1 = sub(load(X + i), C);     store(Z + i,       _mm256_blendv_ps(load(Y + i),        O,  _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    
+    int n = N - i;
+    if (n > 0) {//TODO:BUGGY, loadi should also been a masked load. If not, it may fail during the page bnd        
+        __m256 d1 = sub(load(X + i), C);   maskstore(Z + i, GetMoveMask(n),_mm256_blendv_ps(load(Y + i), O, _mm256_cmp_ps(d1, O, _CMP_GE_OQ))); //0: take a, 1: take from vec        
+    }
+    _mm256_zeroupper();     
+}
 void SetupVectorFunction_AVX2() {
 
     FillMaskTempalte();
@@ -2299,7 +2428,8 @@ void SetupVectorFunction_AVX2() {
     f32_diff_back   = & avx2_f32_diff_back;
   
     f32_seq   = & avx2_f32_seq;
-  
+    i32_seq = &avx2_i32_seq;
+
 /////////////////2
     f32_to_f64_inplace   = &avx2_f32_to_f64_inplace;
     f64_to_f32_inplace   = &avx2_f64_to_f32_inplace;
@@ -2326,7 +2456,11 @@ void SetupVectorFunction_AVX2() {
     f32_gather2Vec_scatterVal_byindex = &avx2_f32_gather2Vec_scatterVal_byindex;
 
     f32_scale_inplace = avx2_f32_scale_inplace;
-    
+    f32_hinge_pos = avx2_f32_hinge_pos;
+    f32_hinge_neg = avx2_f32_hinge_neg;
+    f32_step_pos = avx2_f32_step_pos;
+	f32_step_neg  = avx2_f32_step_neg;
+    f32_axpy_inplace = avx2_f32_axpy_inplace;
 }
 
 #else

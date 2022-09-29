@@ -17,16 +17,16 @@
 #define max4(a,b,c,d)       max( max3(a,b,c),d)
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 
+
+
 static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt,   I32 * MAX_COL) {
-
 	#define MODEL (*model)
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// For some proposal moves, two new segments will be generated..
      #define MAX_NUM_NEW_SEG 2
-	I32 MXNCOL_PERSEG1 = MODEL.sid >= 0 ? (MODEL.b[MODEL.sid].prior.maxOrder)*2L : -999;  	// mem to save one season term	
-	I32 MXNCOL_PERSEG2 = MODEL.tid >= 0 ? (MODEL.b[MODEL.tid].prior.maxOrder+1L) : -999;    // mem to save one trend term	
-	I32 MXNCOL_PERSEG3 = MODEL.did >= 0 ? opt->io.meta.period : -999;                       // mem to save one dummyterm   
+	I32 MXNCOL_PERSEG1 = MODEL.sid >= 0 ? (MODEL.b[MODEL.sid].prior.maxOrder)*2L : -9999;  	// mem to save one season term	
+	I32 MXNCOL_PERSEG2 = MODEL.tid >= 0 ? (MODEL.b[MODEL.tid].prior.maxOrder+1L) : -9999;    // mem to save one trend term	
+	I32 MXNCOL_PERSEG3 = MODEL.did >= 0 ? opt->io.meta.period : -9999;                       // mem to save one dummyterm   
 
 	I32 MAXNUMCOL_Xnewterm = max3(MXNCOL_PERSEG1, MXNCOL_PERSEG2, MXNCOL_PERSEG3) * MAX_NUM_NEW_SEG;
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,19 +58,20 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR o
 	//Xnewterm is also needed to store the recoverd original Y data values to be dumped into the output
 	//varaible o.data and to compute R2 and RMSE.
 	I32 MAX_COLS_YPRED = opt->io.q * MODEL.NUMBASIS;
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 	I32 Npad = ((opt->io.N + 7) / 8) * 8;  Npad = opt->io.N;//Correct for the inconsitency of X and Y in gemm and gemv
 	I32 TOTAL_NUM = max4( MAXNUMCOL_Xnewterm* Npad + MAX_NUMELEM_SEGINFO, 
-		                  MAX_MEM_FOR_CHANGEPOINTS, MAX_COLS_YPRED*Npad,
+		                  MAX_MEM_FOR_CHANGEPOINTS,
+		                  MAX_COLS_YPRED*Npad,
 		                  Nraw);
 		
-	#undef MODEL
 		
 	*MAX_COL = MAXNUMCOL_Xnewterm;
-
 	return TOTAL_NUM;
+
+    #undef MODEL
 }
 /*************************************************/
 //Arrays that have a leading dimension of Npad:
@@ -81,6 +82,8 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR o
 void AllocateXXXMEM( F32PTR * Xt_mars, F32PTR*  Xnewterm, F32PTR*  Xt_zeroBackup,
 	                 BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointers * MEM) 
 {	
+#define RoundTo64(N)  ((N+63)/64*64)
+
 	I32 N         = opt->io.N;
 	I32 Npad      = ((N + 7) / 8) * 8;
 	I32 K_MAX     = opt->prior.K_MAX;
@@ -93,10 +96,10 @@ void AllocateXXXMEM( F32PTR * Xt_mars, F32PTR*  Xnewterm, F32PTR*  Xt_zeroBackup
 	I64 szXnewterm     =  XNEW_TOTAL_NUM;
 	I64 szXtzeroBackup =  MAXNUM_MISSINGROW * XNEW_MAX_NUMCOL;
 
-     #define RoundTo64(N)  ((N+63)/64*64)
+
 	I32 szTotal = RoundTo64(szXtmars) + RoundTo64(szXnewterm) + RoundTo64(szXtzeroBackup);
 
-	*Xt_mars        = MyALLOC(*MEM, szTotal, F32, 64);
+	*Xt_mars       = MyALLOC(*MEM, szTotal, F32, 64);
 	*Xnewterm      = *Xt_mars  + RoundTo64(szXtmars) ;
 	*Xt_zeroBackup = *Xnewterm + RoundTo64(szXnewterm);
 	//Xt_mars		= MyALLOC(MEM, Npad * MAX_K, F32, 64); 
@@ -131,6 +134,7 @@ void AllocateYinfoMEM(BEAST2_YINFO_PTR yInfo, BEAST2_OPTIONS_PTR opt, MemPointer
 	} else {
 		yInfo->Yseason = NULL;
 	}
+
 	if (opt->io.meta.detrend) {
 		yInfo->Ytrend = MyALLOC(*MEM, N * q, F32, 0);
 	}

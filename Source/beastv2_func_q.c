@@ -76,7 +76,7 @@ void SetupPointersForCoreResults(CORESULT* coreResults, BEAST2_BASIS_PTR b, I32 
 
 void BEAST2_EvaluateModel(
 	BEAST2_MODELDATA *curmodel, BEAST2_BASIS_PTR b, F32PTR Xt_mars, I32 N, I32 NUMBASIS,
-	BEAST2_YINFO_PTR  yInfo,    BEAST2_HyperPar *hyperPar, F32 precVal, VOID_PTR stream )
+	BEAST2_YINFO_PTR  yInfo,    BEAST2_HyperPar *hyperPar, F32PTR precVec, VOID_PTR stream )
 {
 	//TO RUN THIS FUNCTION, MUST FIRST RUN CONVERTBAIS so to GET NUMBERS OF BASIS TERMS	
 	
@@ -158,8 +158,8 @@ void BEAST2_EvaluateModel(
 	//X_mars has been constructed. Now use it to calcuate its margin likelihood
 	//Add precison values to the diagonal of XtX: post_P=XtX +diag(prec)	
 	F32PTR cholXtX = curmodel->cholXtX;
-	f32_copy( XtX,  cholXtX, K * K);
-	f32_add_val_matrixdiag(cholXtX, precVal, K);
+	//f32_copy( XtX,  cholXtX, K * K);
+	//f32_add_val_matrixdiag(cholXtX, precVec[0], K);
 
 	//Solve inv(Post_P)*XtY using  Post_P*b=XtY to get beta_mean
 	F32PTR beta_mean = curmodel->beta_mean;	
@@ -172,7 +172,7 @@ void BEAST2_EvaluateModel(
 		r_LAPACKE_spotrs(LAPACK_COL_MAJOR, 'U', K, 1, cholXtX, K, beta_mean, K);	
 	*/
 	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX, cholXtX, &precVal, K, 1, K);
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX, cholXtX, precVec, K, 1, K);
 	solve_U_as_LU_invdiag_sqrmat(cholXtX, XtY, beta_mean, K);
 	//////////////////////////////////////////////////////////////////
 
@@ -213,13 +213,13 @@ void BEAST2_EvaluateModel(
 	F32 half_log_det_post = sum_log_diagv2(cholXtX, K);
 	
 	//half_log_det_prior = -0.5 * (k_SN * log(prec(1)) + length(k_const_terms) * log(prec(2)) + length(linear_terms) * log(prec(3)));		
-	F32 half_log_det_prior	= -.5f * K*logf(precVal);
+	F32 half_log_det_prior	= -.5f * K*logf(precVec[0]);
 
 	//log_ML    = half_log_det_post - half_log_det_prior - (n / 2 + b) * log(a + a_star / 2);
 	F32 marg_lik = half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
 
-	curmodel->alpha2_star = alpha2_star;
-	curmodel->marg_lik    = marg_lik;
+	curmodel->alpha2Q_star[0] = alpha2_star;
+	curmodel->marg_lik        = marg_lik;
 
 	return;
 }
@@ -453,7 +453,7 @@ void MoveCOLsWithinMatrix(F32PTR X, I32 N, I32 Kstart, I32 Kend, I32 Knewstart) 
 
 void MR_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,  BEAST2_BASIS_PTR b, F32PTR Xt_mars, I32 N, I32 NUMBASIS,
-	BEAST2_YINFO_PTR yInfo,	 BEAST2_HyperPar *hyperPar, F32 precVal, VOID_PTR stream )
+	BEAST2_YINFO_PTR yInfo,	 BEAST2_HyperPar *hyperPar, F32PTR precVec, VOID_PTR stream )
 {
 	//TO RUN THIS FUNCTION, MUST FIRST RUN CONVERTBAIS so to GET NUMBERS OF BASIS TERMS	
 
@@ -543,8 +543,8 @@ void MR_EvaluateModel(
 	//X_mars has been constructed. Now use it to calcuate its margin likelihood
 	//Add precison values to the diagonal of XtX: post_P=XtX +diag(prec)	
 	F32PTR cholXtX = curmodel->cholXtX;
-	f32_copy( XtX,  cholXtX, K * K);
-	f32_add_val_matrixdiag(cholXtX, precVal, K);
+	//f32_copy( XtX,  cholXtX, K * K);
+	//f32_add_val_matrixdiag(cholXtX, precVal, K);
 
 	//Solve inv(Post_P)*XtY using  Post_P*b=XtY to get beta_mean
 	F32PTR beta_mean = curmodel->beta_mean;	
@@ -557,7 +557,7 @@ void MR_EvaluateModel(
 		r_LAPACKE_spotrs(LAPACK_COL_MAJOR, 'U', K, 1, cholXtX, K, beta_mean, K);	
 	*/
 	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX, cholXtX, &precVal, K, 1, K);
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX, cholXtX, precVec, K, 1, K);
 	//BEAST: solve_U_as_LU_invdiag_sqrmat(cholXtX, XtY, beta_mean, K);
 	//MRBEAST--------start
 	solve_U_as_LU_invdiag_sqrmat_multicols(cholXtX, XtY, beta_mean, K, q);
@@ -594,18 +594,18 @@ void MR_EvaluateModel(
     //BEAST: F32 alpha2_star = (pyInfo->YtY_plus_alpha2Q[0] - DOT(K,  XtY,  beta_mean)) * 0.5;
 	
 	//MRBEAST--------start
-    r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, K, 1.f, beta_mean, K, XtY, K, 0.f, curmodel->alphaQ_star, q);
-	r_ippsSub_32f(curmodel->alphaQ_star, yInfo->YtY_plus_alpha2Q, curmodel->alphaQ_star, q * q);	
-	r_LAPACKE_spotrf(LAPACK_COL_MAJOR, 'U', q, curmodel->alphaQ_star, q); // Choleskey decomposition; only the upper triagnle elements are used
+    r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, K, 1.f, beta_mean, K, XtY, K, 0.f, curmodel->alpha2Q_star, q);
+	r_ippsSub_32f(curmodel->alpha2Q_star, yInfo->YtY_plus_alpha2Q, curmodel->alpha2Q_star, q * q);
+	r_LAPACKE_spotrf(LAPACK_COL_MAJOR, 'U', q, curmodel->alpha2Q_star, q); // Choleskey decomposition; only the upper triagnle elements are used
 
-	F32 log_det_alphaQ = sum_log_diagv2(curmodel->alphaQ_star, q);	
+	F32 log_det_alphaQ = sum_log_diagv2(curmodel->alpha2Q_star, q);
 	//MRBEAST--------end
 
 	//half_log_det_post; = sum(log(1. / diag(U)))
 	F32 half_log_det_post = sum_log_diagv2(cholXtX, K);
 	
 	//half_log_det_prior = -0.5 * (k_SN * log(prec(1)) + length(k_const_terms) * log(prec(2)) + length(linear_terms) * log(prec(3)));		
-	F32 half_log_det_prior	= -.5f * K*logf(precVal);
+	F32 half_log_det_prior	= -.5f * K*logf(precVec[0]);
 
  	//log_ML = half_log_det_post - half_log_det_prior - (n / 2 + b) * log(a + a_star / 2);
 	F32 marg_lik = q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ*2.0f;

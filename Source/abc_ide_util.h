@@ -37,6 +37,8 @@ typedef struct FIELD_ITEM {
 
 VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind);
 
+void* CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr);
+void ReplaceStructField(VOIDPTR s, char* fname, VOIDPTR newvalue);
 void * CreateStructVar(FIELD_ITEM *fieldList, int nfields);
 void   DestoryStructVar(VOID_PTR strutVar);
 void   RemoveField(FIELD_ITEM *fieldList, int nfields, char * fieldName);
@@ -81,7 +83,7 @@ int IsInt64(void* ptr);
 int IsLogical(void* ptr);
 int HaveEqualDimesions(const void* p1, const void* p2);
 int CopyNumericArrToF32Arr(F32PTR outmem, VOID_PTR infield, int N);
-
+int CopyNumericArrToI32Arr(I32PTR outmem, VOID_PTR infield, int N);
 
 extern I32  CheckInterrupt();
 extern void ConsumeInterruptSignal();

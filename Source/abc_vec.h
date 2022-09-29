@@ -46,6 +46,7 @@ extern "C" {
 	extern I32(*f32_minidx)(const F32PTR  X, const int  N, F32PTR val);
 	extern void (*f32_diff_back)(const F32PTR  X, F32PTR result, const int N);
 	extern void (*f32_seq)(F32PTR p, F32 x0, F32 dX, int N);
+	extern void (*i32_seq)(I32PTR p, I32 x0, I32 dX, int N);
 	extern void (*f32_to_f64_inplace)(F32PTR data32, int N);
 	extern void (*f64_to_f32_inplace)(F64PTR data64, int N);
 	extern void (*i32_to_f32_scaleby_inplace)(I32PTR X, int N, F32 scale);
@@ -81,10 +82,16 @@ extern "C" {
 
 	extern void f32_mat_multirows_extract_set_by_scalar(F32PTR X, I32 ROW, I32 COL, F32PTR Xcopy, I32PTR RowIndices, I32 nRows, F32 newValue);
 	extern void f32_mat_multirows_set_by_submat(F32PTR X, I32 ROW, I32 COL, F32PTR Xcopy, I32PTR RowIndices, I32 nRows);
+	extern void f32_normalize_std_avg_inplace(F32PTR X, I32 N, F32PTR avg, F32PTR std);
 	extern void f32_normalize_inplace(F32PTR X, I32 N);
 	extern void f32_normalize_x_factor_inplace(F32PTR X, I32 N, F32 factor);
-	I32  f32_find_nans(const F32PTR X, int N, I32PTR index);
+	extern I32  f32_find_nans(const F32PTR X, int N, I32PTR index);
 
+	extern void  (*f32_hinge_neg)(const F32PTR X, const F32PTR Y, const F32 knot, const int N);
+	extern void  (*f32_hinge_pos)(const F32PTR X, const F32PTR Y, const F32 knot, const int N);
+	extern void  (*f32_step_neg)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
+	extern void  (*f32_step_pos)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
+	extern void  (*f32_axpy_inplace)(const F32 a, const F32PTR x, F32PTR y, const int N);
 #define f32_copy(src, dst,N)  memcpy(dst,src, sizeof(F32)*N)
 
 

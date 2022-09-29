@@ -889,11 +889,11 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	I32 N      = io->N;
 	/**************************/
 
-	if (m.seasonMinOrder)    o.seasonMinOrder   = 1L;				   o.seasonMinOrder = min(o.seasonMinOrder, period / 2 - 1);    o.seasonMinOrder = max(o.seasonMinOrder, 1L);
-	if (m.seasonMaxOrder)    o.seasonMaxOrder   = (period/2 - 1);      o.seasonMaxOrder = min(o.seasonMaxOrder, (period / 2 - 1));  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
-	if (m.trendMinOrder)     o.trendMinOrder    = 0L;				   o.trendMinOrder	= max(o.trendMinOrder, 0L);
-	if (m.trendMaxOrder)     o.trendMaxOrder    = 1L;				   o.trendMaxOrder	= max(o.trendMaxOrder, o.trendMinOrder);
-	if (m.seasonMinSepDist || o.seasonMinSepDist == 0)   o.seasonMinSepDist = period / 2;       o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
+	if (m.seasonMinOrder)    o.seasonMinOrder   = 1L;				   o.seasonMinOrder   = min(o.seasonMinOrder, period / 2 - 1);    o.seasonMinOrder = max(o.seasonMinOrder, 1L);
+	if (m.seasonMaxOrder)    o.seasonMaxOrder   = (period/2 - 1);      o.seasonMaxOrder   = min(o.seasonMaxOrder, (period / 2 - 1));  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
+	if (m.trendMinOrder)     o.trendMinOrder    = 0L;				   o.trendMinOrder	  = max(o.trendMinOrder, 0L);
+	if (m.trendMaxOrder)     o.trendMaxOrder    = 1L;				   o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);
+	if (m.seasonMinSepDist || o.seasonMinSepDist == 0)				   o.seasonMinSepDist = period / 2;       o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
 	
 	if (m.trendMinSepDist || o.trendMinSepDist == 0)   o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ;
 	o.trendMinSepDist = max(o.trendMinSepDist, (o.trendMaxOrder+1));
@@ -905,23 +905,42 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	
 	if (m.seasonMaxKnotNum)  o.seasonMaxKnotNum  = min(floor(N / (o.seasonMinSepDist + 1) - 1.f), 5);  o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, floor(N / (o.seasonMinSepDist + 1) - 1.f));
 	if (m.trendMaxKnotNum)   o.trendMaxKnotNum   = min( floor(N/(o.trendMinSepDist  + 1) - 1.f),  10); o.trendMaxKnotNum  = min(o.trendMaxKnotNum,  floor(N / (o.trendMinSepDist + 1) - 1.f));	
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;                                  o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
 	
-	if (m.K_MAX )            o.K_MAX       = 300;                  
-	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = min(o.sigFactor, 1.02);
-	if (m.outlierSigFactor)  o.outlierSigFactor = 2.5;            o.outlierSigFactor = min(o.outlierSigFactor, 1.5);
+	if (m.K_MAX )            o.K_MAX            = 500;                  
+	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = max(o.sigFactor,        1.02);
+	if (m.outlierSigFactor)  o.outlierSigFactor = 2.5;            o.outlierSigFactor = max(o.outlierSigFactor, 1.5);
 
-	if (m.sig2 )             o.sig2      = 0.2f;             o.sig2       = max(o.sig2,      0.01);
-	if (m.precValue)         o.precValue = 1.5f;             o.precValue  = max(o.precValue, 0.01);
+	if (m.sig2 )             o.sig2      = 0.2f;				  o.sig2             = max(o.sig2,      0.01);
+	if (m.precValue)         o.precValue = 1.5f;				  o.precValue        = max(o.precValue, 0.01);
 	if (m.alpha1)		     o.alpha1	 = 0.00000001f;
 	if (m.alpha2)		     o.alpha2	 = 0.00000001f;
 	if (m.delta1)		     o.delta1	 = 0.00000001f;
 	if (m.delta2)		     o.delta2	 = 0.00000001f;
 
-	if (m.trendBasisFuncType)		o.trendBasisFuncType  = 0;
-	if (m.outlierBasisFuncType)		o.outlierBasisFuncType  = 0; //TODO: to fix
-	if (m.modelPriorType)			o.modelPriorType      = 1L;
-	if (m.precPriorType)			o.precPriorType       = UniformPrec;
+	if (m.precPriorType)			o.precPriorType = UniformPrec;
+
+
+	if (m.seasonBasisFuncType) {
+		if      (o.precPriorType == UniformPrec)		o.seasonBasisFuncType = 0;
+		else if (o.precPriorType == ConstPrec)          o.seasonBasisFuncType = 0;
+		else if (o.precPriorType == ComponentWise)      o.seasonBasisFuncType = 1;
+		else if (o.precPriorType == OrderWise)          o.seasonBasisFuncType = 1;		
+	}
+	if (m.trendBasisFuncType) {
+		if      (o.precPriorType == UniformPrec)		o.trendBasisFuncType = 0;
+		else if (o.precPriorType == ConstPrec)          o.trendBasisFuncType = 0;
+		else if (o.precPriorType == ComponentWise)      o.seasonBasisFuncType = 1;
+		else if (o.precPriorType == OrderWise)          o.trendBasisFuncType = 1;
+	}	 
+	if (m.outlierBasisFuncType) {
+		if      (o.precPriorType == UniformPrec)		o.outlierBasisFuncType = 0;
+		else if (o.precPriorType == ConstPrec)          o.outlierBasisFuncType = 0;
+		else if (o.precPriorType == ComponentWise)      o.outlierBasisFuncType = 1;
+		else if (o.precPriorType == OrderWise)          o.outlierBasisFuncType = 1;
+	}	 
+	if (m.modelPriorType)			o.modelPriorType        = 1L;
+	
 
 	return 1;
 

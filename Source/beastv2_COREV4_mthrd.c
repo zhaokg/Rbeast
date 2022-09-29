@@ -40,8 +40,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 {
 	
 	// A struct to track allocated pointers   
-	// const MemPointers MEM;
-	// do not use 'const' bcz Clang will asssume other fields as zeros (e.g., alloc, and alloc0).
+	// Do not use 'const MemPointers MEM' bcz Clang will asssume other fields as zeros (e.g., alloc, and alloc0).
 	MemPointers MEM = (MemPointers){.init = mem_init,};
 	MEM.init(&MEM);
 	//MEM.checkHeader = 1;
@@ -105,28 +104,28 @@ int beast2_main_corev4_mthrd(void* dummy)
 	BEAST2_Result_AllocMEM(&result,      opt, &MEM);
 	
 	if (extra.computeCredible) {
-		I32  Npad   = (opt->io.N + 7) / 8 * 8; Npad = opt->io.N;//Correct for the inconsitency of X and Y in gemm and gemv
-		I32  XnewOffset = 0;
+		I32  Npad           = (opt->io.N + 7) / 8 * 8;
+		I32  XnewtermOffset = 0;
+		Npad = opt->io.N;    //Correct for the inconsitency of X and Y in gemm and gemv
 		for (I32 i = 0; i < MODEL.NUMBASIS; i++) {
 			if (MODEL.b[i].type == SEASONID|| MODEL.b[i].type == DUMMYID || MODEL.b[i].type == SVDID)
-				ci[i].result     = resultChain.sCI,		//season		
-			    ci[i].newDataRow = Xnewterm + XnewOffset;			//season		
+				ci[i].result     = resultChain.sCI,		         //season		
+			    ci[i].newDataRow = Xnewterm + XnewtermOffset;	 //season		
 			else if (MODEL.b[i].type == TRENDID)
-				ci[i].result     = resultChain.tCI,     //trend			
-			    ci[i].newDataRow = Xnewterm  + XnewOffset;   //trend		
+				ci[i].result     = resultChain.tCI,               //trend			
+			    ci[i].newDataRow = Xnewterm  + XnewtermOffset;    //trend		
 			else if (MODEL.b[i].type == OUTLIERID)
 				ci[i].result     = resultChain.oCI,      //outlier
-			    ci[i].newDataRow = Xnewterm + XnewOffset; //outlier       
+			    ci[i].newDataRow = Xnewterm + XnewtermOffset; //outlier       
 
-			XnewOffset += Npad * q;   //FOR MRBEAST
+			XnewtermOffset += Npad * q;   //FOR MRBEAST
 		}
 	} //NUMVAR_FOR_CI=3
 
 	const CORESULT coreResults[MAX_NUM_BASIS];
 	SetupPointersForCoreResults(coreResults, MODEL.b, MODEL.NUMBASIS, &resultChain);
 		 
-	const BEAST2_HyperPar  hyperPar = { .alpha_1 = opt->prior.alpha1,  .alpha_2 = opt->prior.alpha2,
-										.del_1   = opt->prior.delta1,  .del_2   = opt->prior.delta2};
+	const BEAST2_HyperPar  hyperPar = {.alpha_1=opt->prior.alpha1,.alpha_2=opt->prior.alpha2,.del_1=opt->prior.delta1,  .del_2=opt->prior.delta2};
 
 	/****************************************************************************/
 	//		THE OUTERMOST LOOP: Loop through all the time series one by one
@@ -147,9 +146,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		//printProgress2(frac, 0, extra.consoleWidth, Xnewterm, firstTimeRun);
 		/***********MULTITHREAD*******************/
 	}
-		
-		
-	
+
 	//#define __DEBUG__
 	#undef  __DEBUG__ 
 
@@ -158,7 +155,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		I32    N          = opt->io.N;
 		I32    Npad       = (N + 7) / 8 * 8; Npad =  N;//Correct for the inconsitency of X and Y in gemm and gemv
 		F32PTR flagSat    = MyALLOC0(MEM, N, I32, 64);
-		F32PTR Xdebug    = MyALLOC0(MEM, Npad*(opt->prior.K_MAX+ opt->prior.K_MAX), I32, 64); // one Kmax for Xt_mars, and another for Xtbackup
+		F32PTR Xdebug     = MyALLOC0(MEM, Npad*(opt->prior.K_MAX+ opt->prior.K_MAX), I32, 64); // one Kmax for Xt_mars, and another for Xtbackup
 	#endif
 
 
@@ -172,6 +169,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 	const U32  MCMC_THINNING = opt->mcmc.thinningFactor;
 	const U32  MCMC_BURNIN   = opt->mcmc.burnin;
 	const U32  MCMC_CHAINNUM = opt->mcmc.chainNumber;
+	const U16  SEASON_BTYPE  = opt->prior.seasonBasisFuncType;
+	const U16  GROUP_MatxMat = (MODEL.sid <0 || opt->prior.seasonBasisFuncType != 3 )
+							   && (MODEL.tid<0  || opt->prior.trendBasisFuncType!=2)
+		                       && ( MODEL.oid<0 || opt->prior.outlierBasisFuncType!=2);
 
 	/***********MULTITHREAD*******************/
 	//The next two global variables will be set in the main thread
@@ -195,7 +196,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		BEAST2_fetch_next_timeSeries(&yInfo, pixelIndex,  MEMBUF, &(opt->io));
 
 
-		F32PTR  Xtmp            = Xt_mars;
+		F32PTR  Xtmp             = Xt_mars;
 		U08     skipCurrentPixel = BEAST2_preprocess_timeSeries(&yInfo, MODEL.b, Xtmp, opt);		
 	
 
@@ -212,21 +213,21 @@ int beast2_main_corev4_mthrd(void* dummy)
 		__START_IF_NOT_SKIP_TIMESESIRIES__  
 		if (!skipCurrentPixel) {
 
-		if (q == 1) {
-				// for BEASTV4
+		if (q == 1) {  // for BEASTV4
 
 				// alpha2_star  = alpha_2 + 0.5(YtY-beta*X'Y) = 0.5* (  [YtY+2*alpha_2] - beta*X'Y  )
 				// YtY+2*alpha_2  is pre-cacluated here. THe "2" before alpha_2 is to undo the division
 				// later in the calcution of alpha2_star
 				yInfo.YtY_plus_alpha2Q[0] = yInfo.YtY_plus_alpha2Q[0] + 2 * hyperPar.alpha_2;
+				
 				//Pre-compute alpha1_start, which depends only on n.
-				yInfo.alpha1_star = yInfo.n * 0.5 + hyperPar.alpha_1;
+				yInfo.alpha1_star = yInfo.n * 0.5 + hyperPar.alpha_1;    
 
-		}	else {
-				// For MRBEAST
+		}	else {	// For MRBEAST
 
 				 //YtY was computed from MV_Fetch; here alpaha_Q is added to its diagonal.			
 				f32_add_val_matrixdiag(yInfo.YtY_plus_alpha2Q, hyperPar.alpha_2, q);
+
 				yInfo.alpha1_star = yInfo.n * 0.5 + (hyperPar.alpha_1 + q - 1) * 0.5;
 		}
 
@@ -240,15 +241,17 @@ int beast2_main_corev4_mthrd(void* dummy)
 			r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD, stream, MAX_RAND_NUM, (U32PTR)RND32);
 			r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD, stream, MAX_RAND_NUM, (U32PTR)RND16);
 			r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD, stream, MAX_RAND_NUM, (U32PTR)RND08);
-			// Depends on n and alpha_1 to generate rndgamma
-			// Needed to resmaple Sig2	
-			// Cann't be used to sample prec bcz the degree of freedom there depends on the number of terms Kterms
+			// rndgamma needed to resmaple Sig2, depending on n and alpha_1 
+			// Not used to sample prec bcz the degree of freedom there depends on the number of terms Kterms
 			r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, MAX_RAND_NUM, RNDGAMMA, ( hyperPar.alpha_1 + yInfo.n * 0.5f), 0, 1);
 		}
-
-		 
+	 
 		// Clear up and zero out A(RESULT) for initialization	 
 		BEAST2_Result_FillMEM(&result, opt, 0);		
+
+		// Make sure the initial preValues in MODEL.precVec contians no NANs as it will contain residual values
+		// from the previous time series
+		ReInit_PrecValues(&MODEL, opt);
 
 		/****************************************************************************/
 		//Iterate all the chains. The individual chain result will be saved into resultChain
@@ -257,7 +260,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		{
 			const I32  N      = opt->io.N; 
 			//const I32  Npad   = (N + 7) / 8 * 8; 
-			const I32  Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+			const I32  Npad   = N;//Correct for the inconsitency of X and Y in gemm and gemv
 			const I32  Npad16 = (N + 15) /16 * 16;	
 			/****************************************************************************/
 			//                 GENERATE AN INITIAL MODEL
@@ -306,9 +309,9 @@ int beast2_main_corev4_mthrd(void* dummy)
 				// larger  mem due to the many terms of the inital random model	
 				// basis->K won't be updated inside the function and the old values from CalcBasisKsKeK is kept
 				if (q == 1) {
-					BEAST2_EvaluateModel(&MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, opt->prior.precValue, &stream); 
+					BEAST2_EvaluateModel(&MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, &opt->prior.precValue, &stream); 
 				} else 	{
-					MR_EvaluateModel(    &MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, opt->prior.precValue, &stream);
+					MR_EvaluateModel(    &MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, &opt->prior.precValue, &stream);
 				}
 		
 			}
@@ -331,13 +334,27 @@ int beast2_main_corev4_mthrd(void* dummy)
 			/**********************************************************************************************/
 			U32 ite            = 0;
 			U32 sample         = 0;
-			U32 subSampleIndex = 0;
+
+			/*************************************************************/
+			// samplesInserted must be reset to zero at the start of each chain
+			/*************************************************************/
+			if (extra.computeCredible) { 
+				for (int i = 0; i < MODEL.NUMBASIS; i++) {
+					ci[i].samplesInserted = 0;
+				} 
+			} 
 
 			PROP_DATA PROPINFO = {.N=N,                   .Npad16 = Npad16,   .samples=&sample,
-				                  .keyresult=coreResults, .mem    = Xnewterm,  .model  =&MODEL, 
+				                  .keyresult=coreResults, .mem    = Xnewterm, .model  =&MODEL, 
 				                  .pRND =&RND,            .yInfo  =&yInfo,    .nSample_ExtremVecNeedUpdate =1L,       
 								  .sigFactor = opt->prior.sigFactor,          .outlierSigFactor = opt->prior.outlierSigFactor,
 			}; 
+
+			NEWTERM        NEW;     // moved here bvz its xcols has two fixed lements, N and Npad
+			NEWCOLINFO     NewCol; // moved here bvz its xcols has two fixed lements, N and Npad
+			NewCol.N    = N;
+			NewCol.Nlda = Npad;
+
 			I32 numBadIterations = 0;
 			while (sample < MCMC_SAMPLES)
 			{
@@ -354,16 +371,15 @@ int beast2_main_corev4_mthrd(void* dummy)
 				//  Choose a basis type	
 				BEAST2_BASIS_PTR basis = MODEL.b + MODEL.PickBasisID(&PROPINFO); //basisID = *RND.rnd08++ < 128;				
 				
-				// IMPLEMENT THE NEW PROPOSED BASIS		       
-				NEWTERM    NEW;
+				// IMPLEMENT THE NEW PROPOSED BASIS	
 				//CHANGE: new.newKnot, numSeg, SEG/R1/2, orders2, newIdx, nKnot_new, jumpType,propinfo.pRND.rnd8/32				
-				basis->Propose(basis, &NEW, &PROPINFO); //info->mem=Xnewterm is used as a temp membuf here
+				basis->Propose(basis, &NEW, &NewCol, &PROPINFO); //info->mem=Xnewterm is used as a temp membuf here
 
 				#ifdef __DEBUG__
-					I32 basisIdx = basis - MODEL.b;
-					if (basisIdx == 0 && (NEW.jumpType == BIRTH || NEW.jumpType == MOVE)) {
-						flagSat[NEW.newKnot - 1] += 1;
-					}
+					I32 basisIdx = basis - MODEL.b;		
+					flagSat[NEW.newKnot - 1] += basisIdx == 0 && (NEW.jumpType == BIRTH || NEW.jumpType == MOVE);					 
+					if (basisIdx == 0) ++(flagS[NEW.jumpType]);
+					else 		       ++(flagT[NEW.jumpType]); 
 				#endif
 
 				/**********************************************************************/
@@ -372,25 +388,25 @@ int beast2_main_corev4_mthrd(void* dummy)
 				/**********************************************************************/								
 				I32 Knewterm = 0;				
 				for (I32 i = 0; i < NEW.numSeg; i++) { 
-					// NEW.numSeg=0 if removing terms for ChORDER(newOrder<oldeTerm)
+					// NEW.numSeg is 0 if removing terms for ChORDER(newOrder<oldeTerm)
 					// [1]..(1)....(2)...(sY-1)...N [N+1] 
-					I32 kterms   = basis->GenTerms(Xnewterm+Npad*Knewterm, N, &NEW.SEG[i], &(basis->bConst));
-					NEW.SEG[i].K = kterms;
+					I32 kterms   = NEW.SEG[i].K = basis->GenTerms(Xnewterm+Npad*Knewterm, N, &NEW.SEG[i], &(basis->bConst));					
 					Knewterm    += kterms;
 				} // Iterate through all the new segments
-				#ifdef SOLARIS_COMPILER
-					NEW.k1= NEW.k1_new=NEW.k1_old;
-				#endif
-				NEW.k2_new = NEW.k1 + Knewterm - 1L;	// if Knewterm=0 (i.e., delete terms), k2_new < k1_new
+
+				NewCol.k2_new = NewCol.k1 + Knewterm - 1L;	// if Knewterm=0 (i.e., delete terms), k2_new < k1_new
 				
 				//Get k1_old, k2_old, k1_new and k2_new
-				NEW.k1     += basis->Kbase;			// k1=k1_new=k1_old
-				NEW.k2_old += basis->Kbase;		
-				NEW.k2_new += basis->Kbase;
+				NewCol.k1     += basis->Kbase;		// k1=k1_new=k1_old
+				NewCol.k2_old += basis->Kbase;
+				NewCol.k2_new += basis->Kbase;
 
-				I32 KOLD     = MODEL.curr.K;                   // Total number of basis for the current model				
-				I32 KNEW     = KOLD + NEW.k2_new - NEW.k2_old; // Total number of bases in the proposed model	
-				MODEL.prop.K = KNEW;
+				I32 KOLD     = MODEL.curr.K;                         // Total number of basis for the current model				
+				I32 KNEW     = KOLD + NewCol.k2_new - NewCol.k2_old; // Total number of bases in the proposed model	
+
+				NewCol.Knewterm = Knewterm;
+				NewCol.KOLD     = KOLD;
+				NewCol.KNEW     = KNEW;				
 
 				/*************************************************************************/
 				// Get XtX_prop: Copy parts of XtX to XtT_prop and fill new components 
@@ -399,147 +415,141 @@ int beast2_main_corev4_mthrd(void* dummy)
 				if (yInfo.nMissing > 0 && Knewterm > 0 /*&& basis->type != OUTLIERID*/)  //needed for basisFunction_OUliter=1
 				f32_mat_multirows_extract_set_by_scalar(Xnewterm,Npad,Knewterm,Xt_zeroBackup, yInfo.rowsMissing, yInfo.nMissing, 0.0f);
 
-				/*************************************************************************/
-				//               The FIRST component:	
-				/*************************************************************************/
-				// There'sY no first component if k1_old/k1_new=1 for SEASON	
-				for (I32 i = 1; i<NEW.k1; i++) SCPY(i, MODEL.curr.XtX + (i-1L)*KOLD, MODEL.prop.XtX + (i-1L)*KNEW);
-				/*************************************************************************/
-				//              The Second component
-				/*************************************************************************/
-				// No new cols/terms if flag=ChORDER && isInsert=0:the resampled basis has a higher order than the old basis
-				if (Knewterm != 0) {
-					FILL0(MODEL.prop.XtX + (NEW.k1-1)*KNEW, (KNEW-NEW.k1+1)*KNEW); // zero out the cols from k1-th to the end
-					if (NEW.k1 > 1) {						
-						/*
-						rI32 r1 = NEW.r1[0];
-					    rI32 r2 = NEW.r2[NEW.numSeg - 1];
-					    rI32 Nseg = r2 - r1 + 1;
-						r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, \
-							NEW.k1 - 1L, Knewterm, Nseg, 1.0f, \
-							Xt_mars  + r1-1L, Npad,
-							Xnewterm + r1-1L, Npad, 0.f, \
-							MODEL.prop.XtX + (NEW.k1 - 1L) * KNEW, KNEW); //0.f, MEMBUF1, k1_new - 1);
-					   */
-					  //r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1_new - 1, K_newTerm, N, 1.0f, Xt_mars , Npad,Xnewterm , Npad, 0.f, GlobalMEMBuf_1st, k1_new - 1);
-					
-						// Xnewterm is pre-allocated with sufficent mem to ensure segInfo won't overflow in __GetMAXNumElemXnewTerm
-						BEAST2_BASESEG* _segInfo  = (BEAST2_BASESEG *)(Xnewterm + Knewterm * Npad);
-						I32             _numBands = GetInfoBandList(_segInfo, &MODEL, NEW.k1 - 1);
-						MatxMat(_segInfo, _numBands, Xt_mars,
-							    NEW.SEG, NEW.numSeg, Xnewterm,
-							    MODEL.prop.XtX+(NEW.k1-1L)*KNEW, N, KNEW );
-					}
 
-					//Three alternative ways to compute Xnewterm'*XnewTerm. Note that the resulting matrix is symmetric
-					XtX_ByGroup(NEW.SEG, NEW.numSeg, Xnewterm, MODEL.prop.XtX + (NEW.k1 - 1) * KNEW + NEW.k1 - 1, N, KNEW);
-					{
-						//THE FIRST WAY:
-						//r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K_newTerm, K_newTerm, N, 1.0, Xnewterm, Npad, Xnewterm, Npad, 0.f, GlobalMEMBuf_2nd, K_newTerm);
-						/*
-						r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
-							Knewterm, Knewterm, Nseg, 1.0,
-							Xnewterm + r1 - 1, Npad,
-							Xnewterm + r1 - 1, Npad, 0.f,
-							MODEL.prop.XtX + (NEW.k1-1) * KNEW + NEW.k1 - 1, KNEW);// MEMBUF2, K_newTerm);
-						 */
-						//XnewtermTXnewterm(&NEW, Xnewterm, MODEL.prop.XtX + (NEW.k1 - 1) * KNEW + NEW.k1 - 1, Npad, KNEW);
-						
-						//THE SECOND WAY: 
-						//sgemmt only updates the upper triangular part of the resulting matrix, which is supposed to be faster than sgemm, but it is NOT
-						//cblas_sgemmt(CblasColMajor, CblasUpper, CblasTrans, CblasNoTrans, K_newTerm, Npad, 1.0f, Xnewterm, Npad, Xnewterm, Npad, 0.f, GlobalMEMBuf_2nd, K_newTerm);
-
-						//THE THIRD WAY: 
-						//This is the fastest way when using Intel'sY MKL
-						/*
-						{  for (int i = 1; i <= K_newTerm; i++)
-						   for (int j = 1; j <= i; j++)
-						   GlobalMEMBuf_2nd[K_newTerm*(i - 1) + j - 1] = DOT(N, Xnewterm + (j - 1)*Npad, Xnewterm + (i - 1)*Npad);
-						} */
-					}
-					/*
-					//After obtaining Xnewterm'*Xnewterm, insert it into XtX_prop at appropriate locations				
-					for (rI32 i = k1_new, j = 1; i <= k2_new; i++, j++) {
-						if (k1_new != 1) r_cblas_scopy(k1_new - 1, MEMBUF1 + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
-						r_cblas_scopy(j, MEMBUF2 + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
-					}*/
+				if (!GROUP_MatxMat) {
+					update_XtX_from_Xnewterm(Xt_mars, Xnewterm, MODEL.curr.XtX, MODEL.prop.XtX, &NewCol);
+					update_XtY_from_Xnewterm(yInfo.Y, Xnewterm, MODEL.curr.XtY, MODEL.prop.XtY, &NewCol, q);
 				}
-				/*{
-				cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1_new - 1, K_newTerm, N, 1, X_mars, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, k1_new - 1);
-				for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
-				r_cblas_scopy(k1_new - 1, GlobalMEMBuf_1st + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
-				cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K_newTerm, K_newTerm, N, 1, X_mars_prop + (k1_new - 1)*N, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, K_newTerm);
-				for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
-				r_cblas_scopy(j, GlobalMEMBuf_1st + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
-				}*/
-				/*************************************************************************/
-				//                  The third component: 
-				/*************************************************************************/
-				//There is no third componet if k2_old=KOLD 
-				if (NEW.k2_old != KOLD) {
-					/*for (rI32  j = 1; i <= KOLD; i++, j++) {r_cblas_scopy(K_newTerm,  MEMBUF1 + (j - 1)*K_newTerm, 1, XtX_prop + (k - 1)*KNEW + k1_new - 1, 1),					*/
-					for (I32 kold=NEW.k2_old+1, knew=NEW.k2_new+1; kold <= KOLD; kold++, knew++) {
-						F32PTR ColStart_old = MODEL.curr.XtX + (kold - 1) * KOLD;
-						F32PTR ColStart_new = MODEL.prop.XtX + (knew - 1) * KNEW;
-						SCPY(NEW.k1 - 1,        ColStart_old,                        ColStart_new); //the upper part of the third componet
-						SCPY(kold - NEW.k2_old, ColStart_old + (NEW.k2_old + 1) - 1, ColStart_new + (NEW.k2_new + 1) - 1); // the bottom part of the 3rd cmpnt
-					}
-
-					// If there is a middle part of the componet (i.e, Knewterm>0); this part 
-					// will be missing if flag is resmaplingOder and isInsert = 0.
-					if (Knewterm != 0) { 						
-						/*
-						rI32 r1 = NEW.r1[0];
-						rI32 r2 = NEW.r2[NEW.numSeg - 1];
-						rI32 Nseg = r2 - r1 + 1;
-						r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
-							Knewterm, (KOLD - NEW.k2_old), Nseg, 1,
-							Xnewterm + r1 - 1, Npad,
-							Xt_mars + (NEW.k2_old + 1 - 1) * Npad + r1 - 1, Npad, 0,
-							MODEL.prop.XtX + (NEW.k2_new+1L-1L) * KNEW + NEW.k1 - 1, KNEW );//MEMBUF1, K_newTerm);
-	                   */
-						BEAST2_BASESEG* _segInfo  = (BEAST2_BASESEG*) (Xnewterm + Knewterm * Npad);
-						I32             _numBands = GetInfoBandList_post(_segInfo, &MODEL, NEW.k2_old + 1);
-			 
-						MatxMat(NEW.SEG,NEW.numSeg,Xnewterm, _segInfo, _numBands, Xt_mars+NEW.k2_old*Npad,
-							    MODEL.prop.XtX + (NEW.k2_new+1 -1)*KNEW + NEW.k1- 1, N, KNEW);				
-					} 
-
-				}
-
-				/*********************************************************************************/
-				//                 Compute XtY_prop from XtY
-				/********************************************************************************/
-				if (q == 1) {
-					// Skipped if k1_old=1 when dealing with SEASON
-					if (NEW.k1 > 1)       SCPY(NEW.k1 - 1, MODEL.curr.XtY, MODEL.prop.XtY);
-					// New components : XnewTemrm*Y
-					if (Knewterm > 0)       MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NEW.k1 - 1, N);
-					//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
-					if (NEW.k2_old != KOLD) SCPY(KNEW - NEW.k2_new, MODEL.curr.XtY + (NEW.k2_old + 1L) - 1L, MODEL.prop.XtY + (NEW.k2_new + 1) - 1);
-
-				}	else {
+				else {
 				
-					// Skipped if k1_old=1 when dealing with SEASON
-					if (NEW.k1 > 1) {
-						for (I32 c = 0; c < q; ++c) {
-							SCPY( NEW.k1-1, MODEL.curr.XtY+MODEL.curr.K*c, MODEL.prop.XtY +KNEW * c);
-						}						
-					}
-					// New components : XnewTemrm*Y
-					if (Knewterm > 0) {
-						MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NEW.k1 - 1, N);
-						r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, Knewterm, q, N, 1.f, Xnewterm, Npad, yInfo.Y, N, 0.f,
-							MODEL.prop.XtY+ NEW.k1 - 1, KNEW);
-					}
-					//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
-					if (NEW.k2_old != KOLD) {
-						for (I32 c = 0; c < q; ++c) {
-							SCPY(KNEW - NEW.k2_new, MODEL.curr.XtY + (NEW.k2_old + 1L) - 1L + MODEL.curr.K * c, MODEL.prop.XtY + (NEW.k2_new + 1) - 1 + KNEW * c);
-						}
-					}
-				 
+					/*************************************************************************/
+					//               The FIRST component:	
+					/*************************************************************************/
+					// There'sY no first component if k1_old/k1_new=1 for SEASON	
+					for (I32 i = 1; i < NewCol.k1; i++) SCPY(i, MODEL.curr.XtX + (i - 1L) * KOLD, MODEL.prop.XtX + (i - 1L) * KNEW);
 
+					/*************************************************************************/
+					//              The SECOND component
+					/*************************************************************************/
+					// No new cols/terms if flag=ChORDER && isInsert=0:the resampled basis has a higher order than the old basis
+					if (Knewterm != 0) {
+
+						FILL0(MODEL.prop.XtX + (NewCol.k1 - 1) * KNEW, (KNEW - NewCol.k1 + 1) * KNEW); // zero out the cols from k1-th to the end
+						if (NewCol.k1 > 1) {
+							/*
+							I32 r1 = NEW.r1[0];
+							I32 r2 = NEW.r2[NEW.numSeg - 1];
+							I32 Nseg = r2 - r1 + 1;
+							r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, \
+								NEW.k1 - 1L, Knewterm, Nseg, 1.0f, \
+								Xt_mars  + r1-1L, Npad,
+								Xnewterm + r1-1L, Npad, 0.f, \
+								MODEL.prop.XtX + (NEW.k1 - 1L) * KNEW, KNEW); //0.f, MEMBUF1, k1_new - 1);
+							*/
+							// Xnewterm is pre-allocated with sufficent mem to ensure segInfo won't overflow in __GetMAXNumElemXnewTerm
+							BEAST2_BASESEG* _segInfo = (BEAST2_BASESEG*)(Xnewterm + Knewterm * Npad);
+							I32             _numBands = GetInfoBandList(_segInfo, &MODEL, NewCol.k1 - 1);
+							MatxMat(_segInfo, _numBands, Xt_mars,
+								NEW.SEG,   NEW.numSeg, Xnewterm,
+								MODEL.prop.XtX + (NewCol.k1 - 1L) * KNEW, N, KNEW);
+						}
+
+						/*
+						  r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+						   Knewterm, Knewterm, Nseg, 1.0,
+						   Xnewterm + r1 - 1, Npad,
+						   Xnewterm + r1 - 1, Npad, 0.f,
+						   MODEL.prop.XtX + (NEW.k1-1) * KNEW + NEW.k1 - 1, KNEW);// MEMBUF2, K_newTerm);
+						*/
+						//XnewtermTXnewterm(&NEW, Xnewterm, MODEL.prop.XtX + (NEW.k1 - 1) * KNEW + NEW.k1 - 1, Npad, KNEW);
+						XtX_ByGroup(NEW.SEG, NEW.numSeg, Xnewterm, MODEL.prop.XtX + (NewCol.k1 - 1) * KNEW + NewCol.k1 - 1, N, KNEW);
+
+						/* //After obtaining Xnewterm'*Xnewterm, insert it into XtX_prop at appropriate locations
+							for (rI32 i = k1_new, j = 1; i <= k2_new; i++, j++) {
+								if (k1_new != 1) r_cblas_scopy(k1_new - 1, MEMBUF1 + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
+								r_cblas_scopy(j, MEMBUF2 + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);}
+						*/
+					}
+					/*{ 
+					cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1_new - 1, K_newTerm, N, 1, X_mars, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, k1_new - 1);
+					for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
+					r_cblas_scopy(k1_new - 1, GlobalMEMBuf_1st + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
+					cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K_newTerm, K_newTerm, N, 1, X_mars_prop + (k1_new - 1)*N, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, K_newTerm);
+					for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
+					r_cblas_scopy(j, GlobalMEMBuf_1st + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
+					}*/
+
+					/*************************************************************************/
+					//                  The THRID component: 
+					/*************************************************************************/
+					//There is no third componet if k2_old=KOLD 
+					if (NewCol.k2_old != KOLD) {
+						/*for (rI32  j = 1; i <= KOLD; i++, j++) {r_cblas_scopy(K_newTerm,  MEMBUF1 + (j - 1)*K_newTerm, 1, XtX_prop + (k - 1)*KNEW + k1_new - 1, 1),					*/
+						for (I32 kold = NewCol.k2_old + 1, knew = NewCol.k2_new + 1; kold <= KOLD; kold++, knew++) {
+							F32PTR ColStart_old = MODEL.curr.XtX + (kold - 1) * KOLD;
+							F32PTR ColStart_new = MODEL.prop.XtX + (knew - 1) * KNEW;
+							SCPY(NewCol.k1 - 1,        ColStart_old, ColStart_new); //the upper part of the third componet
+							SCPY(kold - NewCol.k2_old, ColStart_old + (NewCol.k2_old + 1) - 1, ColStart_new + (NewCol.k2_new + 1) - 1); // the bottom part of the 3rd cmpnt
+						}
+
+						// If there is a MIDDLE part of the componet (i.e, Knewterm>0); this part 
+						// will be missing if flag is resmaplingOder and isInsert = 0.
+						if (Knewterm != 0) {
+							/*
+							  rI32 r1 = NEW.r1[0];
+							  rI32 r2 = NEW.r2[NEW.numSeg - 1];
+							  rI32 Nseg = r2 - r1 + 1;
+							  r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+								  Knewterm, (KOLD - NEW.k2_old), Nseg, 1,
+								  Xnewterm + r1 - 1, Npad,
+								  Xt_mars + (NEW.k2_old + 1 - 1) * Npad + r1 - 1, Npad, 0,
+								  MODEL.prop.XtX + (NEW.k2_new+1L-1L) * KNEW + NEW.k1 - 1, KNEW );//MEMBUF1, K_newTerm);
+							 */
+							BEAST2_BASESEG* _segInfo = (BEAST2_BASESEG*)(Xnewterm + Knewterm * Npad);
+							I32             _numBands = GetInfoBandList_post(_segInfo, &MODEL, NewCol.k2_old + 1);
+							MatxMat(NEW.SEG, NEW.numSeg, Xnewterm, _segInfo, _numBands, Xt_mars + NewCol.k2_old * Npad,
+									MODEL.prop.XtX + (NewCol.k2_new + 1 - 1) * KNEW + NewCol.k1 - 1, N, KNEW);
+						}
+
+					}
+
+					/*********************************************************************************/
+					//                 Compute XtY_prop from XtY
+					/********************************************************************************/
+					if (q == 1) {
+
+						// Skipped if k1_old=1 when dealing with SEASON
+						if (NewCol.k1 > 1)         SCPY(NewCol.k1 - 1, MODEL.curr.XtY, MODEL.prop.XtY);
+						// New components : XnewTemrm*Y
+						if (Knewterm > 0)  	          MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NewCol.k1 - 1, N);
+						//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
+						if (NewCol.k2_old != KOLD) SCPY(KNEW - NewCol.k2_new, MODEL.curr.XtY + (NewCol.k2_old + 1L) - 1L, MODEL.prop.XtY + (NewCol.k2_new + 1) - 1);
+
+					}	else {
+						// FOR MrBEAST
+
+						// Skipped if k1_old=1 when dealing with SEASON
+						if (NewCol.k1 > 1) {
+							for (I32 c = 0; c < q; ++c) {
+								SCPY(NewCol.k1 - 1, MODEL.curr.XtY + KOLD * c, MODEL.prop.XtY + KNEW * c);
+							}
+						}
+						// New components : XnewTemrm*Y
+						if (Knewterm > 0) {
+							//MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NEW.k1 - 1, N);
+							r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, Knewterm, q, N, 1.f, Xnewterm, Npad, yInfo.Y, N, 0.f,
+								MODEL.prop.XtY + NewCol.k1 - 1, KNEW);
+						}
+						//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
+						if (NewCol.k2_old != KOLD) {
+							for (I32 c = 0; c < q; ++c) {
+								SCPY(KNEW - NewCol.k2_new, MODEL.curr.XtY + (NewCol.k2_old + 1L) - 1L + KOLD * c, MODEL.prop.XtY + (NewCol.k2_new + 1) - 1 + KNEW * c);
+							}
+						}
+
+
+					} //if (q == 1) 
+				
 				}
 
 				/*************************************************************/
@@ -552,13 +562,13 @@ int beast2_main_corev4_mthrd(void* dummy)
 					//lapack_int LAPACKE_spotrf(int matrix_layout, char uplo, lapack_int n, double * a, lapack_int lda);
 					r_LAPACKE_spotrf(LAPACK_COL_MAJOR, 'U', KNEW, MODEL.prop.cholXtX, KNEW); // Choleskey decomposition; only the upper triagnle elements are used
 					*/
-					for (I32 i=1; i<NEW.k1; i++) 
+					for (I32 i=1; i<NewCol.k1; i++) 
 						SCPY(i, MODEL.curr.cholXtX+(i-1)*KOLD, MODEL.prop.cholXtX+(i-1)*KNEW);
 
-					precFunc.UpdateXtXPrec_nTermsPerGrp(&MODEL, basis, &NEW);
-					precFunc.chol_addCol(  MODEL.prop.XtX  + (NEW.k1-1)*KNEW,
+					precFunc.UpdateXtXPrec_nTermsPerGrp(&MODEL, basis, &NEW, &NewCol); //&NEW is used only for OrderWise
+					precFunc.chol_addCol(  MODEL.prop.XtX  + (NewCol.k1-1)*KNEW,
 							               MODEL.prop.cholXtX,
-							               MODEL.prop.precXtXDiag, KNEW, NEW.k1, KNEW);
+							               MODEL.prop.precXtXDiag, KNEW, NewCol.k1, KNEW);
 					//chol_full_v2(MODEL.prop.XtX, MODEL.prop.cholXtX, KNEW, KNEW);
 			       /*
 					for (rI32 i = 1; i <= (NEW.k1_new - 1L); i++) 	r_cblas_scopy(i, MODEL.curr.cholXtX + (i - 1L) * KOLD, 1L, MODEL.prop.cholXtX + (i - 1L) * KNEW, 1L);
@@ -572,11 +582,15 @@ int beast2_main_corev4_mthrd(void* dummy)
 					r_LAPACKE_spotrs(LAPACK_COL_MAJOR, 'U', KNEW, 1, MODEL.prop.cholXtX, KNEW, MODEL.prop.beta_mean, KNEW);
 					}*/
 
+					// prop.K is needed for computing prop.marg_Lik
+					// In MODEL, basis's K is still the old ones. They will be updated only if the proposal is accetped
+					// via basis->CalcBasisKsKeK_TermType(basis). The Ks of the proposed bases are stored in MODEL.prop.ntermP				   
+				   MODEL.prop.K = KNEW;
 				   precFunc.ComputeMargLik(&MODEL.prop, &MODEL, &yInfo, &hyperPar);
 				   //if (MODEL.prop.marg_lik != MODEL.prop.marg_lik || fabs(MODEL.prop.marg_lik )>FLOAT_MAX || MODEL.prop.alpha2_star <0.f) {					   				  
 
 				   if ( IsNaN(MODEL.prop.marg_lik) || IsInf(MODEL.prop.marg_lik ) ) {
-					   if (++numBadIterations < 20) {
+					   if (++numBadIterations < 15) {
 					    	   
 						   precFunc.IncreasePrecValues(&MODEL);
 						   precFunc.GetXtXPrecDiag(&MODEL);
@@ -586,7 +600,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						   /***********MULTITHREAD*******************/
 						   //r_printf is not thread-safe.
 						   //#if !(defined(R_RELEASE) || defined(M_RELEASE))
-						   //r_printf("prec: %.4f| marg_lik_prop: %.4f | marg_like_curr: %.4f \n", MODEL.precVal, MODEL.prop.marg_lik, MODEL.curr.marg_lik);
+						   //r_printf("prec: %.4f| marg_lik_prop: %.4f | marg_like_curr: %.4f \n", MODEL.precVec[0], MODEL.prop.marg_lik, MODEL.curr.marg_lik);
 						   //#endif
                            /***********MULTITHREAD*******************/
 
@@ -600,7 +614,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				   } //if (marg_lik_prop != marg_lik_prop || alpha2_star_prop <0.f) 
 
 				   if (q == 1) {// added for MRBEAST
-					   MODEL.prop.alpha2_star = max(MODEL.prop.alpha2_star,  MIN_ALPHA2_VALUE);
+					   MODEL.prop.alpha2Q_star[0] = max(MODEL.prop.alpha2Q_star[0], MIN_ALPHA2_VALUE);
 				   }
 				}
 
@@ -611,7 +625,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				// First, calcuate a factor adjusting the likelihood change
 				F32  factor;				
 				if   ( NEW.jumpType ==MOVE || basis->type ==OUTLIERID) 	factor = 0.;
-				else { factor = basis->ModelPrior(basis, &NEW, N); }
+				else { factor = basis->ModelPrior(basis, &NewCol, &NEW); }
 
 				F32 delta_lik = MODEL.prop.marg_lik - MODEL.curr.marg_lik + factor;
 				
@@ -644,12 +658,11 @@ int beast2_main_corev4_mthrd(void* dummy)
 						f32_mat_multirows_set_by_submat(Xnewterm, Npad, Knewterm, Xt_zeroBackup, yInfo.rowsMissing, yInfo.nMissing);
 
 					// Inserting XnewTerms into Xt_mars
-					if (NEW.k2_old != KOLD && NEW.k2_new != NEW.k2_old)
-						MoveCOLsWithinMatrix(Xt_mars, Npad, NEW.k2_old+1, KOLD, NEW.k2_new+1);
+					if (NewCol.k2_old != KOLD && NewCol.k2_new != NewCol.k2_old)
+						MoveCOLsWithinMatrix(Xt_mars, Npad, NewCol.k2_old+1, KOLD, NewCol.k2_new+1);
 					if (Knewterm != 0)
-						SCPY(Knewterm*Npad, Xnewterm, Xt_mars + (NEW.k1-1) * Npad);
+						SCPY(Knewterm*Npad, Xnewterm, Xt_mars + (NewCol.k1-1) * Npad);
 					
-
 					/****************************************************/
 					//Find the good positions of the proposed MOVE
 					//Then update the knotLists and order
@@ -667,13 +680,12 @@ int beast2_main_corev4_mthrd(void* dummy)
 						Exchange(curr.XtX,       prop.XtX);
 						Exchange(curr.XtY,       prop.XtY);
 						Exchange(curr.beta_mean, prop.beta_mean);
-						//Exchange(curr.beta,      prop.beta); //no need to exchange
+						//Exchange(curr.beta,      prop.beta);                    // no need to exchange
 						Exchange(curr.cholXtX,          prop.cholXtX);
-						Exchange(curr.precXtXDiag,      prop.precXtXDiag);
-						Exchange(curr.nTermsPerPrecGrp, prop.nTermsPerPrecGrp);
+						Exchange(curr.precXtXDiag,      prop.precXtXDiag);        // needed for compontwise and orderwise
+						Exchange(curr.nTermsPerPrecGrp, prop.nTermsPerPrecGrp);   // needed for compontwise and orderwise
 
-						if (q == 1) MODEL.curr.alpha2_star = MODEL.prop.alpha2_star; //BEASTV4
-						else 	    Exchange(curr.alphaQ_star, prop.alphaQ_star);    //MRBEAST 
+						Exchange(curr.alpha2Q_star, prop.alpha2Q_star);           // changed for MRBEAST 
 						
 						MODEL.curr.marg_lik    = MODEL.prop.marg_lik;
 						MODEL.curr.K		   = MODEL.prop.K;  //GetNumOfXmarCols(&MODEL): this function should also give KNEW; if not, there must be something wrong!
@@ -681,7 +693,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 					}
 					#ifdef __DEBUG__	
 					if (q == 1) {
-						//BEAST2_EvaluateModel(&MODEL.prop, MODEL.b, Xdebug, N, MODEL.NUMBASIS, &yInfo, &hyperPar, MODEL.precVal, &stream);											
+						//BEAST2_EvaluateModel(&MODEL.prop, MODEL.b, Xdebug, N, MODEL.NUMBASIS, &yInfo, &hyperPar, MODEL.precVec, &stream);											
 						//r_printf("ite:%d K: |%f|%f|diff:%f\n", ite, MODEL.curr.K, MODEL.curr.marg_lik, MODEL.prop.marg_lik, MODEL.prop.marg_lik - MODEL.curr.marg_lik);
 					    //r_printf(" %f[%f]-%f %f\n", (MODEL.curr.alpha2_star), (MODEL.prop.alpha2_star),	yInfo.alpha1_star* (log(MODEL.curr.alpha2_star) - log(MODEL.prop.alpha2_star)), yInfo.alpha1_star);
 						
@@ -701,8 +713,8 @@ int beast2_main_corev4_mthrd(void* dummy)
 						 */
 					}
 					else {
-						MR_EvaluateModel(&MODEL.prop, MODEL.b, Xdebug, N, MODEL.NUMBASIS, &yInfo, &hyperPar, MODEL.precVal, &stream);
-						//r_printf("MRite%d |%f|%f|diff:%f\n", ite, MODEL.curr.marg_lik, MODEL.prop.marg_lik, MODEL.prop.marg_lik - MODEL.curr.marg_lik);
+						MR_EvaluateModel(&MODEL.prop, MODEL.b, Xdebug, N, MODEL.NUMBASIS, &yInfo, &hyperPar, MODEL.precVec, &stream);
+						//r_printf("MRite%d |%f|%f|diff:%f -prec %f\n", ite, MODEL.curr.marg_lik, MODEL.prop.marg_lik, MODEL.prop.marg_lik - MODEL.curr.marg_lik, MODEL.precVec[0]);
 					 
 	                    /*
 						I32 K = MODEL.prop.K;
@@ -720,23 +732,20 @@ int beast2_main_corev4_mthrd(void* dummy)
 							int a = 1;
 							*/ 
 					}
-					
 
 					#endif
 
 
 				} //(*rnd32++ < exp(marg_lik_prop - basis->marg_lik))
 				
-				
+
+				U08 bResampleParameter  = (ite >=100)         && (ite % 20 == 0)     ; //MCMC_BURIN>=150L
+				U08 bStoreCurrentSample = (ite > MCMC_BURNIN) && (ite % MCMC_THINNING == 0);
 
 				/****************************************************************************************/
-				// For buin-in iterations, no need to sample parameters or make posterior inference.
+				// For buin-in iterations, we also want to sample parameters: added for cases when burn-in is very large
 				/****************************************************************************************/
-				if (ite <= MCMC_BURNIN) continue;
-				
-				U08 bResampleParameter  = (ite % 20            == 0);
-				U08 bStoreCurrentSample = (ite % MCMC_THINNING == 0);
-			
+
 				/**********************/
 				//First, Re-SAMPLING SIG2
 				/**********************/
@@ -744,15 +753,15 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 					if (q == 1) {
 						//vdRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, &sig2, (alpha_1+n/2), 0, 1.0/(alpha_1+basis->alpha2_star *0.5));
-						MODEL.sig2 = (*RND.rndgamma++) * 1.f / MODEL.curr.alpha2_star;
-						MODEL.sig2 = 1.0f / MODEL.sig2;
-						MODEL.sig2 = max(MODEL.sig2, MIN_SIG2_VALUE);
+						F32 sig2      = (*RND.rndgamma++) * 1.f / MODEL.curr.alpha2Q_star[0];
+						sig2          = 1.0f / sig2;					 
+						MODEL.sig2[0] = sig2 > MIN_SIG2_VALUE ? sig2 : MODEL.sig2[0];
 						//r_printf("ite-%d SIG %f %f\n", ite, MODEL.sig2,  MODEL.sig2*yInfo.sd*yInfo.sd);
 					}	else {
 						// For MRBEAST
 						F32PTR MEMBUF = Xnewterm;
-						local_pcg_invwishart_upper( &stream, MODEL.SIG2, MODEL.SIG2+q*q, MEMBUF, q,
-							                        MODEL.curr.alphaQ_star, hyperPar.alpha_1+ yInfo.n + q - 1);					
+						local_pcg_invwishart_upper( &stream, MODEL.sig2, MODEL.sig2 +q*q, MEMBUF, q,
+							                        MODEL.curr.alpha2Q_star, hyperPar.alpha_1+ yInfo.n + q - 1);					
 					}
 
 				}
@@ -769,7 +778,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF, stream, K, MODEL.beta, 0, 1);
 						//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', K, 1, MODEL.curr.cholXtX, K, MODEL.curr.beta, K); // LAPACKE_strtrs (int matrix_layout , char uplo , char trans , char diag , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );
 						solve_U_as_U_invdiag(MODEL.curr.cholXtX, MODEL.beta, K, K);
-						r_ippsMulC_32f_I(fastsqrt(MODEL.sig2), MODEL.beta, K);
+						r_ippsMulC_32f_I(fastsqrt(MODEL.sig2[0]), MODEL.beta, K);
 						r_ippsAdd_32f_I(MODEL.curr.beta_mean, MODEL.beta, K);
 					} else {
 					    // for MRBEAST
@@ -777,7 +786,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						I32    K      = MODEL.curr.K;
 
 						r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF, stream, K * q, MEMBUF, 0., 1.);
-						r_cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, K, q, q, 1.0, MEMBUF, K, MODEL.SIG2, q, 0.f, MODEL.beta, K);
+						r_cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, K, q, q, 1.0, MEMBUF, K, MODEL.sig2, q, 0.f, MODEL.beta, K);
 						//LAPACKE_strtrs (int matrix_layout , char uplo , char trans , char diag , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );
 						//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', K, 1, basis->post_P_U, K, beta, K);
 						//r_ippsMulC_32f_I(sqrtf(modelPar.sig2), beta, K);
@@ -801,113 +810,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 					F32   sumq  = DOT(K, MODEL.curr.beta, MODEL.curr.beta);
 					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (hyperPar.del_1 + K * 0.5f), 0, 1.f);
 					modelPar.prec[2]     = modelPar.prec[1] = modelPar.prec[0] = (*modelPar.prec) / (hyperPar.del_2 + 0.5f * sumq / MODEL.sig2);
-					modelPar.LOG_PREC[2] = modelPar.LOG_PREC[1] = modelPar.LOG_PREC[0] = logf(modelPar.prec[0]);	
-				
-					if (ite % 100 == 0) {
-						F32PTR beta = MODEL.curr.beta_mean;
-						F32 f[4] = { 0, };
-						I32 n[4] = { 0, };
-						for (int j = 0; j < MODEL.b[0].K; j++) {
-							rF32 tY = *beta++;
-							int idx = MODEL.b[0].termType[j];
-							f[idx - 1] += tY * tY;
-							n[idx - 1] += 1;
-						}
-						r_printf("ite: %f %f %f %f", f[0]/(n[0]+0.0001),
-							f[1] / (n[1] + 0.0001), f[2] / (n[2] + 0.0001), f[3] / (n[3] + 0.0001)			);
-
-						 f[0] = f[1]= 0;
-						 n[0] = n[1] = 0;
-						for (int j = 0; j < MODEL.b[1].K; j++) {
-							rF32 tY = *beta++;
-							int idx = MODEL.b[1].termType[j];
-							f[idx] += tY * tY;
-							n[idx] += 1;
-						}
-						r_printf("|%f %f", f[0] / (n[0] + 0.0001),			f[1] / (n[1] + 0.0001));
-
-
-						f[0] = f[1] = 0;
-						n[0] = n[1] = 0;
-						for (int j = 0; j < MODEL.b[2].K; j++) {
-							rF32 tY = *beta++;							
-							f[0] += tY * tY;
-							n[0] += 1;
-						}
-						r_printf("|%f\n", f[0] / (n[0] + 0.0001));
-
-					}
+					modelPar.LOG_PREC[2] = modelPar.LOG_PREC[1] = modelPar.LOG_PREC[0] = logf(modelPar.prec[0]);				
+					 
 					*/
 		   
-			       #ifdef DEBUG_BEAST2
-					if (ite %10==0) {
-						 float sum=0;
-						 int   n  =0;
-							r_printf("ite %d: ",ite);
-							for (int i = 1; i <= MODEL.nPrec; i++) {
-								if (opt->prior.precPriorType < 2) {
-									sum += MODEL.precVal;
-									n++;
-									r_printf("%7.4f | %7.4f ", MODEL.precVal, sum/n );
-								}								
-								else
-									r_printf("%7.4f ", MODEL.precVec[i - 1]);
-							}
-							r_printf("\n ");
-					}
-				   #endif
-
-				    /*
-					rF32 f0 = 0, f1 = 0, f2 = 0;
-					rU08PTR type = basis->termType;
-					for (rI32 i = 0; i < K; i++)
-					{
-					rF32 f = basis->beta[i];
-					f = f*f;
-					U08  type_cur = *type++;
-					if (type_cur == 0)
-					f0 += f;
-					else if (type_cur == 1)
-					f1 += f;
-					else
-					f2 += f;
-					}
-
-
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (modelPar.del_1 + K_SN *0.5f), 0, 1.f);
-					modelPar.prec[0] = modelPar.prec[0] / (modelPar.del_2 + 0.5f*f0 / modelPar.sig2);
-
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec + 1, (modelPar.del_1 + basis->k_const *0.5f), 0, 1.f);
-					modelPar.prec[1] = modelPar.prec[1] / (modelPar.del_2 + 0.5f*f1 / modelPar.sig2);
-
-					rI32 K_1st = (K - K_SN - basis->k_const);
-					if (K_1st > 0)
-					{
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec + 2, (modelPar.del_1 + (K - K_SN - basis->k_const) *0.5f), 0, 1.f);
-					modelPar.prec[2] = modelPar.prec[2] / (modelPar.del_2 + 0.5f*f2 / modelPar.sig2);
-
-					}
-
-
-					//r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (modelPar.del_1 + (K-basis->k_const) *0.5f), 0, 1.f);
-					//modelPar.prec[2]=modelPar.prec[0] = modelPar.prec[0] / (modelPar.del_2 + 0.5f*(f0+f2) / modelPar.sig2);
-
-					//r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec + 1, (modelPar.del_1 + (basis->k_const) *0.5f), 0, 1.f);
-					//modelPar.prec[1] = modelPar.prec[1] / (modelPar.del_2 + 0.5f*(f1) / modelPar.sig2);
-
-					//----------------------------------------------------------------------------------------------
-					////r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (modelPar.del_1 + ( basis->k_SN) *0.5f), 0, 1.f);
-					////modelPar.prec[0] = modelPar.prec[0] / (modelPar.del_2 + 0.5f*(f0 ) / modelPar.sig2);
-
-					//r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec + 1, (modelPar.del_1 + (K - basis->k_SN) *0.5f), 0, 1.f);
-					////modelPar.prec[2]=modelPar.prec[1] = modelPar.prec[1] / (modelPar.del_2 + 0.5f*(f1 + f2) / modelPar.sig2);
-
-					if ( ite%200==0)
-					{
-					r_printf("%d %f %f %f \n", (K - K_SN - basis->k_const), 100 * f0 / K_SN, 100 * f1 / basis->k_const, 100 * f2 / (K - K_SN - basis->k_const));
-					}
-					*/
-
 					/*
 					//X_mars_prop has been constructed. Now use it to calcuate its marginal likelihood
 					//Add precison values to the diagonal of XtX: post_P=XtX +diag(prec)				
@@ -944,7 +850,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 					if ( IsNaN(MODEL.curr.marg_lik) ) {
 						#if !(defined(R_RELEASE) || defined(M_RELEASE)) 
-						r_printf("skip3 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVal, MODEL.curr.marg_lik);
+						r_printf("skip3 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVec[0], MODEL.curr.marg_lik);
 						#endif
 						skipCurrentPixel = 3;
 						break;
@@ -972,18 +878,18 @@ int beast2_main_corev4_mthrd(void* dummy)
 					//r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (modelPar.alpha_2 + K *0.5f), 0, 1.f);
 					//modelPar.prec[2] = modelPar.prec[1] = (*modelPar.prec) / (modelPar.alpha_1 + 0.5f*FLOAT_SHARE.sumq / modelPar.sig2);
 
-					// Get trace( B*inv(SIG2)*B')						
-					//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', q, q, basis->alpha_Q_star, q, W_L, q);	
-					r_cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, K, q, q, 1.0, MODEL.beta, K, MODEL.SIG2+q*q, q, 0.f, MEMBUF, K);
-					F32 sumq = DOT(K * q, MEMBUF, MEMBUF);
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, &MODEL.precVal, (hyperPar.del_1 + K * q * 0.5f), 0.f, 1.f);
-					MODEL.precVal    = MODEL.precVal / (hyperPar.del_2 + 0.5f * sumq);
-					MODEL.logPrecVal = logf(MODEL.precVal);
-					 	
 					
 					I32 ntries = 0;
 					do {
-						if (ntries++ != 0) {
+						if (ntries++ == 0) {
+							// Get trace( B*inv(SIG2)*B')						
+							//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', q, q, basis->alpha_Q_star, q, W_L, q);	
+							r_cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, K, q, q, 1.0, MODEL.beta, K, MODEL.sig2+q*q, q, 0.f, MEMBUF, K);
+							F32 sumq = DOT(K * q, MEMBUF, MEMBUF);
+							r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1L, MODEL.precVec, (hyperPar.del_1 + K * q * 0.5f), 0.f, 1.f);
+							MODEL.precVec[0]     = MODEL.precVec[0] / (hyperPar.del_2 + 0.5f * sumq);
+							MODEL.logPrecVec[0]  = logf(MODEL.precVec[0]);
+						} else {
 							precFunc.IncreasePrecValues(&MODEL);
 						}
 						//precFunc.ResamplePrecValues( &MODEL, &hyperPar,&stream);
@@ -995,46 +901,48 @@ int beast2_main_corev4_mthrd(void* dummy)
 					
 					if ( IsNaN(MODEL.curr.marg_lik) ) {
 						#if !(defined(R_RELEASE) || defined(M_RELEASE)) 
-						r_printf("skip4 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVal, MODEL.curr.marg_lik);
+							r_printf("skip4 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVec[0], MODEL.curr.marg_lik);
 						#endif
-						skipCurrentPixel = 4;
+						skipCurrentPixel = 3;
 						break;
 					}  
 
 				}
-
+ 
 				if (!bStoreCurrentSample) continue;
-				
-				sample++;
-				/***********MULTITHREAD*******************/
-				//if (extra.printProgressBar && NUM_PIXELS == 1 && sample % 1000 == 0) {
-				//	F32 frac = (F32)(chainNumber * MCMC_SAMPLES + sample) / (MCMC_SAMPLES * MCMC_CHAINNUM);
-				//	printProgress(frac, extra.consoleWidth, Xnewterm, 0);
-				//}
-				/***********MULTITHREAD*******************/				
 				
 				/**********************************************/
 				//
 				//      Start to compute final results
 				//
 				/**********************************************/
+
+				sample++;
+				/***********MULTITHREAD*******************/
+				//if (extra.printProgressBar && NUM_PIXELS == 1 && sample % 1000 == 0) {
+				//	F32 frac = (F32)(chainNumber * MCMC_SAMPLES + sample) / (MCMC_SAMPLES * MCMC_CHAINNUM);
+				//	printProgress(frac, extra.consoleWidth, Xnewterm, 0);
+				//}
+				/***********MULTITHREAD*******************/	
+
 				*resultChain.marg_lik += MODEL.curr.marg_lik;
+
 				if (q == 1) {
-					*resultChain.sig2 += MODEL.sig2;
+					resultChain.sig2[0] += MODEL.sig2[0];
 				}	else {
 					// For MRBEAST
 					F32PTR MEMBUF = Xnewterm;
-					r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, q, 1.f, MODEL.SIG2, q, MODEL.SIG2, q, 0.f, MEMBUF, q);
+					r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, q, 1.f, MODEL.sig2, q, MODEL.sig2, q, 0.f, MEMBUF, q);
 					r_ippsAdd_32f_I(MEMBUF, resultChain.sig2,  q*q);
 				}
 
-				F32PTR BETA = extra.useMeanOrRndBeta == 0 ? MODEL.curr.beta_mean : MODEL.beta;
+				F32PTR BETA = (extra.useMeanOrRndBeta == 0) ? MODEL.curr.beta_mean : MODEL.beta;
 				{
-					F32PTR MEMBUF1  = Xnewterm;					
+					F32PTR MEMBUF1 = Xnewterm;					
 
 					for (I32 i = 0; i < MODEL.NUMBASIS; ++i) 
 					{
-						BEAST2_BASIS_PTR  basis   = MODEL.b   +i;
+						BEAST2_BASIS_PTR  basis   = MODEL.b   + i;
 						CORESULT        * result  = coreResults+i;
 
 						I32        nKnot  = basis->nKnot;
@@ -1046,10 +954,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 						//Summng up the harmonic orders or trend orders for individual seeasonal segments
 						if (result->xorder != NULL) {
-							TORDER_PTR  orderList = basis->ORDER;
+							TORDER_PTR  ORDER = basis->ORDER;
 							for (I32 i = 0; i <= nKnot; ++i) {
 								I16 r1 = KNOT[i-1], r2 = KNOT[i]-1;
-								r_ippsAddC_32s_ISfs(orderList[i], result->xorder+r1 - 1, r2 - r1 + 1, 0);							
+								r_ippsAddC_32s_ISfs(ORDER[i], result->xorder+r1 - 1, r2 - r1 + 1, 0);
 							}
 						}
 
@@ -1082,7 +990,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				/********************************************/
 				// Compute results for the seasonal cmpnt
 				/********************************************/
-				if(extra.computeSeasonAmp)
+				if(extra.computeSeasonAmp) 
 				{
 					F32PTR           MEMBUF1 = Xnewterm + 3*Npad;
 					F32PTR           MEMBUF2 = MODEL.prop.beta_mean; //re-used here as a temp mem buf.
@@ -1094,25 +1002,48 @@ int beast2_main_corev4_mthrd(void* dummy)
 					//Summng up the per-segment harmonic magnitudes  	
 					F32PTR       beta            = BETA;
 					TORDER_PTR   orderList       = basis->ORDER;
-					F32PTR       SEASON_SQR_CSUM = basis->bConst.season.SQR_CSUM;
-					for (I32 i = 0; i <= knotNum; i++) {
-						I32 r1 = knotList[i - 1];
-						I32 r2 = knotList[i] - 1;
-						I32    segLength     = r2-r1 + 1L;
-						F32PTR seasonSqrCsum = SEASON_SQR_CSUM + 1L;
-						I32    order2        = orderList[i] * 2L;
-						F32  amp = 0;
-						for (I32 j = 0; j < order2; j++) {
-							//TODO: re-check here
-							F32 scalingFactor = N / (seasonSqrCsum[r2 - 1] - seasonSqrCsum[(r1 - 1) - 1]);
-							amp               += (beta[j] * beta[j]) * scalingFactor;
-							seasonSqrCsum += (N + 1LL);
-						}						
-						//r_ippsSubC_32f_I(-amp, resultChain.samp + r1 - 1, segLength, 0);
+					F32PTR       SEASON_SQR_CSUM = basis->bConst.season.SQR_CSUM +1L;  //SQR_CSUM has a row length of (N+1)
+					F32PTR       SEASON_SCALE    = basis->bConst.season.SCALE_FACTOR;
+					if (SEASON_BTYPE == 0) {
+						for (I32 i = 0; i <= knotNum; i++) {
+							I32		r1 = knotList[i - 1];
+							I32		r2 = knotList[i] - 1;
+							
+							F32PTR seasonSqrCsum = SEASON_SQR_CSUM;
+							I32    order2        = orderList[i] * 2L;
+							F32    amp           = 0;					 
+							for (I32 j = 0; j < order2; j++) {
+								//TODO: re-check here
+								F32 scalingFactor = N / (seasonSqrCsum[r2 - 1] - seasonSqrCsum[(r1 - 1) - 1]);
+								F32 beta0         = beta[j]* SEASON_SCALE[j];
+								amp               = amp + (beta0 * beta0) * scalingFactor;
+								seasonSqrCsum     += (N + 1LL);
+							}			 
+							//r_ippsSubC_32f_I(-amp, resultChain.samp + r1 - 1, segLength, 0);
+							I32    segLength = r2 - r1 + 1L;
+							r_ippsSet_32f(amp, MEMBUF1 + r1 - 1, segLength);
+							beta += order2;
+						}
+					} else {
+						for (I32 i = 0; i <= knotNum; i++) {
+							I32 r1 = knotList[i - 1];
+							I32 r2 = knotList[i] - 1;
+					
+							F32PTR seasonSqrCsum = SEASON_SQR_CSUM;
+							I32    order2        = orderList[i] * 2L;
+							F32    amp           = 0;		 
+							for (I32 j = 0; j < order2; j++) {
+								F32    beta0 = beta[j] * SEASON_SCALE[j];
+								amp += beta0 * beta0;
+							}					 
 
-						r_ippsSet_32f(amp, MEMBUF1 + r1 - 1, segLength);
-						beta += order2;
+							//r_ippsSubC_32f_I(-amp, resultChain.samp + r1 - 1, segLength, 0);
+							I32    segLength = r2 - r1 + 1L;
+							r_ippsSet_32f(amp, MEMBUF1 + r1 - 1, segLength);
+							beta += order2;
+						}
 					}
+	
 					r_ippsAdd_32f_I(MEMBUF1, resultChain.samp,   N);
 					r_ippsMul_32f_I(MEMBUF1, MEMBUF1,            N);
 					r_ippsAdd_32f_I(MEMBUF1, resultChain.sampSD, N); //added to the square of the samp for computering SD
@@ -1206,26 +1137,17 @@ int beast2_main_corev4_mthrd(void* dummy)
 				// and saved in Xnewterm, Xnewterm+Npad, and Xnweterm+2*Npad
 				/*************************************************/
 				if (extra.computeCredible)	{ 	
-					if (extra.fastCIComputation) {
+
+					// when  *RND.rnd16++ <= ciParam.subsampleFraction_x_INT16MAX, samples are included;					
+					if (extra.fastCIComputation &&  !(*RND.rnd16++  < ciParam.subsampleFraction_x_INT16MAX)  ){
 						//if (*rnd32++ < subsampleFraction*4.294967296000000e+09)
-						if (*RND.rnd16++ < ciParam.subsampleFraction_x_INT16MAX)
-							++subSampleIndex;
-						else // The current sample not included. No need to insert it
-							 // into the ci strips. So, just skip to the next iteration							
-							continue;
+				        // The current sample not included. No need to insert it into the ci strips.
+						// So, just skip to the next iteration	
 					} else {
-						subSampleIndex = sample;
-					}
-							
-					/*???????At this point, MEMBUF1 stores the rate-of-change signal???*/
-					if (subSampleIndex <= ciParam.nSamples)	{	
-						for (int i=0; i<MODEL.NUMBASIS;i++)      
-							InsertInitialRows(&ciParam, &ci[i], subSampleIndex); //season 				
-					} else { //(sample > numCISample) 							
-						 // New row of data for slope, seasonal, and trend components: MEMBUF1=slope over time	 					    
+						// New row of data for slope, seasonal, and trend components: MEMBUF1=slope over time	 					    
 						for (int i = 0; i < MODEL.NUMBASIS; i++) 
 							InsertNewRowToUpdateCI(&ciParam, &ci[i]);						
-					}//smaple <=nunumCISample				
+					}					
 
 				} // if (extra.computeCredible)
 				
@@ -1275,7 +1197,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 							//FOR MRBEAST
 							for (int i = 0; i < q; i++) {
 								F32 offset = 0.0f;
-								f32_sx_sxx_to_avgstd_inplace(resultChain.samp+i*N, resultChain.sampSD + i*N, sample, yInfo.sd[i], offset, N);
+								f32_sx_sxx_to_avgstd_inplace(resultChain.samp+i*N, resultChain.sampSD + i*N, sample, yInfo.sd[i]* yInfo.sd[i], offset, N);
 							}							
 						}
 						if (extra.computeCredible) {
@@ -1879,10 +1801,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 			} //for (int i = 0; i < q; ++i)
 		}
 
-		if(q ==1)
-			BEAST2_WriteOutput(opt, &result, pixelIndex);
-		else
-		    MR_WriteOutput(opt, &result, pixelIndex);
+	 
+		BEAST2_WriteOutput(opt, &result, pixelIndex);
+		 
+		  
 
 		/***********MULTITHREAD*******************/
 		pthread_mutex_lock(&mutex);

@@ -695,6 +695,49 @@ void chol_addCol_skipleadingzeros_prec(F32PTR Au, F32PTR U, F32 precPrior, I64 N
 
 }
 
+void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au, F32PTR U, F32PTR precPrior, I64 N, I64 K0, I64 K1)
+{
+	// A =U'*U:  A of size NxN
+	// F32PTR A_BASE= Au;
+	// Au starts at the K0-th column of the square input matrix
+
+
+	F32PTR  Ubase = U;
+	F32PTR  Ucol = Ubase + (K0 - 1) * N;
+
+	for (I64 COL = K0; COL <= K1; COL++) {
+		//Ucol = U_BASE + (COL-1) * N;
+		//Au   = A_BASE + (COL-K0)*N;		
+		//U      = U_BASE;
+
+		// Skip the leading zeros--if any--for the new row
+		// TODO: Buggy. Some new rows may be almost zeros, so the new Cols of XtX are all zero
+		// the loop below may go far over the legal boundary to overwrite other data; therefore
+		// causuing crashes. Adding "&& rIdxFirstNonZero<COL" as a safeguard
+		I64 rIdxFirstNonZero = 1;
+		for (; Au[rIdxFirstNonZero - 1] == 0 && rIdxFirstNonZero < COL; Ucol[rIdxFirstNonZero - 1] = 0, rIdxFirstNonZero++);
+		U = Ubase + (rIdxFirstNonZero - 1) * N;
+
+		F64  SUM = 0.f;
+		for (I64 col = rIdxFirstNonZero; col < COL; col++) {
+			F64 sum = 0.f;
+			for (I64 row = rIdxFirstNonZero; row < col; row++) { sum += U[row - 1] * Ucol[row - 1]; }
+
+			F32  Ukk_invert = U[col - 1];
+			F64  Ucol_curElem = (Au[col - 1] - sum) * Ukk_invert; //invert diagoal element
+			Ucol[col - 1] = Ucol_curElem;
+			SUM += Ucol_curElem * Ucol_curElem;
+			U += N;
+		}
+
+		F32 prec = (COL == 1) ? 0. : *precPrior;
+		Ucol[COL - 1] = 1.f / sqrt((Au[COL - 1] + prec) - SUM); //invert diagoal element
+
+		Ucol += N;
+		Au += N;
+	}
+
+}
 
 void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au, F32PTR U, F32PTR precPrior, I64 N, I64 K0, I64 K1)
 {
@@ -997,9 +1040,164 @@ void f32_gemm_XtY1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F
 	}
 }
 */
-	
 
- 
+void update_XtX_from_Xnewterm(F32PTR X, F32PTR Xnewterm, F32PTR XtX, F32PTR XtXnew, NEWCOLINFO * new ) {
+
+	I32 k1       = new->k1;
+	I32 k2_old   = new->k2_old;
+	I32 k2_new   = new->k2_new;
+	I32 Knewterm = new->Knewterm; // k2_new - k1 + 1L;
+	I32 KOLD     = new->KOLD;
+	I32 KNEW     = new->KNEW;
+
+	I32 N    = new->N;
+	I32 Nlda = new->Nlda;
+	/*************************************************************************/
+	//               The FIRST component:	
+	/*************************************************************************/
+	// There'sY no first component if k1_old/k1_new=1 for SEASON	
+	for (I32 i = 1; i < k1; i++) SCPY(i, XtX + (i - 1L) * KOLD, XtXnew + (i - 1L) * KNEW);
+
+	/*************************************************************************/
+	//              The SECOND component
+	/*************************************************************************/
+	// No new cols/terms if flag=ChORDER && isInsert=0:the resampled basis has a higher order than the old basis
+	if (Knewterm != 0) {
+
+		FILL0(XtXnew + (k1 - 1) * KNEW, (KNEW - k1 + 1) * KNEW); // zero out the cols from k1-th to the end
+		if (k1 > 1) {
+			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1 - 1, Knewterm, N, 1.0f,
+				X, Nlda,
+				Xnewterm, Nlda, 0.f,
+				XtXnew + (k1 - 1L) * KNEW, KNEW);
+		}
+
+
+		// Three alternative ways to compute Xnewterm'*XnewTerm. Note that the resulting matrix is symmetric
+
+		// THE FIRST WAY:
+		r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+			Knewterm, Knewterm, N, 1.0,
+			Xnewterm, Nlda,
+			Xnewterm, Nlda, 0.f,
+			XtXnew + (k1 - 1) * KNEW + k1 - 1, KNEW);
+
+
+		//THE SECOND WAY: 
+		//sgemmt only updates the upper triangular part of the resulting matrix, which is supposed to be faster than sgemm, but it is NOT
+		//cblas_sgemmt(CblasColMajor, CblasUpper, CblasTrans, CblasNoTrans, K_newTerm, Npad, 1.0f, Xnewterm, Npad, Xnewterm, Npad, 0.f, GlobalMEMBuf_2nd, K_newTerm);
+
+		//THE THIRD WAY: 
+		//This is the fastest way when using Intel'sY MKL
+		/*
+		{  for (int i = 1; i <= K_newTerm; i++)
+		   for (int j = 1; j <= i; j++)
+		   GlobalMEMBuf_2nd[K_newTerm*(i - 1) + j - 1] = DOT(N, Xnewterm + (j - 1)*Npad, Xnewterm + (i - 1)*Npad);
+		} */
+
+		/*
+		//After obtaining Xnewterm'*Xnewterm, insert it into XtX_prop at appropriate locations
+		for (rI32 i = k1_new, j = 1; i <= k2_new; i++, j++) {
+			if (k1_new != 1) r_cblas_scopy(k1_new - 1, MEMBUF1 + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
+			r_cblas_scopy(j, MEMBUF2 + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
+		}*/
+	}
+	/*{
+	cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1_new - 1, K_newTerm, N, 1, X_mars, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, k1_new - 1);
+	for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
+	r_cblas_scopy(k1_new - 1, GlobalMEMBuf_1st + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
+	cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K_newTerm, K_newTerm, N, 1, X_mars_prop + (k1_new - 1)*N, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, K_newTerm);
+	for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
+	r_cblas_scopy(j, GlobalMEMBuf_1st + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
+	}*/
+
+	/*************************************************************************/
+	//                  The THRID component: 
+	/*************************************************************************/
+	//There is no third componet if k2_old=KOLD 
+	if (k2_old != KOLD) {
+		/*for (rI32  j = 1; i <= KOLD; i++, j++) {r_cblas_scopy(K_newTerm,  MEMBUF1 + (j - 1)*K_newTerm, 1, XtX_prop + (k - 1)*KNEW + k1_new - 1, 1),					*/
+		for (I32 kold = k2_old + 1, knew = k2_new + 1; kold <= KOLD; kold++, knew++) {
+			F32PTR ColStart_old = XtX + (kold - 1) * KOLD;
+			F32PTR ColStart_new = XtXnew + (knew - 1) * KNEW;
+			SCPY(k1 - 1,       ColStart_old, ColStart_new); //the upper part of the third componet
+			SCPY(kold - k2_old, ColStart_old + (k2_old + 1) - 1, ColStart_new + (k2_new + 1) - 1); // the bottom part of the 3rd cmpnt
+		}
+
+		// If there is a MIDDLE part of the componet (i.e, Knewterm>0); this part 
+		// will be missing if flag is resmaplingOder and isInsert = 0.
+		if (Knewterm != 0) {
+			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+				Knewterm, (KOLD - k2_old), N, 1.0,
+				Xnewterm, Nlda,
+				X + (k2_old + 1 - 1) * Nlda, Nlda, 0.0,
+				XtXnew + (k2_new + 1 - 1) * KNEW + k1 - 1, KNEW);
+		}
+
+	}
+
+			 
+}
+
+void update_XtY_from_Xnewterm(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYnew, NEWCOLINFO* new, I32 q) {
+
+	// X and Xnewterm has a leading dimesnion of new.Nlada
+	// Y has a leading dimension of new.N
+
+	I32 k1       = new->k1;
+	I32 k2_old   = new->k2_old;
+	I32 k2_new   = new->k2_new;
+	I32 Knewterm = new->Knewterm;
+	I32 N        = new->N;
+	I32 Nlda     = new->Nlda;
+	I32 KOLD     = new->KOLD;
+	I32 KNEW     = new->KNEW;
+/*********************************************************************************/
+//                 Compute XtY_prop from XtY
+/********************************************************************************/
+	if (q == 1) {
+		// Skipped if k1_old=1 when dealing with SEASON
+		if (k1 > 1)       SCPY(k1 - 1, XtY,XtYnew);
+		// New components : XnewTemrm*Y
+		if (Knewterm > 0) { 
+				r_cblas_sgemv(CblasColMajor, CblasTrans, N, Knewterm, 1.f,
+						Xnewterm,   Nlda,
+						Y,         1L, 0.f,
+					    XtYnew + k1 - 1, 1L);
+		}
+		//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
+		if (k2_old != KOLD) SCPY(KNEW - k2_new, XtY + (k2_old + 1L) - 1L, XtYnew + (k2_new + 1) - 1);
+
+	}
+	else {
+		// FOR MrBEAST
+
+		// Skipped if k1_old=1 when dealing with SEASON
+		if (k1 > 1) {
+			for (I32 c = 0; c < q; ++c) {
+				SCPY(k1 - 1, XtY + KOLD * c, XtYnew + KNEW * c);
+			}
+		}
+		// New components : XnewTemrm*Y
+		if (Knewterm > 0) {
+			//MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NEW.k1 - 1, N);
+			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, 
+				Knewterm, q, N, 1.f, 
+				Xnewterm, Nlda,
+				Y,        N, 0.f,
+				XtYnew + k1 -1, KNEW);
+		}
+
+		//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
+		if (k2_old != KOLD) {
+			for (I32 c = 0; c < q; ++c) {
+				SCPY(KNEW - k2_new, XtY + (k2_old + 1L) - 1L + KOLD * c, XtYnew + (k2_new + 1) - 1 + KNEW * c);
+			}
+		}
+
+
+	}
+}
 #include "abc_000_warning.h"
  
 

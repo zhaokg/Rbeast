@@ -49,6 +49,7 @@ I32 (*f32_maxidx)(const F32PTR  X, const  int N, F32PTR val);
 I32 (*f32_minidx)(const F32PTR  X, const int  N, F32PTR val);
 void (*f32_diff_back)(const F32PTR  X, F32PTR result, const int N);
 void (*f32_seq)(F32PTR p, F32 x0, F32 dX, int N);
+void (*i32_seq)(I32PTR p, I32 x0, I32 dX, int N);
 void (*f32_to_f64_inplace)(F32PTR data32, int N);
 void (*f64_to_f32_inplace)(F64PTR data64, int N);
 void (*i32_to_f32_scaleby_inplace)(I32PTR X, int N, F32 scale);
@@ -67,12 +68,18 @@ void (*f32_gemm_XYt2x1)(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ld
 
 void(*f32_gemv_Xb)(int N, int K, F32PTR X, int lda, F32PTR b, F32PTR C);
 
-I32  (*f32_findindex)(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag flag);
+I32   (*f32_findindex)(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag flag);
 void  (*f32_scatter_vec_byindex)(F32PTR  x, I32PTR indices, F32PTR values, int N);
-void (*f32_gatherVec_scatterVal_byindex)(F32PTR  x, I32PTR indices, F32PTR values, F32 newValue, int N);
-void (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x, F32PTR  y, I32PTR indices, F32PTR values, F32 newValue, int N);
-void (*f32_scale_inplace)(const F32 gain, const F32 offset, const F32PTR x, const int N);
+void  (*f32_gatherVec_scatterVal_byindex)(F32PTR  x, I32PTR indices, F32PTR values, F32 newValue, int N);
+void  (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x, F32PTR  y, I32PTR indices, F32PTR values, F32 newValue, int N);
+void  (*f32_scale_inplace)(const F32 gain, const F32 offset, const F32PTR x, const int N);
 
+void  (*f32_hinge_neg)(const F32PTR X, const F32PTR Y, const F32 knot, const int N);
+void  (*f32_hinge_pos)(const F32PTR X, const F32PTR Y, const F32 knot, const int N);
+
+void  (*f32_step_neg)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
+void  (*f32_step_pos)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
+void  (*f32_axpy_inplace)(const F32 a, const F32PTR x, F32PTR y, const int N);
 void print_funcs() {
 
 	r_printf("\n\n"  );
@@ -344,7 +351,8 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec, I32 N, I32 nth)
 	I32 nthPos;
 
 	//Cumulatively add up to j: IDX_tmp until reaching GoodPos_tmp :i
-	I32 count = 0;
+	I32 count   = 0;
+	I32 failed  = 1;
 	{
 		I32 i=0, N16 = N / 16;		
 		I32 deltaSum=0;
@@ -355,13 +363,22 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec, I32 N, I32 nth)
 			*((I08PTR)&sum) += *((I08PTR)&sum + 1);
 			deltaSum = *((I08PTR)&sum);
 			count	+= deltaSum;
-			if (count >= nth) break;
+			if (count >= nth) { 
+				failed = 0;
+				break; 
+			}
+
 			binvec += 16;
 		}//newKnot is the newly chosen breakpoint	
 
 		count -= deltaSum;
 		nthPos = i * 16;
 	}
+
+	if (failed) {
+		return 0xffffffff;
+	}
+
 	{
 		I32 j;
 		for (j = 0; j < 16; j++) {
@@ -371,6 +388,7 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec, I32 N, I32 nth)
 		nthPos += (j + 1);
 	}
 
+	//nthPos is a 1-based index
 	return nthPos;
 }
 
@@ -785,6 +803,12 @@ int f32_normalize_multicols_zeroout_nans(F32PTR Y, I32PTR BadRowIndices, I32 ldy
 
 
 
+}
+void f32_normalize_std_avg_inplace(F32PTR X, I32 N, F32PTR avg, F32PTR std) {
+	f32_avgstd(X, N, avg, std);
+	F32 gain    = 1 / std[0];
+	F32 offset = -avg[0] / std[0];  //(x-m)/s= 1/s *m - m/s
+	f32_scale_inplace(gain, offset, X, N);
 }
 void f32_normalize_inplace(F32PTR X, I32 N) {
 	F32 avg, std;
