@@ -14,6 +14,8 @@
 #ifdef MSVC_COMPILER
 	#if R_INTERFACE==1
 		#define DllExport   __declspec( dllexport ) 
+	#elif P_INTERFACE==1
+		#define DllExport   __declspec( dllexport ) 
 	#elif M_INTERFACE==1
 		#define DllExport 
 		#pragma comment(linker, "/export:mexFunction")  //(Linker option) export:mexFunction   
@@ -33,6 +35,8 @@
 	#define LIB_IPP(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/ipp/latest/lib/intel64/_X_ )
     #define LIB_OpenMP(_X_)  QUOTE_IT(C:/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/compiler/lib/intel64_win/_X_ )
 	#define LIB_MyLIB(_X_)   QUOTE_IT(C:/Share/Fortran_blas_lib/_X_ )
+    #define LIB_Python(_X_)   QUOTE_IT(C:/Anaconda3/libs/_X_ )
+
 #ifdef TARGET_32
 	#define LIB_R(_X_)       QUOTE_IT(C:/Program Files/R/R-4.1.0/implib/i386/_X_ )
 #else
@@ -129,8 +133,8 @@
 	#pragma comment(lib , LIB_FORTRAN(libifcoremdd.lib))
 #endif
 
- 
-#if M_INTERFACE ==1
+
+#if M_INTERFACE == 1
 	#define MEX_DOUBLE_HANDLE
 	#include  "mex.h"
 	#pragma comment(lib , LIB_MATLAB(libmx.lib) )
@@ -164,7 +168,50 @@
 	//#include <R_ext\Rdynload.h>
 
 	#define mwSize size_t
-
-
 #endif
 
+#if P_INTERFACE ==1
+
+ //C:\Anaconda3\pkgs\numpy-base-1.16.5-py37hc3f5095_0\Lib\site-packages\numpy\core\include
+ //C:\Anaconda3\include
+
+	#include "Python.h"     
+	#include "structmember.h"
+
+// https://stuff.mit.edu/afs/sipb/project/python/src/python-numeric-22.0/doc/www.pfdubois.com/numpy/html2/numpy-13.html
+// If not defining it, PyArray_API will have local copies in each file.
+
+//https://stackoverflow.com/questions/32899621/numpy-capi-error-with-import-array-when-compiling-multiple-modules
+//https://docs.scipy.org/doc/numpy-1.10.1/reference/c-api.array.html#miscellaneous
+
+/*
+Suppose I have two files coolmodule.c and coolhelper.c which need to be compiled and linked into a single extension module. Suppose coolmodule.c contains the required initcool module initialization function (with the import_array() function called). Then, coolmodule.c would have at the top:
+
+#define PY_ARRAY_UNIQUE_SYMBOL cool_ARRAY_API
+#include numpy/arrayobject.h
+On the other hand, coolhelper.c would contain at the top:
+
+#define NO_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL cool_ARRAY_API
+#include numpy/arrayobject.h
+You can also put the common two last lines into an extension-local header file as long as you make sure that NO_IMPORT_ARRAY is #defined before #including that file.
+*/
+
+	#ifdef  IMPORT_NUMPY
+	   #define PY_ARRAY_UNIQUE_SYMBOL NumpyAPIList
+	   #include "numpy/arrayobject.h"
+	#else
+		#define NO_IMPORT_ARRAY
+		#define PY_ARRAY_UNIQUE_SYMBOL NumpyAPIList
+		#include "numpy/arrayobject.h"
+	#endif
+    //#pragma comment(lib , LIB_Python(python37_msvc.lib) ) 
+
+  /*********************/
+  // No need to set up the lib explicitly 
+  // (1) pynconfig.h has a pragma line to add python.lib
+  //  pragma comment(lib,"python37.lib")  //: #pragma comment(lib , LIB_MATLAB(libmx.lib) )
+  // (2) Numpy usss the import_array to load the (np.core._multiarray_umath._ARRAY_API) variable
+  //    to fill the api arrays
+
+#endif

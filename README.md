@@ -1,31 +1,45 @@
 
 
-##  BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
-<img align="right"  height="500" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png">
+##    BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
-####  BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation. See a list of <ins>[selected studies using BEAST](#selected-publications-using-beastrbeast)</ins>.
-> **BEAST** was impemented in C/C++ but accessible from R and Matlab. Check the `Source`, `R`, and `Matlab` folders at [Github](https://github.com/zhaokg/Rbeast) for the C, R, and Matlab code.
+####  BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for changepoint detection (i.e., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation. See a list of <ins>[selected studies using BEAST](#publications)</ins>.
+
+> **BEAST** was impemented in C/C++ but accessible from R, Python, and Matlab. Check the folders at [Github](https://github.com/zhaokg/Rbeast) for the code and more details.
 
 **Quick installation**:
-   * In Matlab, run **`eval(webread('http://b.link/beast',weboptions('cert','')))`**  
-   * In R,     run **`install.packages("Rbeast")`**
-   * Or follow the more detailed instructions below to install and run BEAST
 
-## Installation for R
+* [Matlab](#matlab): run **`eval(webread('http://b.link/beast',weboptions('cert','')))`**  
+* [Python](#python): run  **`pip install Rbeast`**   
+* [R lang](#r): run **`install.packages("Rbeast")`** 
 
-[![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)  
+## Installation for R <a name=r> 
 
-In CRAN-Task-View: [[**Time Series Analysis**]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling), [[**Bayesian inference**]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models), and [[**Environmetrics**]](https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series)
+ <!---
+ =====================================================================================
+ =====================================================================================
+ =====================================================================================
+ This is our comments:
 
+<table border="0"  style='border:none;'  bordercolor="#ffffff"  > <tr style='border:none;'  >   
+   <td valign="center" style='border:none;'   > 
+           <img src="https://www.r-pkg.org/badges/version/Rbeast?color=green">  
+           <img src="http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green">
+   </td>
+   <td valign="center" style='border:none;'  > 
+   In CRAN-Task-View: 
+   <a href="https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling">[Time Series Analysis]</a> 
+   <a href="https://cran.r-project.org/web/views/Bayesian.html#time-series-models">[Bayesian inference]</a> 
+   <a href="https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series">[Environmetrics]</a> 
+    </td>  
+  
+ </tr></table>
+ 
+  [![](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)  [![](http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast) 
 
-   1. from **CRAN**: An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). (On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`.) Install it in R using
-      ```R
-       install.packages("Rbeast")
-      ```
+ In CRAN-Task-View: [[**Time Series Analysis**]](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling), [[**Bayesian inference**]](https://cran.r-project.org/web/views/Bayesian.html#time-series-models), and [[**Environmetrics**]](https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series)  
 
-   2. from **GitHub**: The latest R versions are also available here at [GitHub](https://github.com/zhaokg/Rbeast) and can be installed using
+from **GitHub**: The latest R versions are also available here at [GitHub](https://github.com/zhaokg/Rbeast) and can be installed using
 
       ```R
         # Windows x86 or x64 (install from binary)
@@ -33,49 +47,87 @@ In CRAN-Task-View: [[**Time Series Analysis**]](https://cran.r-project.org/web/v
         # Linux/Mac (install from source)
         install.packages("https://github.com/zhaokg/Rbeast/raw/master/R/Rbeast_0.9.5.tar.gz", repos = NULL, type="source")
       ```
+=====================================================================================
+=====================================================================================
+=====================================================================================
+
+ -->
+ 
+ 
+<p  align="left">   
+<a href= "https://cran.r-project.org/package=Rbeast">
+<img src="https://www.r-pkg.org/badges/version/Rbeast?color=green"  height="20">  
+<img src="http://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green" height="20">  
+<img src="https://img.shields.io/static/v1?style=plastic&logo=r&label=Rbeast%20%20&message= In CRAN-Task-View&color=brightgreen" height="20">
+</a>
+</p>   
+  
+An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). ( On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`. Also, our package has nothing to with the famous "Bayesian evolutionary analysis by sampling trees" aglorithm.) Install  `Rbeast` in R using
+
+```R
+install.packages("Rbeast")
+ ```
+ 
+> **Rbeast in CRAN-TASK-VIEW**:   <a href="https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling">[Time Series Analysis]</a>    <a href="https://cran.r-project.org/web/views/Bayesian.html#time-series-models">[Bayesian inference]</a>     <a href="https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series">[Environmetrics]</a>  
 
 
-   #### Run and test Rbeast in R
+#### Run and test Rbeast in R
    
-<img align="left"  height="330" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
-
 The main functions in Rbeast are `beast(Y, ...)`, `beast.irreg(Y, ...)`, and `beast123(Y, metadata, prior, mcmc, extra)`. The code snippet below  provides a starting point for the basic usage.  
 
-  ```R
-      library(Rbeast)
-      data(Nile)                       #  annual streamflow of the Nile River    
-      out = beast(Nile, season='none') #  'none': trend-only data without seasonlaity   
-      print(out)                   
-      plot(out)
-      ?Rbeast                          # See more details about the usage of `beast`    
+ ```R
+library(Rbeast)
+data(Nile)                       #  annual streamflow of the Nile River    
+out = beast(Nile, season='none') #  'none': trend-only data without seasonlaity   
+print(out)                   
+plot(out)
+?Rbeast                          # See more details about the usage of `beast`    
       
-      tetris()                         # if you dare to waste a few moments of your life 
-      minesweeper()                    # if you dare to waste a few more moments of your life 
-  ```
+tetris()                         # if you dare to waste a few moments of your life 
+minesweeper()                    # if you dare to waste a few more moments of your life 
+ ```
 
+<table border="0"  style='border:none;'  bordercolor="#ffffff"  width=100%  >
+<tr style='border:none;'  >   
+   <td valign="center" style='border:none;'  > 
+        <img  height="300" align="left" src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png">
+   </td>
+   <td valign="center" style='border:none;'  > 
+       <img  height="300" align="center"  src="https://github.com/zhaokg/Rbeast/raw/master/R/Images/Nile.png">
+   </td>   
+ </tr>
+ </table>
+ 
+ <!---
+ [![](https://github.com/zhaokg/Rbeast/raw/master/R/Images/beach.png)](https://cran.r-project.org/package=Rbeast)
+ 
+ ----
+--->
 
 <br/>
-<br/>
-<br/>
 
-----
+## Installation for Matlab  <a name=matlab>  
 
-## Installation for Matlab  [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
+[![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-rbeast)
  
 
-Install the Matlab version of BEAST automatically to a local folder of your choice by running 
+Install the Matlab version of **BEAST** automatically to a local folder of your choice by running 
   ```Matlab  
   beastPath = 'C:\beast\'                   
   eval( webread('http://b.link/beast') )  
   
-  % NOTE:
-  % 1. Write permission needed for your chosen path; the variable name must be 'beastPath'
-  % 2. If webread has a certificate error, run the following line instead:
-  %     eval(  webread( 'http://b.link/beast', weboptions('cert','') )  );
+  %%%%%%%%%%%%%%%%%%%%%%%%%%% Note on Automatic Installtion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+  % 1. Write permission needed for your chosen path; the variable name must be 'beastPath'.   %
+  % 2. If webread has a certificate error, run the following line instead:                    %
+      eval(  webread( 'http://b.link/beast', weboptions('cert','') )  )                       %
+  % 3. If the automatic installation fails, please manually download all the files (see blow) %       
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ```
-The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder (e.g., `C:\Users\$user_name$\AppData\Local\Temp\Rbeast for Windows 10`) will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows, `Rbeast.mexa64` for Linux, `Rbeast.mexmaci64` for MacOS) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets (e.g., Nile.mat, and co2.mat).
+> The above will download all the files in the [Rbeast\Matlab folder at Github](https://github.com/zhaokg/Rbeast) to the chosen folder: if `beastPath` is missing, a default temporary folder (e.g., `C:\Users\$user_name$\AppData\Local\Temp\Rbeast for Windows 10`) will be used. If the automatic script fails, please download the Matlab files from [Github](https://github.com/zhaokg/Rbeast) manually. These files include a Matlab mex library compiled from the C soure code (e.g., `Rbeast.mexw64` for Windows, `Rbeast.mexa64` for Linux, `Rbeast.mexmaci64` for MacOS) and some Matlab wrapper functions (e.g.,`beast.m`, and `beast123.m`) similar to the R interface, as well as some test datasets (e.g., Nile.mat, and co2.mat). 
 
-#### Usage 
+> We generated the Matlab mex binary library on our own machines with Win10, Ubuntu 22.04, and macOS High Sierra. If they fail on your machine, the mex library can be compiled  from the C source code files under `Rbeast\Source`. If needed, we are happy to work with you to compile for your specific OS or machines. Additional information on compilations from the C source is also given below.
+
+#### Run and test Rbeast in Matlab
 The Matlab API is similar to those of R. Below is a quick example:
   ```Matlab
    help beast
@@ -85,25 +137,72 @@ The Matlab API is similar to those of R. Below is a quick example:
    printbeast(out)
    plotbeast(out)
   ```
-We generated the Matlab mex binary library on our own machines with Win10, Ubuntu 22.04, and macOS High Sierra. If they fail on your machine, the mex library can be compiled  from the C source code files under `Rbeast\Source`. If needed, we are happy to work with you to compile for your specific OS or machines. Additional information on compilations from the C source is also given below.
 
 ----
-### Python/Julia
+### Installation for Python  <a name=python>  
 
-Wrappers in Python and Julia are being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
+
+<p  align="left">   
+ <a href= "https://pypi.org/project/Rbeast/"> <img src="https://img.shields.io/static/v1?style=plastic&logo=python&label=Python%20%20&message=pip install Rbeast&color=brightgreen" height="20"></a>
+</p> 
+
+A package **`Rbeast`** has been deposited at PyPI: https://pypi.org/project/Rbeast/. Run the command below in a console to install:
+  
+  ```python
+    pip install Rbeast
+  ```
+> Currently, a binary wheel file was built only for Windows and Python 3.8. For other OS platforms or Python versions, the installation requires a compiler to build the package from the C/C++ code, which is a hassle-free process in Linux (requiring gcc) or Mac (requiring xcode). If needed, contact Kaiguang Zhao (zhao.1423@osu.edu) to help build the package for your specific OS platforms and Python versions.
+
+#### Run and test Rbeast in Python
+
+ 
+ 
+`Nile` is annual streamflow of the River Nile, starting from Year 1871. As annual observations, it has no periodic component (i.e., `season='none'`).
+
+  ```python
+import Rbeast as rb                                       # Import the Rbeast package as `rb`
+nile, year = rb.load_example('nile')                      # a sample time series
+o          = rb.beast( nile, start=1871, season='none')
+rb.plot(o)
+rb.print(o)
+o  # see a list of output fields in the output variable o
+```
+
+The second example `beach` is a monthly time series of the Google Search popularity of the word ***beach*** over the US. This time series is reguarly-spaced (i.e., deltat=`1 month` =`1/12 year`); it has a cyclyic component with a period of 1 year (e.g., freq = `period / deltat` =  1 year / 1 month = 1/(1/12) = 12).
+ 
+ > We follow R's terminology to use `freq` to refer to the number of data points per `period` -- freq = period/deltaT; apparently, this differs from the standard definiton in physics -- freq = 1/period.
+  ```python
+beach, year = rb.load_example('beach')
+o = rb.beast(beach, start= 2004, deltat=1/12, freq =12)
+rb.plot(o)
+rb.print(o)
+  ```
+
+### Julia/IDL
+
+Wrappers in Julia and IDL are being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
 
 ## Description
 Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, finance, public health, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
 
-## Reference
->Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](https://go.osu.edu/beast2019) Remote Sensing of Environment, 232, 111181. (the BEAST paper) 
->
->Zhao, K., Valle, D., Popescu, S., Zhang, X. and Mallick, B., 2013. [Hyperspectral remote sensing of plant biochemistry using Bayesian model averaging with variable and band selection](https://www.academia.edu/download/55199778/Hyperspectral-biochemical-Bayesian-chlorophyll-carotenoid-LAI-water-content-foliar-pigment.pdf). Remote Sensing of Environment, 132, pp.102-119. (the mcmc sampler used for BEAST)
->
->Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
+## Note on computation
 
-----
-## Selected publications using BEAST/Rbeast
+As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. (But it is still slower, compared to nonBayesian methods.) For applications dealing with a few to thousands of time series, the computation won't be an practical concern. But for remote sensing/geospatial applications that may easily involve millions or billions of time series, computation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. 
+
+In any case, for those users handling stacked time-series images, do not use `beast` or `beast.irreg`. Use **`beast123`** instead, which can handle 3D data cubes and allow parallel computing.  We also welcome consultation with Kaiguang Zhao (zhao.1423@osu.edu) to give specific suggestions if you see some value of BEAST for your applications.
+
+## Reference
+* Zhao, K., Wulder, M. A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick B., Zhang, X., & Brown, M. (2019). [Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.](https://go.osu.edu/beast2019) Remote Sensing of Environment, 232, 111181. (the BEAST paper) 
+
+* Zhao, K., Valle, D., Popescu, S., Zhang, X. and Mallick, B., 2013. [Hyperspectral remote sensing of plant biochemistry using Bayesian model averaging with variable and band selection](https://www.academia.edu/download/55199778/Hyperspectral-biochemical-Bayesian-chlorophyll-carotenoid-LAI-water-content-foliar-pigment.pdf). Remote Sensing of Environment, 132, pp.102-119. (the mcmc sampler used for BEAST)
+
+* Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
+
+
+## Selected publications using BEAST/Rbeast <a name=publications>
+
+Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a short list of peer-reviewed pulications that used BEAST for statistical data analysis.
+
 | Discipline | Publication Title |
 | --- | --- |
 | Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement. Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
@@ -131,13 +230,7 @@ Interpretation of time series data is affected by model choices. Different model
 |Hydrology|*Yang, X., Tian, S., You, W. and Jiang, Z., 2021. Reconstruction of continuous GRACE/GRACE-FO terrestrial water storage anomalies based on time series decomposition. Journal of Hydrology, 603, p.127018.*|
 |Landscape Ecology|*Adams, B.T., Matthews, S.N., Iverson, L.R., Prasad, A.M., Peters, M.P. and Zhao, K., 2021. Spring phenological variability promoted by topography and vegetation assembly processes in a temperate forest landscape. Agricultural and Forest Meteorology, 308, p.108578.*|
 
-## Additional Notes
-
-1. **Computation**
-
-As a Bayesian algorithm, BEAST is fast and is possibly among the fastest implementations of Bayesian time-series analysis algorithms of the same nature. (But it is slower, compared to nonBayesian methods.) For applications dealing with a few to thousands of time series, the computation won't be an practical concern at all. But for remote sensing applications that may easily involve millions or billions of time series, computation will be a big challenge for Desktop computer users. We suggest first testing BEAST on a single time series or small image chips first to determine whether BEAST is appropriate for your applications and, if yes, estimate how long it may take to process the whole image. In any case, for stacked time-series images, do not use `beast` or `beast.irreg` and use **`beast123`** instead, which can handle 3D data cubes and allow parallel computing.  We also welcome consultation with Kaiguang Zhao (zhao.1423@osu.edu) to give specific suggestions if you see some value of BEAST for your applications.
-
-2. **Compilation from source code**
+## Compilation from source code (for developers and experts only)
 
 The BEAST source code appears more complicated than necessary, mainly because the same source is used for both R and Matlab interfaces (also for Python and Julia) as well as for various compilations settings (e.g., compiler variants, alternative library dependencies, cross-platform compatibility, mixed language interfaces, and Win32 API native interfaces). The complication control variables are defined as MACROs in abc_macro.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxiliary files; the BEAST algorithm itself is coded in beastv2_COREV4.c; and the R and Matlab interfaces are coded in glue.c and abc_ide_util.c.
 

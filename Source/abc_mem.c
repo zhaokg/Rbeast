@@ -164,7 +164,7 @@ static I32  verify_header(MemPointers* _restrict self) {
 	return badHeaderNum;
 }
 
-static __NullifyNodes(MemNode* list, VOIDPTR * nodesRemove) {
+static void  __NullifyNodes(MemNode* list, VOIDPTR * nodesRemove) {
 
 	int i = 0;
 	while (nodesRemove[i]) {	        

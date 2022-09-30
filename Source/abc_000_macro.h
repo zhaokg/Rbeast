@@ -7,9 +7,9 @@
 
 //gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
  
-#define R_INTERFACE    1
+#define R_INTERFACE    0
 #define M_INTERFACE    0
-
+#define P_INTERFACE    1
 /*------------------------------------------------------------*/
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
@@ -26,8 +26,28 @@
         // For R interface
 		#undef   R_INTERFACE
 		#undef   M_INTERFACE
+		#undef   P_INTERFACE
 		#define  R_INTERFACE 1
 		#define  M_INTERFACE 0
+        #define  P_INTERFACE 0
+
+		#undef   MYMAT_LIBRARY
+	    #undef   MKL_LIBRARY
+
+		#define MYMAT_LIBRARY 1
+	    #define MKL_LIBRARY   0
+
+	    #define PCGRAND_LIBRARY 1
+        #define MKLRAND_LIBRARY 0
+#endif
+#ifdef P_RELEASE
+        // For R interface
+		#undef   R_INTERFACE
+		#undef   M_INTERFACE
+		#undef   P_INTERFACE
+		#define  R_INTERFACE 0
+		#define  M_INTERFACE 0
+        #define  P_INTERFACE 1
 
 		#undef   MYMAT_LIBRARY
 	    #undef   MKL_LIBRARY
@@ -60,8 +80,10 @@
         // For Matlab interface
 		#undef   R_INTERFACE
 		#undef   M_INTERFACE
+		#undef   P_INTERFACE
 		#define  R_INTERFACE 0
 		#define  M_INTERFACE 1
+        #define  P_INTERFACE 0
 
 		#undef   MYMAT_LIBRARY
 	    #undef   MKL_LIBRARY
@@ -324,7 +346,10 @@
     DISABLE_WARNING(int-conversion,int-conversion, NOT_USED) \
     DISABLE_WARNING(switch, switch, NOT_USED) \
     DISABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
-   DISABLE_WARNING(pedantic, pedantic, NOT_USED)
+    DISABLE_WARNING(pedantic, pedantic, NOT_USED) \
+    DISABLE_WARNING(typedef-redefinition, typedef-redefinition, NOT_USED) 
+
+
 	/*DISABLE_WARNING(restrict, restrict, NOT_USED)\*/
 	/*ENABLE_WARNING(restrict, restrict, NOT_USED)\*/
 
@@ -341,6 +366,7 @@
 	//https://clang.llvm.org/docs/DiagnosticsReference.html#wpragmas
 	//https://clang.llvm.org/docs/DiagnosticsReference.html#wrestrict-expansion
 	#define  ENABLE_MANY_WARNINGS  \
+    ENABLE_WARNING(typedef-redefinition, typedef-redefinition, NOT_USED)\
     ENABLE_WARNING(pedantic, pedantic, NOT_USED)\
     ENABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
     ENABLE_WARNING(switch, switch, NOT_USED)\

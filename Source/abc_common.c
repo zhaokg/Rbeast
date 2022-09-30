@@ -759,6 +759,9 @@ void CopyStrideMEMToF32Arr(F32PTR dst,  VOID_PTR src, int N, int srcStride, int 
 	else if (srcDataType == DATA_DOUBLE){
 		f32_from_strided_f64(dst, src, N, srcStride, srcOffset);
 	}  
+	else if (srcDataType == DATA_INT64) {
+		f32_from_strided_i64(dst, src, N, srcStride, srcOffset);
+	}
 	else if (srcDataType == DATA_INT32)	{
 		f32_from_strided_i32(dst, src, N, srcStride, srcOffset);
 	}  

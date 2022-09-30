@@ -117,7 +117,7 @@ extern "C" {
 
 
 // bool is defined in matlab's tmwtypes.h
-#if R_INTERFACE == 1
+#if R_INTERFACE == 1  || P_INTERFACE == 1 
 	#ifndef bool
 	//typedef uint8_t bool;
 	#define  bool  unsigned char
