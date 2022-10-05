@@ -1,50 +1,52 @@
 from . import Rbeast as cb
-from numpy import ndarray, squeeze
+from .cvt_to_numpy import force_convert_to_numpy
+           
 
 def beast_irreg(Y, \
           time,
           deltat,
-          freq=float('nan'),
-          season='harmonic',       # 'harmonic','dummy','svd (not supported yet)','none'
-          scp_minmax = [0, 10] ,
-          sorder_minmax = [0, 5],
+          freq           = float('nan'),
+          season         = 'harmonic',# 'harmonic','dummy',(svd not supported yet','none'
+          scp_minmax     = [0, 10] ,
+          sorder_minmax  = [0, 5],
           sseg_minlength = None, # an integer
-          tcp_minmax = [0,10 ],
-          torder_minmax = [0, 5],
+          tcp_minmax     = [0,10 ],
+          torder_minmax  = [0, 1],
           tseg_minlength = None,  # an integer
-          detrend = False,
-          deseasonalize = False,
-          mcmc_seed  =0,
-          mcmc_burbin = 200,
-          mcmc_chains = 3,
-          mcmc_thin = 5,
-          mcmc_samples =8000,
-          ci = False,
-          precValue =1.5,
-          precPriorType ='componentwise', #componentwise','uniform','constant','orderwise'
-          print_options =True,
+          detrend        = False,
+          deseasonalize  = False,
+          mcmc_seed      = 0,
+          mcmc_burbin    = 200,
+          mcmc_chains    = 3,
+          mcmc_thin      = 5,
+          mcmc_samples   = 8000,
+          ci        = False,
+          precValue = 1.5,
+          precPriorType  = 'componentwise', #componentwise','uniform','constant','orderwise'
+          print_options  = True,
           print_progress = True,
           hasOutlier = False,
-          ocp_max  = 10,
-          gui     = False
+          ocp_max    = 10,
+          gui        = False
         ):
 
       
-      isNumpyInput = False;
-      if   isinstance(Y, list) or isinstance(Y, tuple):
-            isNumpyInput = False
-      elif isinstance(Y, ndarray):
-            isNumpyInput = True
-      elif hasattr(Y,'to_numpy'):
-            Y = getattr(Y,'to_numpy')()
-            isNumpyInput = True
-      else:
-            raise ValueError('Unknown formats for the input Y.')
+      Y = force_convert_to_numpy(Y)
       
-      if isNumpyInput:
-            Y=squeeze(Y)
+      if hasattr(time, "year"):
+            time.year = force_convert_to_numpy(time.year)
+            if hasattr(time, "month"):
+                time.month = force_convert_to_numpy(time.month)
+            if hasattr(time, "day"):
+                time.day   = force_convert_to_numpy(time.day)   
+            if hasattr(time, "doy"):
+                time.doy   = force_convert_to_numpy(time.doy)   
+      elif hasattr(time,'datestr') or hasattr(time,'dateStr'):
+           pass
+      else: #then, we assume time is a numerical vector
+           time = force_convert_to_numpy(time) 
                 
-    #......Start of displaying 'MetaData' ......
+     #......Start of displaying 'MetaData' ......
       metadata = lambda: None   ###Just get an empty object###
       metadata.isRegularOrdered = True
       metadata.season           = season

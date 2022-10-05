@@ -6,18 +6,18 @@
 #include "abc_win32_demo.h"
 void BEAST2_InitGlobalData() {
 	style = (Style) {
-			.hMargin		= 3,
-			.rEdit			= 0.1,
-			.hgtButtonBar	= 30,
-			.wButton =	 72,
-			.sep = 10,
-			.vButtonRatio = 0.7,
-			.vScrollRatio = 0.5,
-			.labelGap = 8,
+			.hMargin		= 3.f,
+			.rEdit			= 0.1f,
+			.hgtButtonBar	= 30.f,
+			.wButton        = 72.f,
+			.sep            = 10.f,
+			.vButtonRatio   = 0.7f,
+			.vScrollRatio   = 0.5f,
+			.labelGap       = 8.f,
 			.rFig			= { 0.3, 0.7 / 2. * 2 / 3., 0.7 / 2. / 3, 0.7 / 2. * 2. / 3, 0.7 / 2. / 3 },
-			.fractionLabel	= 0.6,
-			.fractionEdit	= 0.5,
-			.widthDialg		= 270,
+			.fractionLabel	= 0.6f,
+			.fractionEdit	= 0.5f,
+			.widthDialg		= 270.f,
 	};
 	
 	memset(hBitmap,       0, sizeof(HBITMAP)* 5);
@@ -78,8 +78,8 @@ void BEAST2_GeneratePlotData()
 
 	//gData.plotData[0][0] = malloc(sizeof(int)*gData.N * 2); //Yfit_mean
 	//gData.plotData[0][1] = malloc(sizeof(int)*gData.N * 2); //Yfit_cur
-	W = gData.w[0];
-	H = gData.h[0];
+	W = (F32) gData.w[0];
+	H = (F32) gData.h[0];
 	Ymax = gData.yMax;
 	Ymin = gData.yMin;
 	dX = W / N;

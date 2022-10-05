@@ -1,50 +1,39 @@
-from . import Rbeast as cb
-from numpy import ndarray, squeeze
+from .             import Rbeast as cb
+from .cvt_to_numpy import force_convert_to_numpy
+
 
 def beast(Y, \
-          start=1,
-          deltat=1,
-          season='harmonic',       # 'harmonic','dummy','svd (not supported yet)','none'
-          freq  = float('nan'),
-          scp_minmax = [0, 10] ,
-          sorder_minmax = [0, 5],
+          start  = 1,
+          deltat = 1,
+          season = 'harmonic',       # 'harmonic','dummy','svd (not supported yet)','none'
+          freq           = float('nan'),
+          scp_minmax     = [0, 10] ,
+          sorder_minmax  = [0, 5],
           sseg_minlength = None, # an integer
-          tcp_minmax = [0,10 ],
-          torder_minmax = [0, 5],
+          tcp_minmax     = [0,10 ],
+          torder_minmax  = [0, 1],
           tseg_minlength = None,  # an integer
-          detrend = False,
-          deseasonalize = False,
-          mcmc_seed  =0,
-          mcmc_burbin = 200,
-          mcmc_chains = 3,
-          mcmc_thin = 5,
-          mcmc_samples =8000,
-          ci = False,
-          precValue =1.5,
-          precPriorType ='componentwise', #componentwise','uniform','constant','orderwise'
-          print_options =True,
+          detrend        = False,
+          deseasonalize  = False,
+          mcmc_seed    = 0,
+          mcmc_burbin  = 200,
+          mcmc_chains  = 3,
+          mcmc_thin    = 5,
+          mcmc_samples = 8000,
+          ci           = False,
+          precValue    = 1.5,
+          precPriorType  = 'componentwise', #componentwise','uniform','constant','orderwise'
+          print_options  = True,
           print_progress = True,
           hasOutlier = False,
-          ocp_max  = 10,
-          gui     = False
+          ocp_max    = 10,
+          gui        = False
         ):
       
-      isNumpyInput = False;
-      if   isinstance(Y, list) or isinstance(Y, tuple):
-            isNumpyInput = False
-      elif isinstance(Y, ndarray):
-            isNumpyInput = True
-      elif hasattr(Y,'to_numpy'):
-            Y = getattr(Y,'to_numpy')()
-            isNumpyInput = True
-      else:
-            raise ValueError('Unknown formats for the input Y.')
-      
-      if isNumpyInput:
-            Y=squeeze(Y)
+      Y = force_convert_to_numpy(Y)
                  
     #......Start of displaying 'MetaData' ......
-      metadata = lambda: None   ###Just get an empty object###
+      metadata                  = lambda: None   ###Just get an empty object###
       metadata.isRegularOrdered = True
       metadata.season           = season
       metadata.startTime        = start

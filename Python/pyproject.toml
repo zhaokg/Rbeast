@@ -1,0 +1,6 @@
+[build-system]
+#numpy is needed before running setuptools bcz
+# it is the first modudle to import in setup.py
+
+requires      = ["setuptools","wheel", "numpy"]
+build-backend = "setuptools.build_meta"

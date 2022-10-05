@@ -12,7 +12,7 @@
 #from package import module
 #module.use_function()
 
-#However this is only because the __init__.py is empty. We can allow the package to export functions and modules as well. Which #means this should be possible:
+#However this is only because the __init__.py is empty. We can allow the package to export functions and modules as well. Which means this should be possible:
 
 #import package
 #package.module.use_function()
@@ -38,7 +38,6 @@ from .load_example import load_example as load_example
 from .             import Rbeast       as cbeast
  
 
-
 # https://stackoverflow.com/questions/2356399/tell-if-python-is-in-interactive-mode
 def isInteractiveMode():
     import sys 
@@ -51,7 +50,7 @@ def isInteractiveMode():
 # https://stackoverflow.com/questions/63156606/aliases-for-imported-modules-with-importlib
 def LoadPlot():
     import sys,importlib, os
-    mod      = sys.modules[__name__]    
+    mod       = sys.modules[__name__]    
     mod_path  = os.path.join(os.path.dirname(__file__), 'plotbeast.py')
     spec      = importlib.util.spec_from_file_location("plotbeast", mod_path)
     plotbeast = importlib.util.module_from_spec(spec)
@@ -69,7 +68,6 @@ def LoadPlot_v2():
     plotbeast = importlib.import_module('.plotbeast',__name__)
     setattr(mod,'plot',  getattr(plotbeast, 'plot') ) 
 
-
 #if isInteractiveMode:
 ##     LoadPlot()
 #      LoadPlot_v2 # this works 
@@ -77,6 +75,7 @@ def LoadPlot_v2():
 
 # https://stackoverflow.com/questions/1957780/how-to-override-the-operator-in-python
 # https://stackoverflow.com/questions/57413453/is-it-possible-to-override-getitem-at-instance-level-in-python     
+
 class BeastOutputClass:
     pass
 BeastOutputClass.__getitem__ = extract    
@@ -89,7 +88,7 @@ class args:
     pass
 
 
-def removeUselessMembers():
+def RemoveUselessMembers():
     import sys    
     dict = sys.modules[__name__].__dict__.copy()    
     mod  = sys.modules[__name__]
@@ -98,7 +97,7 @@ def removeUselessMembers():
         if x not in membersKept:
             delattr(mod, x)
             
-#removeUselessMembers()
+#RemoveUselessMembers()
 
 cbeast.setClassObjects(BeastOutputClass)
 

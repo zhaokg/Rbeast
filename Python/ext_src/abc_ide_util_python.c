@@ -55,7 +55,7 @@ static void* PyGetDict(void *ptr) {
         return NULL;
     }
 
-    if (PyObject_IsInstance(ptr, &PyBaseObject_Type)) {
+    if (PyObject_IsInstance(ptr, (PyObject *) & PyBaseObject_Type)) {
      
         // instance's own dict
         PyObject** dictpr = _PyObject_GetDictPtr(ptr);
@@ -148,7 +148,7 @@ int IsChar(void* ptr) {
     if (PyList_Check(ptr))           pyGetItem = PyList_GetItem;
     else if (PyTuple_Check(ptr))     pyGetItem = PyDict_GetItem;
     if(pyGetItem) {      
-        int sz = PyObject_Size(ptr);
+        int sz = (int) PyObject_Size(ptr);
         int ok = 1;
         for (int i = 0; i < sz; ++i) {
             if ( !PyUnicode_Check(pyGetItem(ptr, i) ) ) {
@@ -385,7 +385,13 @@ I32 GetCharArray(void* ptr, char* dst, int n) {
     if (!IsChar(ptr)) return 0;
 
     if (PyUnicode_Check(ptr)) {
-        int len;
+        //int len;
+        /* STUPID ME. it took me one day to figure out this bug:
+        * if using int, the upper exta 32-bits will be reset to zero,
+        * this will corrupt the pushed 'si' regiser, the si regiseter
+        * seems to hold the prhs passed in the mainFunction
+        */
+        Py_ssize_t  len;
         char* str = PyUnicode_AsUTF8AndSize(ptr, &len);
         strncpy(dst, str, n);
         return len;
@@ -416,7 +422,7 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
     }
 
     if (PyUnicode_Check(tmpItem)) {
-        int   len;
+        Py_ssize_t  len;
         char* str = PyUnicode_AsUTF8AndSize(tmpItem, &len);
         strncpy(dst, str, n);
         return len;
@@ -435,10 +441,10 @@ void* GetField123(const void* structVar, char* fname, int nPartial) {
 
     Pob dict = NULL;
 
-    if (PyDict_Check(structVar)) {
+    if (PyDict_Check((void*)structVar)) {
         dict = structVar;
     }   else {
-        dict = PyGetDict(structVar);
+        dict = PyGetDict( (void *) structVar);
     }
  
     if (dict) {
@@ -450,13 +456,13 @@ void* GetField123(const void* structVar, char* fname, int nPartial) {
 void* GetField(const void* structVar, char* fname) {
  
     if (PyDict_Check(structVar)) {
-        PyObject* item = PyGetDictItemString(structVar, fname);
+        PyObject* item = PyGetDictItemString((void*)structVar, fname);
         return item;
     
     }  else {
  
-        if (PyObject_HasAttrString(structVar, fname)) {
-            PyObject *attr= PyObject_GetAttrString(structVar, fname); // new ref
+        if (PyObject_HasAttrString((void*)structVar, fname)) {
+            PyObject *attr= PyObject_GetAttrString((void*)structVar, fname); // new ref
             Py_DECREF(attr);  // so the returned 
             return  attr;
         }        
@@ -483,7 +489,7 @@ static F64 NumpyGetNumericElemt(void* ptr, int ind) {
         return *(int32_t*)dptr;
     }
     else if (dtype == NPY_INT64) {
-        return *(int64_t*)dptr;
+        return (F64)  * (int64_t*)dptr;
     }
     else if (dtype == NPY_FLOAT) {
         return *(float*)dptr;
@@ -713,7 +719,7 @@ static void* pyCreateStructObject() {
     return obj;
 }
 static void pySetAddField(void *obj, char *fname, void *value) {
-    if (value == NULL) return NULL;
+    if (value == NULL) return ;
 
     PyObject_SetAttrString(obj, fname, value); // do not steal ref and value is increfed.
     Py_XDECREF(value);  // decref it so    

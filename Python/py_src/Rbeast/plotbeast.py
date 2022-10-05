@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
-import numpy             as np
+from    matplotlib       import __version__  as version
 from   .extractbeast     import extract as extractbeast
+from numpy               import ndarray, min, max,ndarray,flip, isnan, round, sum, arange
+from numpy               import concatenate as c, array as np_array, where as np_where, sqrt as np_sqrt
 
 import warnings
 
@@ -15,9 +17,6 @@ HEIGHTS = {'st': 0.8, 's': 0.8, 't': 0.8, 'o': 0.8, 'scp': .5, 'tcp': .5, 'ocp':
 
 length  = len
 isfield = hasattr
-c       = np.concatenate
-min     = np.min
-max     = np.max
 
 
 def getfield(obj, fld):
@@ -31,7 +30,7 @@ def getfield(obj, fld):
 def isempty(obj):
     if obj is None:
         return True
-    if isinstance(obj, np.ndarray):
+    if isinstance(obj, ndarray):
         return len(obj) == 0
     if hasattr(obj, '__dict__'):
         return len(obj.__dict__) == 0
@@ -93,7 +92,7 @@ def plot(o, index=0,\
         # more than time series is present
         o=extractbeast(o,index);        
 
-    if np.isnan(o.marg_lik):
+    if isnan(o.marg_lik):
         H = [];
         warning("The result of the selected time series selected is invalid.");
         return None
@@ -139,12 +138,13 @@ def plot(o, index=0,\
     if (not hasData):
         idx = [idx[i] if vars[i] != 'error' else False for i in range(len(idx))]
 
-    vars  = [ vars[i] for i in range(len(idx)) if idx[i]]
-    col   = [ col[i] for i in range(len(idx)) if idx[i]]
-    ylab  = [ ylab[i] for i in range(len(idx)) if idx[i]]
+    vars     = [ vars[i]    for i in range(len(idx)) if idx[i]]
+    col      = [ col[i]     for i in range(len(idx)) if idx[i]]
+    ylab     = [ ylab[i]    for i in range(len(idx)) if idx[i]]
     heights  = [ heights[i] for i in range(len(idx)) if idx[i]]
 
     nPlots = length(vars)
+    
     if (nPlots == 0):
         error("No valid variable names speciffied int the 'vars' argument. Possible names include 'st','t','s','sorder','torder','scp','tcp','samp','tslp','o', 'ocp', and 'error'. ")
 
@@ -153,7 +153,7 @@ def plot(o, index=0,\
     #  Functions and variables to load the outputs
     ########################################################
 
-    opt = Obj()
+    opt               = Obj()
     opt.leftmargin    = 0.1;
     opt.rightmargin   = 0.05;
     opt.topmargin     = 0.06;
@@ -169,7 +169,7 @@ def plot(o, index=0,\
     #  ########################################################
     x      = o
     t, N   = (x.time, length(x.time))
-    t2t    = c( [t, np.flip(t)] )
+    t2t    = c( [t, flip(t)] )
 
     for i in range(len(vars)):
         ytitle, var, clr, h = ( ylab[i], vars[i], col[i], H[i])
@@ -254,9 +254,9 @@ def axeslayout(opt, hLayout, fig):
     bm = opt.bottommargin;
     vd = opt.verticalspace;
     # hLayout = [1 1 - 1 1 1 - 1 1 1];
-    hLayout = np.array(hLayout)
-    winList = np.where(hLayout > 0)[0]  # a tuple returned
-    hgt = (1 - tm - bm - abs(np.sum(hLayout[hLayout < 0]) * vd)) / np.sum(hLayout[hLayout > 0]);
+    hLayout = np_array(hLayout)
+    winList = np_where(hLayout > 0)[0]  # a tuple returned
+    hgt = (1 - tm - bm - abs(sum(hLayout[hLayout < 0]) * vd)) / sum(hLayout[hLayout > 0]);
     H = [];
     fig.clf()
     ax = fig.subplots(len(winList), 1)  # plt.figure()  fig.add_axes
@@ -266,7 +266,7 @@ def axeslayout(opt, hLayout, fig):
         if i == 0:
             yup = 1 - tm
         else:
-            slist = hLayout[np.arange(1, len(hLayout) + 1) <= idx]
+            slist = hLayout[arange(1, len(hLayout) + 1) <= idx]
             slist[slist > 0] = slist[slist > 0] * hgt;
             slist[slist < 0] = -slist[slist < 0] * vd;
             yup = 1 - tm - sum(slist);
@@ -285,9 +285,9 @@ def get_Yts(x, hasSeason, hasOutlier, hasData):
         Yts, SD2 = (Yts + x.season.Y, SD2 + x.season.SD ** 2)
     if hasOutlier:
         Yts, SD2 = (Yts + x.outlier.Y, SD2 + x.outlier.SD ** 2)
-    SD    = np.sqrt(SD2)
+    SD    = np_sqrt(SD2)
     tmp   = Yts + SD
-    YtsSD = np.concatenate([Yts - SD, np.flip(tmp)])
+    YtsSD = c([Yts - SD, flip(tmp)])
     if hasData:
         Yerr = x.data - Yts
     else:
@@ -296,19 +296,18 @@ def get_Yts(x, hasSeason, hasOutlier, hasData):
 
 #% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 def get_T(x, hasSlp, hasTOrder):
-    c = np.concatenate
     Y = x.trend.Y;
     tmp = Y + x.trend.SD;
-    SD = c( [Y - x.trend.SD, np.flip(tmp)] )
+    SD = c( [Y - x.trend.SD, flip(tmp)] )
     if isfield(x.trend, 'CI') and not isempty(x.trend.CI):
         tmp = x.trend.CI[:,1]
-        CI  = c( [x.trend.CI[:, 0], np.flip(tmp) ])
+        CI  = c( [x.trend.CI[:, 0], flip(tmp) ])
     else:
         CI = SD
     if (hasSlp):
         Slp   = x.trend.slp;
         tmp   = Slp + x.trend.slpSD;
-        SlpSD = c( [Slp - x.trend.slpSD, np.flip(tmp) ] )
+        SlpSD = c( [Slp - x.trend.slpSD, flip(tmp) ] )
         SlpSignPos = x.trend.slpSgnPosPr;
         SlpSignZero = x.trend.slpSgnZeroPr;
     else:
@@ -338,11 +337,11 @@ def get_tcp(x, ncpStat):
     elif ncpStat == 'pct10':
         ncp = cmpnt.ncp_pct10;
     elif ncpStat == 'max':
-        ncp = sum(~np.isnan(cp));
+        ncp = sum(~isnan(cp));
     else:
         ncp = cmpnt.ncp_mode;
 
-    ncp  = int( np.round(ncp) );
+    ncp  = int( round(ncp) );
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,cmpnt.cpAbruptChange, cmpnt.cpOccPr)
     Prob1 = c( [Prob,Prob - Prob])
 
@@ -353,18 +352,18 @@ def get_tcp(x, ncpStat):
 def get_S(x, hasAmp, hasSOrder):
     Y = x.season.Y;
     tmp = Y + x.season.SD;
-    SD = c( [Y - x.season.SD, np.flip(tmp)])
+    SD = c( [Y - x.season.SD, flip(tmp)])
 
     if isfield(x.season, 'CI') and not isempty(x.season.CI):
         tmp = x.season.CI[:, 1];
-        CI = c( [x.season.CI[:, 0],  np.flip(tmp)] )
+        CI = c( [x.season.CI[:, 0],  flip(tmp)] )
     else:
         CI = SD
 
     if hasAmp:
         Amp = x.season.amp;
         tmp   = Amp + x.season.ampSD;
-        AmpSD = c( [Amp - x.season.ampSD,  np.flip(tmp) ])
+        AmpSD = c( [Amp - x.season.ampSD,  flip(tmp) ])
     else:
         Amp = [];
         AmpSD = [];
@@ -378,10 +377,10 @@ def get_S(x, hasAmp, hasSOrder):
 #% %  ###########################################################
 def get_O(x):
     Y   = x.outlier.Y
-    SD = c( [Y - x.outlier.SD,  np.flip(Y + x.outlier.SD) ])
+    SD = c( [Y - x.outlier.SD,  flip(Y + x.outlier.SD) ])
 
     if isfield(x.outlier, 'CI') and not isempty(x.outlier.CI):
-        CI = c( [x.outlier.CI[:,0], np.flip(x.outlier.CI[:, 1]) ] )
+        CI = c( [x.outlier.CI[:,0], flip(x.outlier.CI[:, 1]) ] )
     else:
         CI = SD
     return (Y, SD, CI)
@@ -401,11 +400,11 @@ def get_scp(x, ncpStat):
     elif ncpStat == 'pct10':
         ncp = cmpnt.ncp_pct10;
     elif ncpStat == 'max':
-        ncp = sum(~np.isnan(cp));
+        ncp = sum(~isnan(cp));
     else:
         ncp = cmpnt.ncp_mode;
 
-    ncp  = int( np.round(ncp) );
+    ncp  = int( round(ncp) );
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,cmpnt.cpAbruptChange, cmpnt.cpOccPr)
     Prob1 = c( [Prob, Prob - Prob])
     #% %  ###########################################################
@@ -425,11 +424,11 @@ def  get_ocp(x, ncpStat):
     elif ncpStat == 'pct10':
         ncp = cmpnt.ncp_pct10
     elif ncpStat == 'max':
-        ncp = sum(~np.isnan(cp))
+        ncp = sum(~isnan(cp))
     else:
         ncp = cmpnt.ncp_mode
 
-    ncp  = int( np.round(ncp) );
+    ncp  = int( round(ncp) );
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,[], cmpnt.cpOccPr)
     Prob1 = c( [Prob, Prob - Prob])
     #% %  ###########################################################
@@ -438,7 +437,7 @@ def  get_ocp(x, ncpStat):
 #% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 #% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 def getylim(y):
-    ymin,ymax = (np.min(y), np.max(y) )
+    ymin,ymax = (min(y), max(y) )
     yext = ymax -ymin
     return (ymin - yext*0.1, ymax+yext*0.1)
 
@@ -467,8 +466,8 @@ def plot_prob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
     alpha = 0.2;
     h.fill( t2t, Prob1, color=clr, linestyle='None', alpha=alpha);
     h.plot(t, Prob, color=clr)
-    maxp = np.min( [1, np.max(Prob) * 1.5])
-    maxp = np.max([maxp, 0.2])
+    maxp = min( [1, max(Prob) * 1.5])
+    maxp = max([maxp, 0.2])
     h.set_ylim( (0, maxp) )
 
     for i in range(ncp):
@@ -477,7 +476,7 @@ def plot_prob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
 #% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 def plot_order(h, ytitle, has, clr, x, t, t2t, Order, ncp, cp):
     h.plot(t, Order, color=clr);
-    maxp = np.max([ np.max(Order), 1.05]);
+    maxp = max([ max(Order), 1.05]);
     minp = -0.05;
     h.set_ylim([minp, maxp])
     for i in range(ncp):
@@ -499,9 +498,9 @@ def plot_slp(h, ytitle, has, clr, x, t, t2t, Slp, SlpSD):
 def plot_slpsgn(h, ytitle, has, clr, x, t, t2t, SlpSignPos, SlpSignZero):
     alpha      = 0.5;
     SlpSignNeg = 1 - SlpSignPos - SlpSignZero;
-    y2y        = c( [t - t,  np.flip( SlpSignNeg ) ] )
+    y2y        = c( [t - t,  flip( SlpSignNeg ) ] )
     h.fill(t2t, y2y, color=[0, 0, 1], linestyle='None', alpha=alpha);
-    y2y = c( [SlpSignNeg,  1 - np.flip( SlpSignPos) ] )
+    y2y = c( [SlpSignNeg,  1 - flip( SlpSignPos) ] )
     h.fill(t2t, y2y, color=[0, 1, 0], linestyle='None', alpha=alpha);
     y2y = c( [1 - SlpSignPos, t - t + 1])
     h.fill(t2t, y2y, color=[1, 0, 0], linestyle='None', alpha=alpha);
@@ -509,19 +508,33 @@ def plot_slpsgn(h, ytitle, has, clr, x, t, t2t, SlpSignPos, SlpSignZero):
 
 def plot_o(h, ytitle, has, clr, x, t, t2t, Y, CI, ncp, cp):
     alpha = 0.5;
-    #%  # polygon(t2t, CI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
-    #$%  # points( t,   Y,    type = 'l',col='#333333');
-    h.stem( t, Y,  linefmt='-', markerfmt=None ,use_line_collection=True)
+    # polygon(t2t, CI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    # points( t,   Y,    type = 'l',col='#333333');
+    # TypeError: stem() got an unexpected keyword argument 'use_line_collection'
+    # https://matplotlib.org/3.1.0/api/_as_gen/matplotlib.pyplot.stem.html
+    if version >= '3.3':
+         h.stem( t, Y,  linefmt='-', markerfmt=None ,use_line_collection=True)
+    else: 
+         h.stem( t, Y,  linefmt='-', markerfmt=None)
+
 
 def plot_oprob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
     alpha = 0.2
     #% plot(c(t2t[1], t2t), c(0.22, Prob1), type='n', ann=FALSE, xaxt='n', yaxt='n');
    #%  # polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
    # %  # points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
-    h.stem(t, Prob,  linefmt='-', markerfmt=None,use_line_collection=True)
+    if version >= '3.3':
+         h.stem(t, Prob,  linefmt='-', markerfmt=None,use_line_collection=True)
+    else: 
+         h.stem(t, Prob,  linefmt='-', markerfmt=None)
+    
 
 def plot_error(h, ytitle, has, clr, x, t, t2t, Yerr):
     #% plot(t, Yerr, type='n', ann=FALSE, xaxt='n', yaxt='n');
     h.plot(t, t - t, color=clr);
-    h.stem(t, Yerr, linefmt='-', markerfmt=None,use_line_collection=True)
+    if version >= '3.3':
+         h.stem(t, Yerr, linefmt='-', markerfmt=None,use_line_collection=True)
+    else: 
+         h.stem(t, Yerr, linefmt='-', markerfmt=None)
+    
 

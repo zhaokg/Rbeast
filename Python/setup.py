@@ -1,7 +1,34 @@
-import os,sys
-import numpy as np
+import os,sys,glob
 from   setuptools import setup, find_packages, Extension,find_namespace_packages
-import glob
+
+
+#import numpy as np
+
+# setup should isstall numpy but numpy is needed to get the numpy headers  in np.get_include()
+# and run the setup before it is installed -- chichen-and-egg problems
+# 
+# https://stackoverflow.com/questions/56008251/setup-requires-does-not-seem-to-install-dependencies
+# https://stackoverflow.com/questions/35516059/python-is-not-installing-dependencies-listed-in-install-requires-of-setuptools
+# https://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py/21621689
+
+# A few solutions: https://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py/21621689
+# This should now (since 2018-ish) be solved by adding numpy as a buildsystem dependency in pyproject.toml, 
+# so that pip install makes numpy available before it runs setup.py.
+
+# We fix the problem by using pyproject.toml
+# Alternatively, we also included a solution from 
+# https://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py/21621689
+# by using the deferring the import till it has been installed
+
+# https://stackoverflow.com/questions/68282771/python-packaging-build-requirements-in-pyproject-toml-vs-setup-requires
+class get_numpy_include(object):
+    """Defer numpy.get_include() until after numpy is installed."""
+    def __str__(self):
+        from numpy import get_include 
+        # this is the only function we need here:  not sure if this help reduce 
+        # the possibility of "runtimeerror: module compiled against api version 0xe but this version of numpy is 0xd"
+        return get_include()
+
 
 
 def read(fname):
@@ -23,7 +50,7 @@ if is_platform_windows():
 modules = Extension(
             "Rbeast.Rbeast",
             sources       = filenames,
-            include_dirs  = [np.get_include(), "ext_src/"],
+            include_dirs  = [get_numpy_include(), "ext_src/"],      #[np.get_include(), "ext_src/"],
             define_macros = [('P_RELEASE','1'),('R_INTERFACE','0')],
             libraries     = extralibs
         )
@@ -37,13 +64,13 @@ packages = find_namespace_packages(where='./py_src', exclude=['build','tests','e
 #print(packages)
 setup(
     name             = "Rbeast",   
-    version          = '0.1.8',
-    description      = "Python package for Bayesian changepoint detection and time series decomposition",
+    version          = '0.1.12',
+    description      = "Bayesian changepoint detection and time series decomposition",
     author           = "Kaiguang Zhao",
     author_email     = 'zhao.1423@osu.edu',
     url              = 'https://github.com/zhaokg/Rbeast',    
-    keywords         = ('changepoint', 'structural breaks','time series decomposition' 'time series analysis', 'trend analysis',),
-    python_requires  = '>=3.7',  
+    keywords         = ['changepoint', 'structural breaks','time series decomposition' 'time series analysis', 'trend analysis'],
+    python_requires  = '>=3.5',  
     long_description = read('README.md'),
     long_description_content_type = "text/markdown",        
     classifiers=[
@@ -60,12 +87,13 @@ setup(
         "Topic :: Scientific/Engineering",
         "License :: OSI Approved :: MIT License",
     ],    
-    install_requires=['numpy', 'matplotlib>=2.2.0'],
+    #setup_requires  = ['numpy'], #deprecated in favor of pyproject.toml
+    install_requires     = ['numpy', 'matplotlib>=2.2.0'],
     #entry_points={  'console_scripts': ['mycommand=exampleproject.data:main1'] },    
     packages             = packages,    
     package_dir          = {"Rbeast": "py_src/Rbeast","Rbeast.data": "py_src/Rbeast/data", '': '.'},      
     include_package_data = True,      
-    package_data         = {'Rbeast': ['data/nile.csv'],'Rbeast.data': ['beach.csv'] ,'Rbeast': ['data/*.npy','data/*.txt']},
+    package_data         = {'Rbeast': ['data/nile.csv'],'Rbeast.data': ['beach.csv'] ,'Rbeast': ['data/*.npy','data/*.txt','data/*.csv']},
     exclude_package_data = {'': ['*.c','*.cpp']},       
     ext_modules          = [modules]
 )
