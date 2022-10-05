@@ -14,19 +14,20 @@
 
 
    
-**Quick Examples**
+**Quick Usage**
 
 > One-liner code for Python, Matlab and R. Check below or [github.com/zhaokg/Rbeast](https://github.com/zhaokg/Rbeast) for more details.
 ```
-# Python example and usage
+# Python example
 import Rbeast as rb; (Nile, Year)=rb.load_example('nile'); o=rb.beast(Nile,season='none'); rb.plot(o)
 
-# Matlab example and usage
+# Matlab example
 load('Nile'); o = beast(Nile, 'season','none'); plotbeast(o)
 
-# R example and usage
+# R example
 library(Rbeast); data(Nile); o = beast(Nile); plot(o)
 ```
+
 
 
 ## Installation for R <a name=r> </a>
