@@ -217,7 +217,7 @@ In any case, for those users handling stacked time-series images, do not use `be
 * Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 
-## Selected publications using BEAST/Rbeast <a name=publications></a>
+<h2 id="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
 
 Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a short list of peer-reviewed pulications that used BEAST for statistical data analysis.
 
@@ -225,6 +225,7 @@ Despite being published originally for ecological and enviornmental applications
 | --- | --- |
 | Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. [Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement](https://www.sciencedirect.com/science/article/pii/S0034425722003285?casa_token=wj-jESXHBrQAAAAA:MPS5ThIzaw2Tvveml2fKYPzVmul24NTF11uGZpeBMTOfwtdA_hpx2OSwGR7686QPiN5xO1pHKQ). Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
 | Hydraulic Engineering | *Xu, X., Yang, J., Ma, C., Qu, X., Chen, J. and Cheng, L., 2022. Segmented modeling method of dam displacement based on BEAST time series decomposition. Measurement, 202, p.111811.* |
+| Ecosystem Sciences | *Lyu, R., Zhao, W., Pang, J., Tian, X., Zhang, J. and Wang, N., 2022. [Towards a sustainable nature reserve management: Using Bayesian network to quantify the threat of disturbance to ecosystem services](https://www.sciencedirect.com/science/article/pii/S2212041622000791?casa_token=4gYXQ65EcfgAAAAA:mdYwpF_tXZ_W0IUu8JPhlm4_P9RrabtiDGhkwu3ogElVwHb6Ie7HEWbFwgm8JDSdf99drcCYSw). Ecosystem Services, 58, p.101483.* |
 | Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. [Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon](https://iopscience.iop.org/article/10.1088/1748-9326/ac8236/meta). Environmental Research Letters.*|
 |   Population Ecology  | *Henderson, P. A. (2021). [Southwood's Ecological Methods (5th edition)](https://www.google.com/books/edition/Southwood_s_Ecological_Methods/snEhEAAAQBAJ?hl=en&gbpv=1&pg=PA473&printsec=frontcover). Oxford University Press., page 475-476*|
 |Political Science|*Reuning, K., Whitesell, A. and Hannah, A.L., 2022. [Facebook algorithm changes may have amplified local republican parties](https://journals.sagepub.com/doi/full/10.1177/20531680221103809). Research & Politics, 9(2), p.20531680221103809.*|
