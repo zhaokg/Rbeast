@@ -20,7 +20,7 @@ if ~isempty(beastPath)
         y = input(str,'s');
         if strcmp(y,'y')        
             rbeast_uninstall();
-            eval(webread('http://b.link/beast',weboptions('cert','')));
+            eval(webread('http://b.link/rbeast',weboptions('cert','')));
         end
     else
         fprintf('The latest version is being used and no update is available from GitHub. \n' );
@@ -29,5 +29,5 @@ end
 
 
 if isempty(beastPath)
-      eval(webread('http://b.link/beast',weboptions('cert','')));    
+      eval(webread('http://b.link/rbeast',weboptions('cert','')));    
 end

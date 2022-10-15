@@ -15,7 +15,7 @@
 
 %beastPath='a:\xx\'
 %eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
-%eval( webread('http://bit.ly/loadbeast',weboptions('Cert','')) )
+%eval( webread('http://bit.ly/loadbeast',  weboptions('Cert','')) )
 
 clear Rbeast % just in case that an exisitng version has been loaded 
 
@@ -54,7 +54,7 @@ end
 
 rpath = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
 %%
-datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', ...
+datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'googletrend.mat', ...
             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 for i=1:numel(datalist)
