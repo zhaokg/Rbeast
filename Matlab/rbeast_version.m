@@ -1,3 +1,5 @@
+% Oct 24., 2022: Thanks to Robert Martin: Suppressed unnecessary warnings 
+% related to whichDimIsTime=1
 
 % Oct 13., 2022: Add the googletrend.mat file in the dataset list
 
@@ -7,4 +9,4 @@
 % model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.9413;
+rbeastGitHubVersion = 0.9414;
