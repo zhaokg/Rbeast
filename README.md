@@ -80,7 +80,7 @@ from **GitHub**: The latest R versions are also available here at [GitHub](https
 </a>
 </p>   
   
-An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). ( On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`. Also, our package has nothing to with the famous "Bayesian evolutionary analysis by sampling trees" aglorithm.) Install  `Rbeast` in R using
+An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). ( On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`. Also, our package has nothing to do with the famous "Bayesian evolutionary analysis by sampling trees" aglorithm.) Install  `Rbeast` in R using
 
 ```R
 install.packages("Rbeast")
