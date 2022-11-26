@@ -25,9 +25,15 @@ function out = beast(y, varargin)
 %   <strong>deltat</strong>: 
 %        the time interval between consecutive datapoints (e.g., 1/12
 %        for monthly time series if the time unit is year).
-%   <strong>freq</strong>:  
-%        the number of datapoints per period if peridodic  variations are 
-%        present in the data
+%   <strong>freq</strong>:  Deprecated. Replaced with 'period'. See below
+%   <strong>period</strong>:  
+%        a numeric value to specify the period if peridodic/seasonal variations 
+%        are present in the data. If period is given a zero, negative value or 'none' 
+%        it suggests no seasonal/periodic component in the signal. (season='none'
+%        also suggests no periodic component).
+%        Note: in earlier versions, 'freq' was used to specify the period and
+%        now deprecated in this version. The unit of 'period', if any
+%        should be consistent with the unit of 'deltat'..
 %   <strong>season</strong>: 
 %        a string specifier. Possible values - 'none':  trend-only data with no 
 %        seasonality; 'harmonic': the seasonal/peridoic  component modelled via 
@@ -116,28 +122,81 @@ function out = beast(y, varargin)
 %       season.ampSD   : standard ev of the estiamated amplitude
 %
 %   <strong>More help</strong>:  
-%      The terse doc sucks (I know); so far, the best details are still the
+%      This terse help doc sucks (I know); so far, the best details are still the
 %      R help doc, available at https://cran.r-project.org/web/packages/Rbeast/Rbeast.pdf.
-%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's beast(freq=1) 
-%      beast('freq',1).
+%      Matlab doesn't support keyword-style args, so Matlab's equivalent to R's 
+%      beast(Y,<strong>start</strong>=1987,<strong>freq</strong>=1) is beast(Y,<strong>'start'</strong>, 1987, <strong>'freq'</strong>,1).
 %      
 %   <strong>Examples</strong>:
-%       load('Nile.mat')             % Nile river annual streamflow: trend-only data
-%       o=beast(Nile, 'start', 1871, 'season','none') 
+%       %%Nile river annual streamflow: trend-only data
+%       load('Nile.mat')             
+%       o = beast(Nile, 'start', 1871, 'season','none') 
 %       printbeast(o)
 %       plotbeast(o)
+%       
+%       % Explicitly specify deltat=1. BEAST knows nothing about the unit
+%       % of 1871 and 1.0 (i.e., 1871 years, 1871 seconds, or 1871 meters?) 
+%       o=beast(Nile, 'start', 1871, 'deltat', 1.0, 'season','none') 
 %
-%       load('googletrend.mat')   % Monthly google trend of the search word 'beach'
-%       o=beast(beach, 'start', [2004,1],'deltat', 1/12)
+%       % start is given a date 1871-1 (Year-Mon). The time unit is
+%       % then fractional/decimal year. delta=1.0 means 1.0 year
+%       o=beast(Nile, 'start', [1871,1], 'deltat', 1.0, 'season','none') 
+%
+%       % period=0 means a trend-only signal, which is equivalent to season='none'
+%       o=beast(Nile, 'start', 1871, 'deltat', 1, 'period', 0) 
+%
+%       % Use a string to specify a unit for deltat or period (e.g., deltat='1 year')
+%       % The time unit is also fractional year. 1871 means Year 1871
+%       o=beast(Nile, 'start', 1871, 'deltat', '1 year', 'period', 0) 
+%
+%       % Use a string to specify a unit for delta or period (e.g., deltat='12 mo')
+%       % The time unit is fractional year. 1871 means Year 1871
+%       o=beast(Nile, 'start', 1871, 'deltat', '12 mo', 'period', 0) 
+%
+%       % Do not print the options 
+%       o=beast(Nile, 'start', 1871, 'deltat',1.0,'season','none','print.options',false)
+%
+%
+%       %% Monthly google trend of the search word 'beach'
+%       load('googletrend.mat')   
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12) %deltat = 1/12 yr =1 month
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
 %
-%       load('co2.mat')             % Monthly air co2 data since 1959: deltaTime=1/12 year
-%       o=beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'freq',12)
+%       % delta  = 1/12: for dates, the default unit is year, so delta=1/12yr=1 month;       
+%       % period = 1.0 means 1 year
+%       o=beast(beach, 'start', [2004,1],'deltat', 1/12, 'period',1.0)  
+%
+%       % period='12 month': use a string to explicitly specify the unit              
+%       o=beast(beach, 'start', [2004,1],'deltat', 1/12, 'period','12 month')
+%       o=beast(beach, 'start', [2004,1],'deltat', '1 month', 'period','365 days')
+%
+%       %% Monthly air co2 data since 1959: deltaTime=1/12 year
+%       load('co2.mat')     
+%       o=beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'period',1.0)
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
+%
+%      %% Daily covid-19 infection statistics 
+%       load('covid19.mat')    
+%       Y    = sqrt(double(covid19.newcases));
+%       Date = covid19.datestr;
+%       % the min length of seasonal segments is set to 30 data points
+%       o=beast(Y, 'start',[2020,01,22], 'deltat', 1/365, 'period', 7/365,'sseg.min',30)
+%       printbeast(o)
+%       plotbeast(o)
+%       plotbeast(o,'ncpStat','median')
+%
+%       % Use a string to specify delta with a unit
+%       o=beast(Y, 'start',[2020,01,22], 'deltat', '1.0 day',  'period', '7days','sseg.min',30)
+%
+%       % Convert and aggregate the daily data into a weekly time series (i.e., deltaT=7 days)
+%       % then fit a trend-only model with no periodic component
+%       o = beast(Y, 'time',Date, 'deltat', '7days',  'period', 'none')
+%       %o= beast(Y, 'time',Date, 'deltat', '7days',  'period', 0 ) % equivalent to period='none'
+%       plotbeast(o)
 %
 %   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
 %   at <strong>zhao.1423@osu.edu</strong>.
@@ -163,11 +222,13 @@ function out = beast(y, varargin)
    % get values from keys. The last arg is the default value if the key is
    % missing from varagin/KeyList
   
-   start  = GetValueByKey(KeyList, ValList, 'start',  1);
-   deltat = GetValueByKey(KeyList, ValList, 'deltat',  1);
-   freq   = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   start  = GetValueByKey(KeyList, ValList, 'start',  []);
+   deltat = GetValueByKey(KeyList, ValList, 'deltat', []);
+   num_samples_per_period  = GetValueByKey(KeyList, ValList, 'freq',  []); 
+   period   = GetValueByKey(KeyList, ValList, 'period',  []); 
+   time    = GetValueByKey(KeyList, ValList, 'time',  []); 
    
-   season          = GetValueByKey(KeyList, ValList, 'season','harmonic');
+   season          = GetValueByKey(KeyList, ValList, 'season',[]); %'harmonic'
    sorder_minmax   = GetValueByKey(KeyList, ValList, 'sorder.minmax', [1,5]); 
    scp_minmax      = GetValueByKey(KeyList, ValList, 'scp.minmax',    [0,10]); 
    sseg_min        = GetValueByKey(KeyList, ValList, 'sseg.min',      []); 
@@ -200,13 +261,12 @@ function out = beast(y, varargin)
    metadata.season           = season;
    metadata.startTime        = start;
    metadata.deltaTime        = deltat;
-   if ~strcmp(metadata.season, 'none')
-       if (isempty(freq))
-        metadata.period       = [] ;  
-       else
-         metadata.period =freq *metadata.deltaTime;
-       end
-   end
+   if isempty(period) && ~isempty(deltat) && ~isempty(num_samples_per_period) && ~strcmp(season, 'none')
+       period=num_samples_per_period*deltat;
+   end   
+   metadata.period           = period;
+   metadata.time             = time;
+ 
    if strcmp(metadata.season, 'svd')
        if isempty(freq)|| freq <= 1.1 || isnan(freq)
            error("When season=svd, freq must be specified and larger than 1.");
@@ -235,10 +295,9 @@ function out = beast(y, varargin)
    prior.trendMinKnotNum  = tcp_minmax(1);
    prior.trendMaxKnotNum  = tcp_minmax(2);
    prior.trendMinSepDist  = tseg_min;
-   if hasOutlierCmpnt
-	prior.outlierMaxKnotNum=ocp;
-   end
-     
+   
+   prior.outlierMaxKnotNum=ocp;
+        
    prior.precValue        = 1.500000;
    prior.precPriorType    = 'componentwise';
 %......End of displaying pripr ......
@@ -246,7 +305,7 @@ function out = beast(y, varargin)
 %......Start of displaying 'mcmc' ......
    mcmc = [];
    mcmc.seed                      = mcmc_seed;
-   mcmc.samples                   =  mcmc_samples;
+   mcmc.samples                   = mcmc_samples;
    mcmc.thinningFactor            = mcmc_thin;
    mcmc.burnin                    = mcmc_burnin;
    mcmc.chainNumber               = mcmc_chainNumber;

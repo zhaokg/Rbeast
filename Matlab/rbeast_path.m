@@ -10,7 +10,7 @@ flist = split(path(),pathsep());
 for i=1:numel(flist)
     
     [fpath,fname,fext] = fileparts(flist{i}); 
-    if strcmp(fname,'testdata') && ~strcmp(lower(fpath),lower('F:\rpk\mat'))
+    if strcmp(fname,'testdata') && ~strcmp(lower(fpath),lower('F:\rpk\mat')) && isempty( strfind(lower(fpath),':\rpk\mat') )
 
         datapath=flist{i};   %...\testdata
         

@@ -14,8 +14,11 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %
 %   <strong>metadata</strong>:  a struct variable specifying metadata for the input Y 
 %
-%   metadata.isRegularOrdered : if true, Y is regular ts; if false, Y is
-%                               unevenly spaced time series
+%   metadata.isRegularOrdered : Deprecated. Now use 'startTime' and 'deltaTime' to 
+%                               specify times for evenly-spaced data, and use 'time' to
+%                               provide times of individual data points for
+%                               irregular or regular data
+%
 %   metadata.season           : a string specifier. 'none' - trend-only  data,
 %                               'harmonic' - harmonic model for the seasonal component,     
 %                               'dummy' - dummy model for the seasonal component     
@@ -165,10 +168,9 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %
 %       load('Nile')   % Nile river annual streamflow: trend-only data
 %       metadata=[];
-%       metadata.isRegularOrdered=true;
 %       metadata.season     = 'none'  % trend-only
-%       metadata.startTime  =1871;
-%       metadata.deltaTime =1;
+%       metadata.startTime = 1871;
+%       metadata.deltaTime = 1;
 %       % Default values will be used if parameters are missing
 %       o=beast123(Nile,metadata) 
 %       printbeast(o)
@@ -177,20 +179,18 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %
 %       load('ohioNDVI')   % irregular Landsat NDVI time series
 %       metadata=[];
-%       metadata.isRegularOrdered =false;
 %       metadata.season     =  'harmonic'  % seasonality is present
 %       metadata.time       =  ohio.time;
 %       metadata.deltaTime  = 1/12;   % aggregate into a monthly ts
 %       metadata.period     = 1.0;    % period= 1/12 x 12 (freq)
 %       % Default values will be used if parameters are missing
-%       o=beast123(ohio.ndvi,metadata,[],[], struct('dumpInputData', true)) 
+%       o=beast123(ohio.ndvi,metadata) 
 %       printbeast(o)
 %       plotbeast(o, 'ncpStat','median')       
 %       
 %       load('ohioNDVI')   % irregular Landsat NDVI time series
 %       ohio.datestr1      % strings of times for ohio.ndvi
 %       metadata=[];
-%       metadata.isRegularOrdered =false;
 %       metadata.time       =  [];
 %       metadata.time.dateStr =ohio.datestr1;
 %       metadata.time.strFmt  ='????yyyy?mm?dd';
@@ -202,7 +202,6 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %
 %       ohio.datestr2      % strings of times for ohio.ndvi
 %       metadata=[];
-%       metadata.isRegularOrdered =false;
 %       metadata.time       =  [];
 %       metadata.time.dateStr =ohio.datestr2;
 %       metadata.time.strFmt  ='LC8-yyyydoyxdvi';
@@ -239,8 +238,6 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %      NDVI3D=imageStack.ndvi    % a 12x9x1066 3D cube
 %      TIME  =imageStack.datestr % 1066 is the time series length%
 %      metadata=[];      
-%      metadata.isRegularOrdered =false % irregular input
-%      metadata.whichDimIsTime =3 % 1066 is the ts length 
 %      metadata.time=[];
 %      metadata.time.dateStr=TIME
 %      metadata.time.strFmt='LT05_018032_20110726.yyyy-mm-dd';
@@ -267,10 +264,10 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
     if (nargin<3)     prior    =[];   end
     if (nargin<2)     metadata =[];   end
     
-    if nargin>=2 && (isstring(metadata) || ischar(metadata))
-           seasonType   = char(metadata);
-           metadata     = struct('season',seasonType);
-    end    
+    %if nargin>=2 && (isstring(metadata) || ischar(metadata))
+    %       seasonType   = char(metadata);
+    %       metadata     = struct('season',seasonType);
+    %end    
     
    if (nargin==0)          
        error("The input should not be empty; at least a time series needs to be provided.");

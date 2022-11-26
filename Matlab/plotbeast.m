@@ -77,8 +77,8 @@ end
     fig  = GetValueByKey(KeyList, ValList, 'fig', []);
 %%
 vars     = lower(vars);
-vars_log = vars=="st"|vars=="s"|vars=="t"|vars=="scp"|vars=="tcp" ...
-    |vars=="sorder"|vars=="torder"|vars=="error"|vars=="o"|vars=="ocp"|vars=="samp"|vars=="tslp"|vars=="slpsgn";
+vars_log = vars=="st"|vars=="s"|vars=="t"|vars=="scp"|vars=="tcp"|vars=="sorder"|vars=="torder"|vars=="error"|vars=="o"|vars=="ocp" ...
+          |vars=="samp"|vars=="tslp"|vars=="slpsgn";
 vars     = vars(vars_log);
 
 %%
@@ -336,7 +336,7 @@ H  =[];
 for i=1:length(winList)
     H(i) = axes(fig);
     idx  =  winList(i);
-    if idx==1
+    if i ==1  % a bug 
         yup=1-tm;
     else
         slist=hLayout(1:idx-1);

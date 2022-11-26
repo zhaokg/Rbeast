@@ -10,12 +10,12 @@
    Method 2: (Recommendded)
 	    The easiest way to install is to simply run the following line of command in Matlab's console:
  
-             >  eval(webread('http://b.link/beast',weboptions('cert','')))  % install to a temp folder
+             >  eval(webread('http://b.link/rbeast',weboptions('cert','')))  % install to a temp folder
         
              Or install it to a chosen folder by first setting the beastPath variable
 
              >  beastPath='c:\beast'
-             >  eval(webread('http://b.link/beast',weboptions('cert',''))) % install to the folder specified by beastPath
+             >  eval(webread('http://b.link/rbeast',weboptions('cert',''))) % install to the folder specified by beastPath
 
 
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

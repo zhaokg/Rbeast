@@ -1,3 +1,6 @@
+% Nov 24., 2022: The API has changed a little bit: the most important
+% change is that 'freq' is deprecated in favor of 'period'
+
 % Oct 24., 2022: Thanks to Robert Martin: Suppressed unnecessary warnings 
 % related to whichDimIsTime=1
 
@@ -9,4 +12,4 @@
 % model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.9414;
+rbeastGitHubVersion = 0.945;
