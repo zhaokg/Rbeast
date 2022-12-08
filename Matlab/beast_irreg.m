@@ -202,6 +202,7 @@ function out = beast_irreg(y, varargin)
    time     = GetValueByKey(KeyList, ValList, 'time',   []);   
    start     = GetValueByKey(KeyList, ValList, 'start', []);
    deltat   = GetValueByKey(KeyList, ValList, 'deltat', []);
+   num_samples_per_period  = GetValueByKey(KeyList, ValList, 'freq',  []); 
    period   = GetValueByKey(KeyList, ValList, 'period',  []); 
    
    season          = GetValueByKey(KeyList, ValList, 'season',[]); %'harmonic'

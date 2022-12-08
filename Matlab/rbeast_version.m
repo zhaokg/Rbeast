@@ -1,3 +1,5 @@
+% Dec 8, 2002: Fixed the num_samples_per_period error for beast_irreg
+
 % Nov 24., 2022: The API has changed a little bit: the most important
 % change is that 'freq' is deprecated in favor of 'period'
 
@@ -12,4 +14,4 @@
 % model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.945;
+rbeastGitHubVersion = 0.946;
