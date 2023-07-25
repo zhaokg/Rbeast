@@ -7,10 +7,11 @@
 
 
 **Quick Installation**
-> BEAST was impemented in C/C++ but accessible from  R, Python, and Matlab.  Run the following to install:
+> BEAST was impemented in C/C++ but accessible from  R, Python, Matlab, and Octave.  Run the following to install:
 
 * [Python](#python):   **`pip install Rbeast`**   
-* [Matlab](#matlab):  **`eval(webread('http://b.link/rbeast',weboptions('cert','')))`**  
+* [Matlab](#matlab):  **`eval(webread('http://b.link/rbeast',weboptions('cert','')))`**
+* [Octave](#octave):  **`eval(webread('http://b.link/rbeast'))`**  
 * [R lang](#r):  **`install.packages("Rbeast")`** 
 
 
@@ -22,7 +23,7 @@
 # Python example
 import Rbeast as rb; (Nile, Year)=rb.load_example('nile'); o=rb.beast(Nile,season='none'); rb.plot(o)
 
-# Matlab example
+# Matlab/Octave example
 load('Nile'); o = beast(Nile, 'season','none'); plotbeast(o)
 
 # R example
@@ -80,13 +81,15 @@ from **GitHub**: The latest R versions are also available here at [GitHub](https
 </a>
 </p>   
   
+> **Rbeast in CRAN-TASK-VIEW**:   <a href="https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling">[Time Series Analysis]</a>    <a href="https://cran.r-project.org/web/views/Bayesian.html#time-series-models">[Bayesian inference]</a>     <a href="https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series">[Environmetrics]</a>  
+
 An R package **`Rbeast`** has been deposited at [CRAN](https://CRAN.R-project.org/package=Rbeast). ( On CRAN, there is another Bayesian time-series package named "beast", which has nothing to do with the BEAST algorithim. Our package is `Rbeast`. Also, our package has nothing to do with the famous "Bayesian evolutionary analysis by sampling trees" aglorithm.) Install  `Rbeast` in R using
 
 ```R
 install.packages("Rbeast")
  ```
  
-> **Rbeast in CRAN-TASK-VIEW**:   <a href="https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling">[Time Series Analysis]</a>    <a href="https://cran.r-project.org/web/views/Bayesian.html#time-series-models">[Bayesian inference]</a>     <a href="https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series">[Environmetrics]</a>  
+
 
 
 #### Run and test Rbeast in R
@@ -155,9 +158,12 @@ The Matlab API is similar to those of R. Below is a quick example:
    printbeast(out)
    plotbeast(out)
   ```
+## Installation for Octave <a name=octave>    </a>
+
+The same as for Matlab. Now, only Windows platforms are supported. If needed for other platforms (e.g., Octave in Linux and Mac), please contact the author at zhao.1423@osu.edu for support.
 
 ----
-### Installation for Python  <a name=python>   </a>
+##  Installation for Python  <a name=python>   </a>
 
 
 <p  align="left">   
@@ -196,11 +202,11 @@ rb.plot(o)
 rb.print(o)
   ```
 
-### Julia/IDL
+## Installation for Julia/IDL (yet to come)
 
 Wrappers in Julia and IDL are being developed: We welcome contributions and help from interested developers. If interested, contact Kaiguang Zhao at zhao.1423@osu.edu.
 
-## Description
+## Description of BEAST
 Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data–a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, finance, public health, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in [Zhao et al. (2019)](https://go.osu.edu/beast2019). The paper is available at https://go.osu.edu/beast2019.
 
 ## Note on computation
@@ -219,15 +225,22 @@ In any case, for those users handling stacked time-series images, do not use `be
 
 <h2 id="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
 
-Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a short list of peer-reviewed pulications that used BEAST for statistical data analysis.
+Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a list of selected peer-reviewed pulications that used BEAST for statistical data analysis.
 
 | Discipline | Publication Title |
 | --- | --- |
 | Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. [Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement](https://www.sciencedirect.com/science/article/pii/S0034425722003285?casa_token=wj-jESXHBrQAAAAA:MPS5ThIzaw2Tvveml2fKYPzVmul24NTF11uGZpeBMTOfwtdA_hpx2OSwGR7686QPiN5xO1pHKQ). Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
 |   Population Ecology  | *Henderson, P. A. (2021). [Southwood's Ecological Methods (5th edition)](https://www.google.com/books/edition/Southwood_s_Ecological_Methods/snEhEAAAQBAJ?hl=en&gbpv=1&pg=PA473&printsec=frontcover). Oxford University Press., page 475-476*|
+|Cardiology|*Ozier, D., Rafiq, T., de Souza, R. and Singh, S.M., 2023. [Use of Sacubitril/Valsartan Prior to Primary Prevention Implantable Cardioverter Defibrillator Implantation](https://www.sciencedirect.com/science/article/pii/S2589790X22002062). CJC Open.*|
+|Anthropocene Science|*Thomas, E.R., Vladimirova, D.O., Tetzner, D.R., Emanuelsson, D.B., Humby, J., Turner, S.D., Rose, N.L., Roberts, S.L., Gaca, P. and Cundy, A.B., 2023. The Palmer ice core as a candidate Global boundary Stratotype Section and Point for the Anthropocene series. The Anthropocene Review, p.20530196231155191.*|
 |Political Science|*Reuning, K., Whitesell, A. and Hannah, A.L., 2022. [Facebook algorithm changes may have amplified local republican parties](https://journals.sagepub.com/doi/full/10.1177/20531680221103809). Research & Politics, 9(2), p.20531680221103809.*|
-|Cardiology|*Ozier, D., Rafiq, T., de Souza, R. and Singh, S.M., 2022. [Use of Sacubitril/Valsartan Prior to Primary Prevention Implantable Cardioverter Defibrillator Implantation](https://www.sciencedirect.com/science/article/pii/S2589790X22002062). CJC Open.*|
+|Watershed Hydrology|*Sakizadeh, M., Milewski, A. and Sattari, M.T., 2023. Analysis of Long-Term Trend of Stream Flow and Interaction Effect of Land Use and Land Cover on Water Yield by SWAT Model and Statistical Learning in Part of Urmia Lake Basin, Northwest of Iran. Water, 15(4), p.690.*|
 | Hydraulic Engineering | *Xu, X., Yang, J., Ma, C., Qu, X., Chen, J. and Cheng, L., 2022. Segmented modeling method of dam displacement based on BEAST time series decomposition. Measurement, 202, p.111811.* |
+|Social Media|*Barrie, C., Ketchley, N., Siegel, A. and Bagdouri, M., 2023. Measuring Media Freedom.*|
+|Political Economy|*Benchimol, J. and Palumbo, L., 2023. Sanctions and Russian Online Prices.*|
+|Remote Sensing|*Mulverhill, C., Coops, N.C. and Achim, A., 2023. Continuous monitoring and sub-annual change detection in high-latitude forests using Harmonized Landsat Sentinel-2 data. ISPRS Journal of Photogrammetry and Remote Sensing, 197, pp.309-319.*|
+|Physical Chemistry|*Faran, M. and Bisker, G., 2023. Nonequilibrium Self-Assembly Time Forecasting by the Stochastic Landscape Method. The Journal of Physical Chemistry B.*|
+|Analytical Chemistry|*Šimić, M., Neuper, C., Hohenester, U. and Hill, C., 2023. Optofluidic force induction as a process analytical technology. Analytical and Bioanalytical Chemistry, pp.1-11.*|
 | Ecosystem Sciences | *Lyu, R., Zhao, W., Pang, J., Tian, X., Zhang, J. and Wang, N., 2022. [Towards a sustainable nature reserve management: Using Bayesian network to quantify the threat of disturbance to ecosystem services](https://www.sciencedirect.com/science/article/pii/S2212041622000791?casa_token=4gYXQ65EcfgAAAAA:mdYwpF_tXZ_W0IUu8JPhlm4_P9RrabtiDGhkwu3ogElVwHb6Ie7HEWbFwgm8JDSdf99drcCYSw). Ecosystem Services, 58, p.101483.* |
 | Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. [Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon](https://iopscience.iop.org/article/10.1088/1748-9326/ac8236/meta). Environmental Research Letters.*|
 |  Climate Sciences|*Duke, N.C., Mackenzie, J.R., Canning, A.D., Hutley, L.B., Bourke, A.J., Kovacs, J.M., Cormier, R., Staben, G., Lymburner, L. and Ai, E., 2022. [ENSO-driven extreme oscillations in mean sea level destabilise critical shoreline mangroves—An emerging threat](https://journals.plos.org/climate/article?id=10.1371/journal.pclm.0000037). PLOS Climate, 1(8), p.e000003*|
@@ -236,6 +249,7 @@ Despite being published originally for ecological and enviornmental applications
 |Biometerology|*Li, Y., Liu, Y., Bohrer, G., Cai, Y., Wilson, A., Hu, T., Wang, Z. and Zhao, K., 2022. [Impacts of forest loss on local climate across the conterminous United States: Evidence from satellite time-series observations](https://www.sciencedirect.com/science/article/pii/S0048969721047264?casa_token=X9fIQLvFlXcAAAAA:0nk-D2dV1cXmaIxJ7Tp79sx16npj5kgkDFjM4N2roh_akQyIfIkRaHfxPjPtp5v5dGWo-GFBcA). Science of The Total Environment, 802, p.149651.*|
 | Applied Math|*Ferguson, Daniel, and François G. Meyer. [Probability density estimation for sets of large graphs with respect to spectral information using stochastic block models](https://arxiv.org/abs/2207.02168). arXiv preprint arXiv:2207.02168 (2022).*|
 |Water quality|*He, Ziming, Jiayu Yao, Yancen Lu, and Danlu Guo. "Detecting and explaining long‐term changes in river water quality in south‐eastern Australia." Hydrological Processes: e14741.*|
+|Air quality|*Wu, S., Yao, J., Wang, Y. and Zhao, W., 2023. Influencing factors of PM2. 5 concentrations in the typical urban agglomerations in China based on wavelet perspective. Environmental Research, p.116641.*|
 | Hydrology | *Zohaib, M. and Choi, M., 2020. [Satellite-based global-scale irrigation water use and its contemporary trends](https://www.sciencedirect.com/science/article/pii/S0048969720302291?casa_token=pPXP5Q9glsMAAAAA:QBZq1T9FXB3JgnHwM9ug1sIDSMd2u7Jl4L2qA0fCvCwtAGcB_WhAbgTjEZBO9B_WXxtu7WKarA). Science of The Total Environment, 714, p.136719.* |
 | Energy Engineering |*Lindig, S., Theristis, M. and Moser, D., 2022. Best practices for photovoltaic performance loss rate calculations. Progress in Energy, 4(2), p.022003.*|
 |Virology|*Shen, L., Sun, M., Song, S., Hu, Q., Wang, N., Ou, G., Guo, Z., Du, J., Shao, Z., Bai, Y. and Liu, K., 2022. [The impact of anti-COVID19 nonpharmaceutical interventions on hand, foot, and mouth disease—A spatiotemporal perspective in Xi'an](https://onlinelibrary.wiley.com/doi/abs/10.1002/jmv.27715?casa_token=9mLRmQ7JqRIAAAAA:E2IR7q-3EqsidsYVEwiQBfJo5K5Hqx3mxKfsyZOW_ZMcWmD94B7hox6p7d9KCboZS87OZVAVj5RZHUY), northwestern China. Journal of medical virology.*|
@@ -260,3 +274,8 @@ Despite being published originally for ecological and enviornmental applications
 ## Reporting Bugs or getting help
 
 BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
+
+
+## Acknowledgement:
+
+BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
