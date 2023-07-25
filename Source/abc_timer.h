@@ -3,6 +3,12 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #ifdef MSVC_COMPILER
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>          //QueryPerformanceFrequency QueryPerformanceCounter
@@ -41,13 +47,14 @@ static INLINE void Sleep_ms(int milliseconds) {
     #endif
 }
 
-
-extern void InitTimerFunc();
-extern void StartTimer();
-extern F64  GetElapsedSecondsSinceStart();
-extern void SetBreakPointForStartedTimer();
-extern F64  GetElaspedTimeFromBreakPoint();
-extern U64  TimerGetTickCount();
+//warning: function declaration isn't a prototype [-Wstrict-prototypes]
+//https://stackoverflow.com/questions/42125/warning-error-function-declaration-isnt-a-prototype
+extern void InitTimerFunc(void);
+extern void StartTimer(void);
+extern F64  GetElapsedSecondsSinceStart(void);
+extern void SetBreakPointForStartedTimer(void);
+extern F64  GetElaspedTimeFromBreakPoint(void);
+extern U64  TimerGetTickCount(void);
 
 
 // stackoverflow.com/questions/9887839/how-to-count-clock-cycles-with-rdtsc-in-gcc-x86
@@ -59,7 +66,7 @@ extern U64  TimerGetTickCount();
     
    //https://github.com/BackupTheBerlios/iometer-svn/blob/cd9ca025b44a0e80015a040b838d6dc7d486642a/tags/initial/iometer/src/rdtsc.c
    #include <sys/time.h>
-    static INLINE   unsigned long long __rdtsc() {
+    static INLINE   unsigned long long __rdtsc(void) {
         //https://community.oracle.com/tech/developers/discussion/2490026/about-gethrtime-function
         return  gethrtime();
     }
@@ -107,11 +114,17 @@ extern U64  TimerGetTickCount();
     #include <x86intrin.h> // __rdtsc
 #endif
 
-static INLINE unsigned long long readTSC() {
+static INLINE unsigned long long readTSC(void) {
     // _mm_lfence();  // optionally wait for earlier insns to retire before reading the clock
     return __rdtsc();
     // _mm_lfence();  // optionally block later instructions until rdtsc retires
 }
 
-extern void               tic();
-extern unsigned long long toc();
+extern void               tic(void);
+extern unsigned long long toc(void);
+
+
+
+#ifdef __cplusplus
+}
+#endif

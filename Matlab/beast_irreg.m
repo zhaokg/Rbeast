@@ -2,9 +2,9 @@ function out = beast_irreg(y, varargin)
 % 
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast_irreg' to see the following
-%   USAGE: out=<strong>beast_irreg(y, ...) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%   USAGE: out=<strong>beast_irreg(y, ...) </strong>
 %
 %   <strong>y</strong>:  iregular time series; it should be a numeric vector. For reggular 
 %   time series, use 'beast' or 'beast123' instead. For multiple time series 
@@ -68,16 +68,14 @@ function out = beast_irreg(y, varargin)
 %        polynomials used to model the trend
 %   <strong>tseg.min</strong>: 
 %        an integer; the min length of the segment for the trend component (i.e.,
-%        the min distance between neighorbing changepoints)
-%
+%        the min distance between neighorbing changepoints)%
 %   <strong>deseasonalize</strong>: 
 %        boolean; if true, the input time series will be first
 %        de-seasonalized before applying BEAST by removing a global seasonal 
 %        component
 %   <strong>detrend</strong>: 
 %        boolean; if true, the input time series will be first
-%        de-trend before applying BEAST by removing a global trend 
-%
+%        de-trend before applying BEAST by removing a global trend %
 %   <strong>mcmc.seed</strong>: 
 %        a seed for the random number generator; set it to a non-zero
 %        integer to reproduce the results among different runs
@@ -88,21 +86,22 @@ function out = beast_irreg(y, varargin)
 %   <strong>mcmc.burnin</strong>: 
 %        the number of initial samples of each chain to be discarded
 %   <strong>mcmc.chains</strong>: 
-%        the number of MCMC chains
-%
+%        the number of MCMC chains%
 %   <strong>print.progress</strong>: 
 %        boolean; if true, a progress bar is shown
-%   <strong>print.options</strong>: 
-%        boolean; if true, print the BEAST paramers. The keywords for beast() 
-%        are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
+%   <strong>gui</strong>: 
+%       boolean; if true, show a gui to demostrate the MCMC sampling; runs only 
+%       on Windows not Linux or MacOS
+%
+%   The keywords for beast() are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
 %        in the beast123() interface. Some examples are:
 %            deseasonalize <-> metadata.deseasonalize
-%            scp.minmax(1) <-> prior.minSeasonKnotNumber
-%            scp.minmax(1) <-> prior.maxSeasonKnotNumber
-%            sseg.min      <-> prior.minSeasonSepDist
+%            scp.minmax(1) <-> prior.seasonMinOrder
+%            scp.minmax(2) <-> prior.seasonMaxOrder
+%            sseg.min      <-> prior.seasonMinSepDist
 %            mcmc.seed     <-> mcmc.seed
-%            scp.minmax(1) <-> prior.maxSeasonKnotNumber
-%       <strong> Experts should use the the beast123 function.</strong>
+%            tcp.minmax(1) <-> prior.trendMinKnotNumber
+%   <strong>Experts should use the the beast123 function.</strong>
 %   
 %   <strong>Note</strong>:
 %       beast, beast_irreg, and beast123 calls the same library
@@ -229,7 +228,8 @@ function out = beast_irreg(y, varargin)
    ci               =GetValueByKey(KeyList, ValList, 'ci',   false);   
       
    printProgressBar =GetValueByKey(KeyList, ValList, 'print.progress',  true);     
-   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);           
+   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);       
+   gui              = GetValueByKey(KeyList, ValList, 'gui',  false); 
 %% Convert the opt parameters to the individual option parameters (e.g.,
 %  metadata, prior, mcmc, and extra)
 
@@ -238,8 +238,8 @@ function out = beast_irreg(y, varargin)
    %metadata.isRegularOrdered = false;
    metadata.season           = season;
    if strcmp(metadata.season, 'svd')
-     warning("season=svd is supported only for regular time series in beast()! 'harmonic' is used instead.");
-	 metadata.season  = 'harmonic';
+    % warning("season=svd is supported only for regular time series in beast()! 'harmonic' is used instead.");
+	% metadata.season  = 'harmonic';
    end
    metadata.time             = time;
    metadata.startTime        = start;
@@ -313,7 +313,12 @@ function out = beast_irreg(y, varargin)
    extra.numParThreads        = 0;
 %......End of displaying extra ......
 %%
-  out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ if (gui)
+    out=Rbeast('beastv4demo',y,metadata, prior,mcmc, extra);
+ else
+    out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ end
+ 
 end
 
 

@@ -18,9 +18,9 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new
 	if (flag == BIRTH) 
 		r_ippsSet_8u(0, goodVec + (newKnot - MINSEP) - 1, 2 * MINSEP + 1);	
 	else if (flag == DEATH) {//death						
-		I16 oldKnot = knotList[newIdx - 1]; //If flag=death, oldKnot was not assgined before until now
-		I16 r1      = knotList[(newIdx - 1) - 1];
-		I16 r2      = knotList[(newIdx + 1) - 1] - 1;
+		I32 oldKnot = knotList[newIdx - 1]; //If flag=death, oldKnot was not assgined before until now
+		I32 r1      = knotList[(newIdx - 1) - 1];
+		I32 r2      = knotList[(newIdx + 1) - 1] - 1;
 
 		r_ippsSet_8u(1, goodVec + (oldKnot - MINSEP) - 1,   2 * MINSEP + 1);
 		r_ippsSet_8u(0, goodVec + (r1)-1,                   MINSEP + 1);
@@ -28,9 +28,9 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new
 		//GOOD.tY.num = countOnes(N, GOOD.tY.binvec);//ippsSum_16s32s_Sfs(GOOD.tY.binvec, N, &GOOD.tY.num, 0);
 	}
 	else if (flag == MOVE) {//move
-		I16 oldKnot = knotList[newIdx - 1];
-		I16 r1      = knotList[(newIdx - 1) - 1];
-		I16 r2      = knotList[(newIdx + 1) - 1] - 1;
+		I32 oldKnot = knotList[newIdx - 1];
+		I32 r1      = knotList[(newIdx - 1) - 1];
+		I32 r2      = knotList[(newIdx + 1) - 1] - 1;
 
 		//If flag=move, oldKnot has been already assgined before.
 		r_ippsSet_8u(1, goodVec + (oldKnot - MINSEP) - 1, 2 * MINSEP + 1);

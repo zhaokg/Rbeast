@@ -296,10 +296,8 @@ static _WDIR *_wopendir (const wchar_t *dirname);
 static struct dirent *readdir (DIR *dirp);
 static struct _wdirent *_wreaddir (_WDIR *dirp);
 
-static int readdir_r(
-    DIR *dirp, struct dirent *entry, struct dirent **result);
-static int _wreaddir_r(
-    _WDIR *dirp, struct _wdirent *entry, struct _wdirent **result);
+static struct dirent*  readdir_r(    DIR *dirp, struct dirent *entry, int *result);
+static int _wreaddir_r(   _WDIR *dirp, struct _wdirent *entry, struct _wdirent **result);
 
 static int closedir (DIR *dirp);
 static int _wclosedir (_WDIR *dirp);
@@ -675,9 +673,7 @@ dirent_next(
 /*
  * Open directory stream using plain old C-string.
  */
-static DIR*
-opendir(
-    const char *dirname)
+static DIR* opendir( const char *dirname)
 {
     struct DIR *dirp;
 
@@ -731,17 +727,16 @@ exit_free:
 /*
  * Read next directory entry.
  */
-static struct dirent*
-readdir(
-    DIR *dirp)
+static struct dirent* readdir(   DIR *dirp)
 {
-    struct dirent *entry;
+ 
 
     /*
      * Read directory entry to buffer.  We can safely ignore the return value
      * as entry will be set to NULL in case of error.
      */
-    (void) readdir_r (dirp, &dirp->ent, &entry);
+    int result;
+    struct dirent* entry = readdir_r (dirp, &dirp->ent, &result);
 
     /* Return pointer to statically allocated directory entry */
     return entry;
@@ -753,12 +748,14 @@ readdir(
  * Returns zero on success.  If the end of directory stream is reached, then
  * sets result to NULL and returns zero.
  */
-static int
+static   struct dirent*
 readdir_r(
     DIR *dirp,
     struct dirent *entry,
-    struct dirent **result)
+    int *status)
 {
+    struct dirent* result;
+
     WIN32_FIND_DATAW *datap;
 
     /* Read next directory entry */
@@ -827,14 +824,17 @@ readdir_r(
         }
 
         /* Return pointer to directory entry */
-        *result = entry;
+        result = entry;
 
     } else {
 
         /* No more directory entries */
-        *result = NULL;
+        result = NULL;
 
     }
+
+    status[0] = 0; /*OK*/
+    return result;
 
     return /*OK*/0;
 }
@@ -842,9 +842,7 @@ readdir_r(
 /*
  * Close directory stream.
  */
-static int
-closedir(
-    DIR *dirp)
+static int closedir(    DIR *dirp)
 {
     int ok;
     if (dirp) {
@@ -869,9 +867,7 @@ closedir(
 /*
  * Rewind directory stream to beginning.
  */
-static void
-rewinddir(
-    DIR* dirp)
+static void rewinddir( DIR* dirp)
 {
     /* Rewind wide-character string directory stream */
     _wrewinddir (dirp->wdirp);
@@ -880,8 +876,7 @@ rewinddir(
 /*
  * Scan directory for entries.
  */
-static int
-scandir(
+static int scandir(
     const char *dirname,
     struct dirent ***namelist,
     int (*filter)(const struct dirent*),
@@ -943,7 +938,9 @@ scandir(
             }
 
             /* Read directory entry to temporary area */
-            if (readdir_r (dir, tmp, &entry) == /*OK*/0) {
+            int status;
+            entry = readdir_r(dir, tmp, &status);
+            if (status == /*OK*/0) {
 
                 /* Did we get an entry? */
                 if (entry != NULL) {

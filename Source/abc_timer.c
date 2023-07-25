@@ -88,9 +88,9 @@ U64 TimerGetTickCount() {
 }
 
 
-static unsigned long long ReadTSC_InternalTime;
-void				tic() { ReadTSC_InternalTime = readTSC();}
-unsigned long long  toc() {	return readTSC()- ReadTSC_InternalTime;}
+static unsigned long long ReadTSC_InternalTime_TIC;
+void				tic(void) { ReadTSC_InternalTime_TIC = readTSC();}
+unsigned long long  toc(void) {	return readTSC()- ReadTSC_InternalTime_TIC;}
 
 
 

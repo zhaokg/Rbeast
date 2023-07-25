@@ -1,22 +1,26 @@
 function beastpath=rbeast_path()
-% a silly way to enumerate the current search path to find the beast
-% install path
-datalist={'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
+% <strong>rbeast_path:</strong> A silly way to enumerate the current search path to find the beast
+% install path, if any
 %%
 beastpath=[];
 %%
-flist = split(path(),pathsep());
+datalist={'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
+
+%flist = split(path(),pathsep());
+flist = strsplit(path(),pathsep());
  
 for i=1:numel(flist)
     
     [fpath,fname,fext] = fileparts(flist{i}); 
-    if strcmp(fname,'testdata') && ~strcmp(lower(fpath),lower('F:\rpk\mat')) && isempty( strfind(lower(fpath),':\rpk\mat') )
+	fpath_lower        = lower(fpath);
+    if strcmp(fname,'testdata') && ~strcmp(fpath_lower,'f:\rpk\mat') && isempty( strfind(fpath_lower,':\rpk\mat') ) ...
+	   && isempty( strfind(fpath_lower,'rpk\mat') ) && isempty( strfind(fpath_lower,'rpk/mat') )
 
         datapath=flist{i};   %...\testdata
-        
+       
         isBeastFolder=1;
         for j=1:numel(datalist)         
-            lfile=fullfile( datapath, string(datalist{j}) );             
+            lfile=fullfile( datapath, datalist{j} );             
             if ~exist(lfile,'file')
                 isBeastFolder=0;
                 break;

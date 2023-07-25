@@ -1,5 +1,10 @@
 #pragma once
 
+//#define  PLAY_MODE
+//#define  M_RELEASE
+//#define  P_RELEASE
+//#define  R_RELEASE
+
 // https://social.msdn.microsoft.com/Forums/vstudio/en-US/355ed7af-4037-4587-8614-34d51d865f03/missing-prototype-warning?forum=vclanguage
 // In MSVC, set the warning level to Level 3 to get warnings of unfctions without prototypes
 //ERROR: function returning a value
@@ -7,9 +12,11 @@
 
 //gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
  
-#define R_INTERFACE    0
-#define M_INTERFACE    0
-#define P_INTERFACE    1
+// file externsion: .mexw64 for Matlab, .pyd for Pyhton
+
+#define R_INTERFACE  1
+#define M_INTERFACE   0
+#define P_INTERFACE    0
 /*------------------------------------------------------------*/
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
@@ -18,9 +25,9 @@
 /*------------------------------------------------------------*/
 #define PCGRAND_LIBRARY 1
 #define MKLRAND_LIBRARY 0
-
-
-//#define M_RELEASE
+ 
+ 
+//#define  M_RELEASE
 
 #ifdef R_RELEASE
         // For R interface
@@ -168,12 +175,18 @@
 #endif
 
 #if defined(__aarch64__)
-	 //https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
+	//https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
     //https://stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
 
     #define  ARM64_OS
 #endif
 
+
+//https://stackoverflow.com/questions/152016/detecting-cpu-architecture-compile-time
+#if defined(__powerpc) || defined(__powerpc__) || defined(__powerpc64__)  || defined(__POWERPC__) || defined(__ppc__) || defined(__PPC__) || defined(_ARCH_PPC) \
+     || defined(__PPC64__) || defined(__ppc64__) || defined(_ARCH_PPC64)
+	#define POWERPC_OS
+#endif
 
 #if defined(TARGET_32) && defined (MSVC_COMPILER)
     //'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNING
@@ -188,6 +201,8 @@
 		#define PCGRAND_LIBRARY 1
 		#define MKLRAND_LIBRARY 0
 #endif
+
+
 /*------------------------------------------------------------*/
 #if defined(MSVC_COMPILER)
 		#define INLINE    __inline
@@ -217,22 +232,6 @@
     # define ALIGN32_BEG
     # define ALIGN32_END __attribute__((aligned(32)))
 #endif
-
-#define _in_
-#define _inout_
-#define _out_
-
-
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
-// The outermost parentheses are DEFINITELY needed. If not, subtile errors
-// can creep. Here is a failing example from beastv2_func.c
-// min(Kbase + b->ke[j], Klastcol) - (Kbase + b->ks[j]) + 1
-
-#define mv(n, src, dest)	r_cblas_scopy( n,src, 1L, dest, 1L) 
-#define cp(n, src, dest)    memcpy(dest, src, sizeof(F32)*(size_t)(n))
-#define SCPY(n, src, dest)  memcpy(dest, src, sizeof(F32)*(size_t)(n))
-#define FILL0(dest,n)       memset(dest, 0L,  sizeof(F32)*(size_t)(n))
 
 
 /*------------------------------------------------------------*/
@@ -293,9 +292,11 @@
     DISABLE_WARNING(restrict,restrict, NOT_USED)\
     DISABLE_WARNING(switch, switch, NOT_USED) \
     DISABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
-    DISABLE_WARNING(pedantic, pedantic, NOT_USED)
+    DISABLE_WARNING(pedantic, pedantic, NOT_USED) \
+    DISABLE_WARNING(div-by-zero,div-by-zero, NOT_USED)
 
 	#define  ENABLE_MANY_WARNINGS   \
+    ENABLE_WARNING(div-by-zero,div-by-zero, NOT_USED) \
     ENABLE_WARNING(pedantic, pedantic, NOT_USED)\
     ENABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
     ENABLE_WARNING(switch, switch, NOT_USED)\
@@ -347,8 +348,8 @@
     DISABLE_WARNING(switch, switch, NOT_USED) \
     DISABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
     DISABLE_WARNING(pedantic, pedantic, NOT_USED) \
-    DISABLE_WARNING(typedef-redefinition, typedef-redefinition, NOT_USED) 
-
+    DISABLE_WARNING(typedef-redefinition, typedef-redefinition, NOT_USED) \
+    DISABLE_WARNING(div-by-zero,div-by-zero, NOT_USED)
 
 	/*DISABLE_WARNING(restrict, restrict, NOT_USED)\*/
 	/*ENABLE_WARNING(restrict, restrict, NOT_USED)\*/
@@ -366,6 +367,7 @@
 	//https://clang.llvm.org/docs/DiagnosticsReference.html#wpragmas
 	//https://clang.llvm.org/docs/DiagnosticsReference.html#wrestrict-expansion
 	#define  ENABLE_MANY_WARNINGS  \
+    ENABLE_WARNING(div-by-zero,div-by-zero, NOT_USED) \
     ENABLE_WARNING(typedef-redefinition, typedef-redefinition, NOT_USED)\
     ENABLE_WARNING(pedantic, pedantic, NOT_USED)\
     ENABLE_WARNING(uninitialized, uninitialized, NOT_USED)\
@@ -434,4 +436,17 @@ C:/rtools40/mingw32/i686-w64-mingw32/include/_mingw.h:225: note: this is the loc
           DIAG_DO_PRAGMA(GCC optimization_level 3) \
           DIAG_DO_PRAGMA(GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")) \
           DIAG_DO_PRAGMA(GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell"))  
- 
+
+
+
+#define _in_
+#define _inout_
+#define _out_
+
+
+
+
+#define mv(n, src, dest)	r_cblas_scopy( n,src, 1L, dest, 1L) 
+#define cp(n, src, dest)    memcpy(dest, src, sizeof(F32)*(size_t)(n))
+#define SCPY(n, src, dest)  memcpy(dest, src, sizeof(F32)*(size_t)(n))
+#define FILL0(dest,n)       memset(dest, 0L,  sizeof(F32)*(size_t)(n))

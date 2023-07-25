@@ -1,18 +1,22 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#if M_INTERFACE ==1 && !defined(MSVC_COMPILER)
+#include "abc_001_config.h"
+#include "abc_datatype.h"
+
+ #if M_INTERFACE ==1 &&  !defined(MSVC_COMPILER)
+
 	#include "inttypes.h"
 	#include "mex.h"
     //https://stackoverflow.com/questions/26271154/how-can-i-make-a-mex-function-printf-while-its-running/26271557
     //isoFlush is  an undocumented C++ function that resides in libmwservices.dll
 	#if defined(WIN_OS)
-		extern bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
+		extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
 	#elif defined(MAC_OS)
       // Linux		
-		extern bool ioFlush(void)  asm("__Z7ioFlushv");
+		extern Bool ioFlush(void)  asm("__Z7ioFlushv");
 	#else 
-		extern bool ioFlush(void)  asm("_Z7ioFlushv");
+		extern Bool ioFlush(void)  asm("_Z7ioFlushv");
 	#endif
 
 //https://stackoverflow.com/questions/35837694/how-to-manually-mangle-names-in-visual-c
@@ -21,7 +25,9 @@
 		// Using gcc, use  int a asm("xxx")
 
     void matlab_IOflush(void)	{
-		ioFlush();
+		#ifndef O_INTERFACE
+			ioFlush();
+		#endif
 	}
 
 	////https://stackoverflow.com/questions/10529500/what-does-this-mean-int-a

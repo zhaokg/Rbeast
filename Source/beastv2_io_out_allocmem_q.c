@@ -5,6 +5,7 @@
 
 #include "abc_ide_util.h"
 #include "abc_vec.h"
+#include "abc_date.h"
 #include "abc_mem.h"
 #include "beastv2_io.h"
 
@@ -179,82 +180,55 @@ static void __RemoveFieldsGivenFlags_Outlier(A(OPTIONS_PTR)  opt, FIELD_ITEM * f
 	#undef _7
 }
 
-static void __ExtendDims_SwitchTimeDim_1D2D(FIELD_ITEM* fld, int outTimDim, int numTS) {
-	
-	int ndim = fld->ndim;
-	if (ndim > 2 || outTimDim >2  ||  (numTS==1 && outTimDim!=1)) {
-		// newDimT should be always 1 if the number of pixels is 1
-		r_printf("__ExtendDims_SwitchTimeDim_1D2D:there must be something wrong!");
+
+static void   __AddSpatialDimension(int ROW, int COL, int whichOutDimIsTime, FIELD_ITEM * fieldList, int nfields) {
+	  
+  	if (whichOutDimIsTime == 1) {
+		// Apend the nuMTS at the end
+		for (int i = 0; i < nfields; i++) {
+			FIELD_ITEM * fld  = fieldList + i;
+			int          ndim = fld->ndim;
+			fld->dims[ndim]     = ROW;
+			fld->dims[ndim + 1] = COL;
+			fld->ndim += 2;
+		}
+		return;
 	}
 
-	if        (outTimDim == 1) {
-	    // Apend the nuMTS at the end
-		fld->dims[ndim] = numTS;
-		fld->ndim++;
-	} else if (outTimDim == 2) {
-	   // Insert the numTS at the start
-		for (int i = ndim - 1; i >= 0; i--) { fld->dims[i + 1] = fld->dims[i]; }
-		fld->dims[0] = numTS;
-		fld->ndim++;;
-	}  
-}
-
-static void __ExtendDims_SwitchTimeDim_3D(FIELD_ITEM* fld, int outTimDim, int ROW, int COL) {
- 
-	int ndim = fld->ndim;
-	if (ndim > 2 || outTimDim >3) {
-		r_printf("__ExtendDims_SwitchTimeDim_1D2D:there must be something wrong!");
-	}
-
-	if  (outTimDim == 1) {
-	    // Apend the nuMTS at the end
-		fld->dims[ndim  ] = ROW;
-		fld->dims[ndim+1] = COL;
-		fld->ndim  +=2;
-	} else if (outTimDim == 3) {
-	   // Insert the numTS at the start
-		for (int i = ndim - 1; i >= 0; i--) {fld->dims[i + 2] = fld->dims[i];}
-		fld->dims[0] = ROW;
-		fld->dims[1] = COL;
-		fld->ndim += 2;
-	} else if (outTimDim == 2) {
+	if (whichOutDimIsTime == 2) {
 		// Insert ROW at the start and the COL at the end
-		for (int i = ndim - 1; i >= 0; i--) {fld->dims[i +1 ] = fld->dims[i];}
-		fld->dims[0]      = ROW;
-		fld->dims[ndim+1] = COL;
-		fld->ndim += 2;
-	}
-
-}
-
-static void   ExtendDims_SwitchTimeDim_AllFields(BEAST2_IO_PTR  io, FIELD_ITEM * fieldList, int nfields) {
-
-	/***************************************/
-	// If the inputs is a ts or a 2D matrix
-	/***************************************/
-	if (io->ndim == 1 || io->ndim == 2) {		
-		// When numTS=1, outWhichDimIsTIms should be always 1.
 		for (int i = 0; i < nfields; i++) {
-			__ExtendDims_SwitchTimeDim_1D2D(fieldList + i, io->out.whichDimIsTime, io->numOfPixels);
+			FIELD_ITEM * fld  = fieldList + i;
+			int          ndim = fld->ndim;
+			for (int i = ndim - 1; i >= 0; i--) { 
+				fld->dims[i + 1] = fld->dims[i]; 
+			}
+			fld->dims[0]         = ROW;
+			fld->dims[ndim + 1]  = COL;
+			fld->ndim           += 2;
 		}
+		return;
 	}
-	// if the input is a 3D stack
-	else if (io->ndim == 3) {		
-		int   ROW, COL;
-		switch (io->meta.whichDimIsTime) {
-			case 1:	ROW = io->dims[1], COL = io->dims[2]; break;
-			case 2:	ROW = io->dims[0], COL = io->dims[2]; break;
-			case 3:	ROW = io->dims[0], COL = io->dims[1]; break;
-		}
+
+	if (whichOutDimIsTime == 3) {
+		// Insert the numTS at the start
 		for (int i = 0; i < nfields; i++) {
-			__ExtendDims_SwitchTimeDim_3D(fieldList + i, io->out.whichDimIsTime, ROW, COL);
+			FIELD_ITEM * fld  = fieldList + i;
+			int          ndim = fld->ndim;
+			for (int i = ndim - 1; i >= 0; i--) {
+				fld->dims[i + 2] = fld->dims[i]; 
+			}
+			fld->dims[0] = ROW;
+			fld->dims[1] = COL;
+			fld->ndim    += 2;
 		}
-	
+		return;
 	}
+	 
 }
 
 
-static  I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist, I32 N, I32 q) {
+static  I32  __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist, I32 N, I32 q) {
 
 	if (q == 1) 
 		return 0;
@@ -271,7 +245,7 @@ static  I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist, I32 N, I32 q) {
 		nptr_dummy++;
 		FIELD_ITEM qList[100] = { { /*fielditem*/{/*char*/0,},}, };
 		for (int j = 0; j < q; j++) {
-			sprintf(qList[j].name, "Y%d", j+1); 	//strcpy(qList[j].name, nms[j]);
+			snprintf(qList[j].name, 63, "Y%d", j+1); 	//strcpy(qList[j].name, nms[j]);
 			qList[j].extra = 0;
 			qList[j].type  = flist[i].type;
 			qList[j].ndim  = flist[i].ndim;
@@ -299,47 +273,13 @@ static  I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist, I32 N, I32 q) {
 	 return nptr;
 }
 
-
-static void __RemoveSingltonDims(FIELD_ITEM* flist, I32 nlist) {
-	// 1 x1 ->1
-	// 2x1x1x2-> 2x2
-	// 1x10 -> 10
-
-	// 10 : in R, this will be created as a vector, and in Matlab 
-	// be created as a column vector.
-	for (int i = 0; i < nlist; i++) {
-
-		if ( flist[i].ndim == 1) continue;
-		
-		int goodN       = 0;
-		int goodDims[4];
-		// FInd all the non-one dims
-		for (int j = 0; j < flist[i].ndim; j++) {
-			if (flist[i].dims[j]!= 1) {
-				goodDims[goodN++] = flist[i].dims[j];
-			}
-		}
-
-		// Re-assign the non-one dims
-		if (goodN == 0) {
-			// it is 1x 1 x1 ..,
-			flist[i].ndim    = 1;
-			flist[i].dims[0] = 1;
-		} else {
-			flist[i].ndim = goodN;
-			for (int j = 0; j < goodN; j++) {
-				flist[i].dims[j] = goodDims[j];
-			}
-		}
-	}
-
-}
+ 
 static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 
 	const BEAST2_IO_PTR      io = &opt->io;
 	const BEAST2_RESULT_PTR  mat = io->out.result;
-	DATA_TYPE   dtype = io->out.dtype; // DATA_FLOAT or DATA_DOUBLE                            
-	const int   N = io->N;
+	DATA_TYPE   dtype     = io->out.dtype; // DATA_FLOAT or DATA_DOUBLE                            
+	const int   N         = io->N;
 	const int   mxKnotNum = opt->prior.trendMaxKnotNum;
 	//https://stackoverflow.com/questions/2124339/c-preprocessor-va-args-number-of-arguments
 	#define NUMARGS(...)                 (sizeof((int[]){__VA_ARGS__})/sizeof(int))
@@ -392,10 +332,10 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	};
 
 	I32 nfields = sizeof(fieldList) / sizeof(FIELD_ITEM);
-	ExtendDims_SwitchTimeDim_AllFields(io, fieldList, nfields);
+	__AddSpatialDimension(io->dims[io->rowdim-1], io->dims[io->coldim - 1], io->out.whichDimIsTime, fieldList, nfields);
 	__RemoveFieldsGivenFlags_Trend(opt, fieldList, nfields);
 	if (opt->extra.removeSingletonDims) {
-		__RemoveSingltonDims(fieldList, nfields);
+		RemoveSingltonDims(fieldList, nfields);
 	}
 
 	// Do nothing if io->q is 1L;  within the function, newly created lists are protected
@@ -474,10 +414,10 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 	};
 
 	I32 nfields = sizeof(fieldList) / sizeof(FIELD_ITEM);
-	ExtendDims_SwitchTimeDim_AllFields(io, fieldList, nfields);
+	__AddSpatialDimension(io->dims[io->rowdim - 1], io->dims[io->coldim - 1], io->out.whichDimIsTime, fieldList, nfields);
 	__RemoveFieldsGivenFlags_Season(opt, fieldList, nfields);
 	if (opt->extra.removeSingletonDims) {
-		__RemoveSingltonDims(fieldList, nfields);
+		RemoveSingltonDims(fieldList, nfields);
 	}
 
 	// Do nothing if io->q is 1L;  within the function, newly created lists are protected
@@ -506,6 +446,7 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 	#undef _q6
 	#undef _q7
 }
+
 static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 {
 	const BEAST2_IO_PTR      io     = &opt->io;
@@ -556,10 +497,10 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 	};
 
 	I32 nfields = sizeof(fieldList) / sizeof(FIELD_ITEM);
-	ExtendDims_SwitchTimeDim_AllFields(io, fieldList, nfields);
+	__AddSpatialDimension(io->dims[io->rowdim - 1], io->dims[io->coldim - 1], io->out.whichDimIsTime, fieldList, nfields);
 	__RemoveFieldsGivenFlags_Outlier(opt, fieldList, nfields);
 	if (opt->extra.removeSingletonDims) {
-		__RemoveSingltonDims(fieldList, nfields);
+		RemoveSingltonDims(fieldList, nfields);
 	}
 
 	// Do nothing if io->q is 1L;  within the function, newly created lists are protected
@@ -591,8 +532,8 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 
 
 
-void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt) 
-{	
+void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {	
+
 	//Moved from glue_code to accomodate multivriate time series
 	if (opt->io.out.result) {
 		// Added to accomodate the beast_thread() for Win GUI where Output_AllocMem is called each time a thread is created.
@@ -665,16 +606,16 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 	I32    nfields = sizeof(fieldList) / sizeof(FIELD_ITEM);
 
 	int sig2_index = 6 - 1;
-	ExtendDims_SwitchTimeDim_AllFields(io, &fieldList[sig2_index], 1L); //1L means only one field to be adjusted
+	__AddSpatialDimension(io->dims[io->rowdim - 1], io->dims[io->coldim - 1], io->out.whichDimIsTime, &fieldList[sig2_index], 1L); //1L means only one field to be adjusted
 	// Adjust the dimension of out$data based on the input dimesion and the outputtimedim
 	// to make it compatible with whichOutputDimIsTime.
 	// Change the data field by adding the extra dims and swithcing for the outputTimeDim
-	ExtendDims_SwitchTimeDim_AllFields(io, &fieldList[1], 1L);
+	__AddSpatialDimension(io->dims[io->rowdim - 1], io->dims[io->coldim - 1], io->out.whichDimIsTime, &fieldList[1], 1L);
 	if (!opt->extra.dumpInputData) {  		 
 		RemoveField(fieldList, nfields, "data"); mat->data = NULL;
 	}
 	if (opt->extra.removeSingletonDims) {
-		__RemoveSingltonDims(fieldList, nfields);
+		RemoveSingltonDims(fieldList, nfields);
 	}
 
 	VOID_PTR  out;
@@ -697,7 +638,14 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 	if (!hasSeasonCmpnt )                 AddStringAttribute(out,  "season_type",  "none");
 	//AddIntegerAttribute(out, "hasOutlier", hasOutlierCmpnt);	
  
-	f32_seq(mat->time, io->meta.startTime, io->meta.deltaTime, N);
+	if (io->T.out.asDailyTS) {
+		for (int i = 0; i < N; i++) {
+			mat->time[i]=FracYear_from_DateNum(io->meta.startTime+ io->meta.deltaTime*i);
+		} 
+	}	else {
+		f32_seq(mat->time, io->meta.startTime, io->meta.deltaTime, N);
+	}    
+
 	if (dtype == DATA_DOUBLE)  f32_to_f64_inplace(mat->time, N);
 	//r_ippsMulC_32f_I(io->meta.deltaTime, mat->time, N);
 	//r_ippsSubC_32f_I(-(io->meta.startTime - io->meta.deltaTime), mat->time, N);

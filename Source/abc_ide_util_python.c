@@ -8,7 +8,11 @@
 #include "abc_common.h"
 #include "abc_date.h"
 
-#if P_INTERFACE==1
+#if P_INTERFACE==1  
+
+int  JDN_to_DateNum(int jdn) {
+    return jdn - JulianDayNum_from_civil_ag1(1, 1, 1);
+}
 
 PyObject* currentModule;
 PyObject* classOutput=NULL;
@@ -29,7 +33,7 @@ void* CvtToPyArray_NewRef(VOIDPTR Y) {
     // Accessing view of a NumPy array using the C API
     // https://stackoverflow.com/questions/35000565/accessing-view-of-a-numpy-array-using-the-c-api
         PyArray_Descr* reqDescr = PyArray_DescrFromType(PyArray_TYPE(Y));
-        Pob            out    = PyArray_FromArray(Y, reqDescr, NPY_ARRAY_FARRAY);
+        Pob            out      = PyArray_FromArray(Y, reqDescr, NPY_ARRAY_FARRAY);
         return out;
     }   else {
         Pob            out = PyArray_FROM_OF(Y, NPY_ARRAY_FARRAY);
@@ -55,7 +59,7 @@ static void* PyGetDict(void *ptr) {
         return NULL;
     }
 
-    if (PyObject_IsInstance(ptr, &PyBaseObject_Type)) {
+    if (PyObject_IsInstance(ptr, (PyObject *) & PyBaseObject_Type)) {
      
         // instance's own dict
         PyObject** dictpr = _PyObject_GetDictPtr(ptr);
@@ -136,6 +140,7 @@ static void* PyGetDictItemString123(void *ptr, char *fldname, int nPartial) {
 int IsClass(void* ptr, char* class) { return 0; }
 int IsCell(void* ptr) { return 0; }
 int IsChar(void* ptr) {   
+    if (ptr == NULL) return 0;
 
     if (PyUnicode_Check(ptr)) {
         return 1;
@@ -148,7 +153,7 @@ int IsChar(void* ptr) {
     if (PyList_Check(ptr))           pyGetItem = PyList_GetItem;
     else if (PyTuple_Check(ptr))     pyGetItem = PyDict_GetItem;
     if(pyGetItem) {      
-        int sz = PyObject_Size(ptr);
+        int sz = (int) PyObject_Size(ptr);
         int ok = 1;
         for (int i = 0; i < sz; ++i) {
             if ( !PyUnicode_Check(pyGetItem(ptr, i) ) ) {
@@ -320,6 +325,30 @@ VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind) {
     return NULL;
 }
 
+
+void  GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char *str, int buflen) {
+
+    Pob dict   = PyGetDict(strucVar);
+    
+    if (dict) {
+        PyObject* keys = PyDict_Keys(dict);              // new ref
+        int       n    = PyList_Size(keys);
+
+        PyObject* tmpkey = PyList_GetItem(keys, ind0);  // borrowed ref
+        if (IsChar(tmpkey)) {
+            int       len = GetCharArray(tmpkey, str, buflen);
+        }   else {
+            str[0] = 0;
+        }        
+
+        Py_DECREF(keys);
+    }    else {
+        str[0] = 0;
+    }
+    
+    
+}
+
 void* CreateStructVar(FIELD_ITEM* fieldList, int nfields); //Done
 
 void  DestoryStructVar(VOID_PTR strutVar) {  Py_XDECREF(strutVar);}
@@ -382,10 +411,16 @@ I32   GetConsoleWidth() {
 
 I32 GetCharArray(void* ptr, char* dst, int n) {
     dst[0] = 0;
-    if (!IsChar(ptr)) return 0;
+    if (ptr ==NULL || !IsChar(ptr)) return 0;
 
     if (PyUnicode_Check(ptr)) {
-        int len;
+        //int len;
+        /* STUPID ME. it took me one day to figure out this bug:
+        * if using int, the upper exta 32-bits will be reset to zero,
+        * this will corrupt the pushed 'si' regiser, the si regiseter
+        * seems to hold the prhs passed in the mainFunction
+        */
+        Py_ssize_t  len;
         char* str = PyUnicode_AsUTF8AndSize(ptr, &len);
         strncpy(dst, str, n);
         return len;
@@ -416,7 +451,7 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
     }
 
     if (PyUnicode_Check(tmpItem)) {
-        int   len;
+        Py_ssize_t  len;
         char* str = PyUnicode_AsUTF8AndSize(tmpItem, &len);
         strncpy(dst, str, n);
         return len;
@@ -435,10 +470,10 @@ void* GetField123(const void* structVar, char* fname, int nPartial) {
 
     Pob dict = NULL;
 
-    if (PyDict_Check(structVar)) {
+    if (PyDict_Check((void*)structVar)) {
         dict = structVar;
     }   else {
-        dict = PyGetDict(structVar);
+        dict = PyGetDict( (void *) structVar);
     }
  
     if (dict) {
@@ -450,13 +485,13 @@ void* GetField123(const void* structVar, char* fname, int nPartial) {
 void* GetField(const void* structVar, char* fname) {
  
     if (PyDict_Check(structVar)) {
-        PyObject* item = PyGetDictItemString(structVar, fname);
+        PyObject* item = PyGetDictItemString((void*)structVar, fname);
         return item;
     
     }  else {
  
-        if (PyObject_HasAttrString(structVar, fname)) {
-            PyObject *attr= PyObject_GetAttrString(structVar, fname); // new ref
+        if (PyObject_HasAttrString((void*)structVar, fname)) {
+            PyObject *attr= PyObject_GetAttrString((void*)structVar, fname); // new ref
             Py_DECREF(attr);  // so the returned 
             return  attr;
         }        
@@ -483,7 +518,7 @@ static F64 NumpyGetNumericElemt(void* ptr, int ind) {
         return *(int32_t*)dptr;
     }
     else if (dtype == NPY_INT64) {
-        return *(int64_t*)dptr;
+        return (F64)  * (int64_t*)dptr;
     }
     else if (dtype == NPY_FLOAT) {
         return *(float*)dptr;
@@ -613,6 +648,31 @@ void GetDimensions(const void* ptr, int dims[], int ndims) {
         dims[0] = PyObject_Size(ptr);
     }   
 }
+ 
+
+void * SetDimensions(const void* ptr, int dims[], int ndims) {
+    if (PyArray_Check(ptr)) {
+        //PyObject* PyArray_Newshape(PyArrayObject * self, PyArray_Dims * newshape, NPY_ORDER order);
+        //NPY_ANYORDER: keep the orignal order
+        
+        PyArray_Dims newshape;
+        npy_intp  newdims[100];
+        newshape.len = ndims;
+        newshape.ptr = newdims;
+         for (int i = 0; i < ndims; i++) {
+             newdims[i] = dims[i];
+        }
+
+         PyObject *newptr=PyArray_Newshape(ptr, &newshape, NPY_ANYORDER);
+
+         return newptr;
+
+    }
+    return NULL;
+    if (PyList_Check(ptr) || PyTuple_Check(ptr)) {
+      //  dims[0] = PyObject_Size(ptr);
+    }
+}
 
 int  GetNumberOfElements(const void* ptr) {
     
@@ -648,7 +708,7 @@ I32  GetNumberOfFields(const void* structVar) {
 
 
 int HaveEqualDimesions(const void* p1, const void* p2);
-int CopyNumericArrToF32Arr(F32PTR outmem, VOID_PTR infield, int N);
+int CopyNumericObjToF32Arr(F32PTR outmem, VOID_PTR infield, int N);
  
 void* CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr) {
 
@@ -713,7 +773,7 @@ static void* pyCreateStructObject() {
     return obj;
 }
 static void pySetAddField(void *obj, char *fname, void *value) {
-    if (value == NULL) return NULL;
+    if (value == NULL) return ;
 
     PyObject_SetAttrString(obj, fname, value); // do not steal ref and value is increfed.
     Py_XDECREF(value);  // decref it so    

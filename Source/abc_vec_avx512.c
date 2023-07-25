@@ -4,6 +4,8 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
+#define STATIC   static
+
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
@@ -102,7 +104,7 @@
 // addi32(*((__m512i*) (x + i)), C)--> addi32 (loadu(x+i),C)
 
 static __mmask16 masktemplate[16];
-static INLINE void      FillMaskTemplate() {   for (I32 i = 0; i < 16; i++)    masktemplate[i] = (1UL << i) - 1UL;  }
+static INLINE void      FillMaskTemplate(void) {   for (I32 i = 0; i < 16; i++)    masktemplate[i] = (1UL << i) - 1UL;  }
 static INLINE __mmask16  __attribute__((always_inline)) GetMoveMask(int n)  {
     return masktemplate[n];
 }
@@ -150,7 +152,7 @@ static INLINE I32 __attribute__((always_inline)) i32_hsum(__m512i r) {
 }
 
 
- void avx512_i32_add_val_inplace(const int c, const I32PTR x, const int N) {
+STATIC void avx512_i32_add_val_inplace(const int c, const I32PTR x, const int N) {
     __m512i  C = set1_i32(c);
     int i = 0;
     for (; i < N - (NF4-1); i += NF4) 
@@ -165,7 +167,7 @@ static INLINE I32 __attribute__((always_inline)) i32_hsum(__m512i r) {
         maskstorei(x + i,  GetMoveMask(n),  addi32(loadi(x + i), C)  );
     _mm256_zeroupper();    
 }
-I32  avx512_i32_sum(const I32PTR x, const int N) {
+STATIC I32  avx512_i32_sum(const I32PTR x, const int N) {
     __m512i  S = set0i();
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -183,7 +185,7 @@ I32  avx512_i32_sum(const I32PTR x, const int N) {
      _mm256_zeroupper();
      return sum;
 }
-F32  avx512_f32_sum(const I32PTR x, const int N) {
+STATIC F32  avx512_f32_sum(const I32PTR x, const int N) {
     __m512  S = set0();
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -199,7 +201,7 @@ F32  avx512_f32_sum(const I32PTR x, const int N) {
     //for (; i < N; i++)         x[i] += c;
      return sum;
 }
-void avx512_f32_fill_val(const F32 c, F32PTR x, int N) {    
+STATIC void avx512_f32_fill_val(const F32 c, F32PTR x, int N) {
     __m512  C = set1(c);
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -216,7 +218,7 @@ void avx512_f32_fill_val(const F32 c, F32PTR x, int N) {
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_add_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
+STATIC void avx512_f32_add_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
    int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {       //dst=dst-src
         store(dst + i,        add(load(src2 + i),       load(src1 + i)));
@@ -232,7 +234,7 @@ void avx512_f32_add_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N)
     _mm256_zeroupper();
     //for (; i < N; i++)        dst[i] += src[i];
 }
-void avx512_f32_sub_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
+STATIC void avx512_f32_sub_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
     //dst=src2-src1
    int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {       //dst=dst-src
@@ -249,7 +251,9 @@ void avx512_f32_sub_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N)
     _mm256_zeroupper();
     //for (; i < N; i++)        dst[i] += src[i];
 }
-void avx512_f32_add_vec_inplace(const F32PTR src, const F32PTR dst, const int N) {
+
+
+STATIC void avx512_f32_add_vec_inplace(const F32PTR src, const F32PTR dst, const int N) {
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
         store(dst + i,           add(load(dst + i),          load(src + i)));
@@ -266,7 +270,7 @@ void avx512_f32_add_vec_inplace(const F32PTR src, const F32PTR dst, const int N)
     _mm256_zeroupper();
     //for (; i < N; i++)        dst[i] += src[i];
 }
-void avx512_f32_sub_vec_inplace(const F32PTR src, F32PTR dst, int N) {
+STATIC void avx512_f32_sub_vec_inplace(const F32PTR src, F32PTR dst, int N) {
    int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {       //dst=dst-src
         store(dst + i,       sub(load(dst + i),      load(src + i)));
@@ -283,7 +287,7 @@ void avx512_f32_sub_vec_inplace(const F32PTR src, F32PTR dst, int N) {
     _mm256_zeroupper();
     //for (; i < N; i++)        dst[i] += src[i];
 }
-void avx512_f32_add_val_inplace(const F32 c, const F32PTR x, const int N) {
+STATIC void avx512_f32_add_val_inplace(const F32 c, const F32PTR x, const int N) {
     __m512  C = set1(c);
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) 
@@ -299,7 +303,7 @@ void avx512_f32_add_val_inplace(const F32 c, const F32PTR x, const int N) {
     _mm256_zeroupper();
     //for (; i < N; i++)         x[i] += c;
 }
-void avx512_f32_subrev_val_inplace(const F32 c, const F32PTR x, const int N) {
+STATIC void avx512_f32_subrev_val_inplace(const F32 c, const F32PTR x, const int N) {
     __m512  C = set1(c);
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) 
@@ -316,7 +320,7 @@ void avx512_f32_subrev_val_inplace(const F32 c, const F32PTR x, const int N) {
     //for (; i < N; i++)         x[i] += c;
 }
 
-void avx512_f32_mul_val_inplace(const F32 c, const F32PTR x, const int N) {
+STATIC void avx512_f32_mul_val_inplace(const F32 c, const F32PTR x, const int N) {
     __m512  C = set1(c);
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4)
@@ -332,7 +336,7 @@ void avx512_f32_mul_val_inplace(const F32 c, const F32PTR x, const int N) {
     _mm256_zeroupper();
     //for (; i < N; i++)         x[i] += c;
 }
-void avx512_f32_mul_vec_inplace(const F32PTR src, F32PTR dst, int N) {
+STATIC void avx512_f32_mul_vec_inplace(const F32PTR src, F32PTR dst, int N) {
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
         store(dst + i,       mul(load(dst + i),      load(src + i)));
@@ -350,7 +354,7 @@ void avx512_f32_mul_vec_inplace(const F32PTR src, F32PTR dst, int N) {
     //for (; i < N; i++)        dst[i] += src[i];
 }
 
-void avx512_f32_mul_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
+STATIC void avx512_f32_mul_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N) {
    int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {       
         store(dst + i,       mul(load(src2 + i),      load(src1 + i)));
@@ -368,7 +372,7 @@ void avx512_f32_mul_vec(const F32PTR src1, const F32PTR src2, F32PTR dst, int N)
     //for (; i < N; i++)        dst[i] += src[i];
 }
 
-void avx512_f32_add_v_v2_vec_inplace(const F32PTR src, const F32PTR  v, const F32PTR  v2, int N) {
+STATIC void avx512_f32_add_v_v2_vec_inplace(const F32PTR src, const F32PTR  v, const F32PTR  v2, int N) {
 
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -400,7 +404,7 @@ void avx512_f32_add_v_v2_vec_inplace(const F32PTR src, const F32PTR  v, const F3
 
  
 }
-F32 avx512_f32_dot(F32PTR  x, F32PTR y, int N) {
+STATIC F32 avx512_f32_dot(F32PTR  x, F32PTR y, int N) {
 
     __m512 r = set0();    
     int i = 0;    
@@ -425,7 +429,7 @@ F32 avx512_f32_dot(F32PTR  x, F32PTR y, int N) {
      _mm256_zeroupper();    
     return sum;
 }
-F32 avx512_f32_dot2x1(F32PTR  x, F32PTR y, F32PTR v, int N, F32PTR res) {
+STATIC F32 avx512_f32_dot2x1(F32PTR  x, F32PTR y, F32PTR v, int N, F32PTR res) {
     __m512 RX = set0();
     __m512 RY = set0();
     int i = 0;    
@@ -459,7 +463,7 @@ F32 avx512_f32_dot2x1(F32PTR  x, F32PTR y, F32PTR v, int N, F32PTR res) {
     res[0] = sumX;
     return sumY;
 }
-void avx512_f32_dot2x2(F32PTR  x, F32PTR y, F32PTR v, F32PTR w, int N, F32PTR res1, F32PTR res2) {
+STATIC void avx512_f32_dot2x2(F32PTR  x, F32PTR y, F32PTR v, F32PTR w, int N, F32PTR res1, F32PTR res2) {
     __m512 RX1 = set0();
     __m512 RX2 = set0();
     __m512 RY1 = set0();
@@ -518,7 +522,7 @@ void avx512_f32_dot2x2(F32PTR  x, F32PTR y, F32PTR v, F32PTR w, int N, F32PTR re
     res2[1] = sumY2;
     return;
 }
-F32 avx512_fma_f32_dot(F32PTR  x, F32PTR y, int N) {
+STATIC F32 avx512_fma_f32_dot(F32PTR  x, F32PTR y, int N) {
 
     __m512 r0 = set0();
     __m512 r1 = set0();
@@ -550,7 +554,7 @@ F32 avx512_fma_f32_dot(F32PTR  x, F32PTR y, int N) {
 //https://stackoverflow.com/questions/1528727/why-is-sse-scalar-sqrtx-slower-than-rsqrtx-x
 //https://stackoverflow.com/questions/54642663/how-sqrt-of-gcc-works-after-compiled-which-method-of-root-is-used-newton-rap
 //https://stackoverflow.com/questions/31555260/fast-vectorized-rsqrt-and-reciprocal-with-sse-avx-depending-on-precision
-void avx512_f32_sqrt_vec_inplace(const F32PTR x, const int N)
+STATIC void avx512_f32_sqrt_vec_inplace(const F32PTR x, const int N)
 {
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -577,7 +581,7 @@ void avx512_f32_sqrt_vec_inplace(const F32PTR x, const int N)
 //https://stackoverflow.com/questions/8924729/using-avx-intrinsics-instead-of-sse-does-not-improve-speed-why
 //x0 = vrsqrtps(a)
 //x1 = 0.5 * x0 * (3 - (a * x0) * x0)
-void avx512_f32_sqrt_vec(const F32PTR x, const F32PTR y, const int N)
+STATIC void avx512_f32_sqrt_vec(const F32PTR x, const F32PTR y, const int N)
 {
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -601,7 +605,7 @@ void avx512_f32_sqrt_vec(const F32PTR x, const F32PTR y, const int N)
 
 
 #ifdef MSVC_COMPILER
-void avx512_f32_sin_vec_inplace_MSVC(const F32PTR x, const int N)
+STATIC void avx512_f32_sin_vec_inplace_MSVC(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -617,7 +621,7 @@ void avx512_f32_sin_vec_inplace_MSVC(const F32PTR x, const int N)
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_cos_vec_inplace_MSVC(const F32PTR x, const int N)
+STATIC void avx512_f32_cos_vec_inplace_MSVC(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -633,7 +637,7 @@ void avx512_f32_cos_vec_inplace_MSVC(const F32PTR x, const int N)
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin, F32PTR outcos, const int N)
+STATIC void avx512_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin, F32PTR outcos, const int N)
 {
 //Compute the sine and cosine of packed single-precision (32-bit) floating-point elements in a expressed in radians,
 //store the sine in dst, and store the cosine into memory at mem_addr.
@@ -653,7 +657,7 @@ void avx512_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin, F32PTR outcos, c
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_pow_vec_inplace_MSVC(F32PTR x, F32 pow, int N)
+STATIC void avx512_f32_pow_vec_inplace_MSVC(F32PTR x, F32 pow, int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -672,7 +676,7 @@ void avx512_f32_pow_vec_inplace_MSVC(F32PTR x, F32 pow, int N)
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_log_vec_inplace_MSVC(const F32PTR x, const int N)
+STATIC void avx512_f32_log_vec_inplace_MSVC(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -688,7 +692,7 @@ void avx512_f32_log_vec_inplace_MSVC(const F32PTR x, const int N)
     _mm256_zeroupper();
     // for (; i < N; i++)       x[i] = s;
 }
-void avx512_f32_exp_vec_inplace_MSVC(const F32PTR x, const int N)
+STATIC void avx512_f32_exp_vec_inplace_MSVC(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -707,7 +711,7 @@ void avx512_f32_exp_vec_inplace_MSVC(const F32PTR x, const int N)
 #endif
 
 
-void avx512_f32_sin_vec_inplace(const F32PTR x, const int N)
+STATIC void avx512_f32_sin_vec_inplace(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -720,7 +724,7 @@ void avx512_f32_sin_vec_inplace(const F32PTR x, const int N)
         maskstore(x + i, GetMoveMask(n), sin512_ps(load(x + i)) );
     _mm256_zeroupper();    
 }
-void avx512_f32_cos_vec_inplace(const F32PTR x, const int N)
+STATIC void avx512_f32_cos_vec_inplace(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -733,7 +737,7 @@ void avx512_f32_cos_vec_inplace(const F32PTR x, const int N)
         maskstore(x + i, GetMoveMask(n), cos512_ps(load(x + i)) );
     _mm256_zeroupper();    
 }
-void avx512_f32_sincos_vec_inplace(const F32PTR in_outsin, F32PTR outcos, const int N) 
+STATIC void avx512_f32_sincos_vec_inplace(const F32PTR in_outsin, F32PTR outcos, const int N)
 {
 //Compute the sine and cosine of packed single-precision (32-bit) floating-point elements in a expressed in radians,
 //store the sine in dst, and store the cosine into memory at mem_addr.
@@ -773,7 +777,7 @@ static INLINE __m512 pow512_int(__m512 x, int n)
     }
     return res;
 }
-void avx512_f32_pow_vec_inplace(F32PTR x, F32 pow, int N)
+STATIC void avx512_f32_pow_vec_inplace(F32PTR x, F32 pow, int N)
 {
          int   nInteger   = pow;
         float  nRemainder = pow - nInteger;
@@ -798,7 +802,7 @@ void avx512_f32_pow_vec_inplace(F32PTR x, F32 pow, int N)
         }
         _mm256_zeroupper();
 }
-void avx512_f32_log_vec_inplace(const F32PTR x, const int N)
+STATIC void avx512_f32_log_vec_inplace(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -811,7 +815,7 @@ void avx512_f32_log_vec_inplace(const F32PTR x, const int N)
         maskstore(x + i, GetMoveMask(n), log512_ps(load(x + i)) );
     _mm256_zeroupper();    
 }
-void avx512_f32_exp_vec_inplace(const F32PTR x, const int N)
+STATIC void avx512_f32_exp_vec_inplace(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
     //http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
@@ -827,7 +831,7 @@ void avx512_f32_exp_vec_inplace(const F32PTR x, const int N)
 
 
 
-void  avx512_f32_avgstd(const F32PTR x, int N, F32PTR avg, F32PTR std) {
+STATIC void avx512_f32_avgstd(const F32PTR x, int N, F32PTR avg, F32PTR std) {
     __m512  S    = set0();
     __m512  SS   = set0();
     int i = 0;
@@ -869,7 +873,7 @@ void  avx512_f32_avgstd(const F32PTR x, int N, F32PTR avg, F32PTR std) {
      std[0] = sqrtf((sumxx - AVG * sumx) / (N - 1));// sqrtf((sumxx - AVG * AVG * N) / (N - 1));
      avg[0] = AVG;
 }
-void avx512_f32_sx_sxx_to_avgstd_inplace(F32PTR SX, F32PTR SXX, I32 Nsample, F32 scale, F32 offset, int N) {
+STATIC void avx512_f32_sx_sxx_to_avgstd_inplace(F32PTR SX, F32PTR SXX, I32 Nsample, F32 scale, F32 offset, int N) {
     /*
                    r_ippsMulC_32f_I(inv_sample* sd, resultChain.tY, N);
                    r_ippsMul_32f(resultChain.tY, resultChain.tY, MEMBUF1, N);
@@ -988,7 +992,7 @@ I32 avx512_f32_maxidx1(const F32PTR x, const int N, F32PTR val) {
 }
 */
 
-I32 avx512_f32_maxidx(const F32PTR x, const int N, F32PTR val) {
+STATIC I32 avx512_f32_maxidx(const F32PTR x, const int N, F32PTR val) {
     //https://stackoverflow.com/questions/23590610/find-index-of-maximum-element-in-x86-simd-vector    
       
     __m128i _maskIdx    = _mm_cvtsi64_si128(0x0706050403020100);    
@@ -1057,7 +1061,7 @@ I32 avx512_f32_maxidx(const F32PTR x, const int N, F32PTR val) {
     //for (; i < N; i++)     sum+=x[i] *y[i];
     return ID.idx[IDX];
 }
-I32 avx512_f32_minidx(const F32PTR x, const int N, F32PTR val) {
+STATIC I32 avx512_f32_minidx(const F32PTR x, const int N, F32PTR val) {
     
     //https://stackoverflow.com/questions/23590610/find-index-of-maximum-element-in-x86-simd-vector    
       
@@ -1127,7 +1131,7 @@ I32 avx512_f32_minidx(const F32PTR x, const int N, F32PTR val) {
     return ID.idx[IDX];
 }
 
-void avx512_f32_diff_back(const F32PTR  x, F32PTR result, const int N) {
+STATIC void avx512_f32_diff_back(const F32PTR  x, F32PTR result, const int N) {
     //skip the first elements because evaluation of diff0-x[0]-x[-1] needs an nonexistent element at -1
     //res[i]=x[i]-x[i-1]
 
@@ -1150,7 +1154,7 @@ void avx512_f32_diff_back(const F32PTR  x, F32PTR result, const int N) {
     result[0] = result[1];
 
 }
-void avx512_f32_seq(F32PTR p, F32 x0, F32 dX, int N) {
+STATIC void avx512_f32_seq(F32PTR p, F32 x0, F32 dX, int N) {
     
     __m512 X;
     {    
@@ -1183,7 +1187,7 @@ void avx512_f32_seq(F32PTR p, F32 x0, F32 dX, int N) {
     }     
     _mm256_zeroupper();    
 }
-void avx512_i32_seq(I32PTR p, I32 x0, I32 dX, int N) {
+STATIC void avx512_i32_seq(I32PTR p, I32 x0, I32 dX, int N) {
     
     __m512i X;
     {    
@@ -1216,7 +1220,7 @@ void avx512_i32_seq(I32PTR p, I32 x0, I32 dX, int N) {
     }     
     _mm256_zeroupper();    
 }
-void avx512_f32_to_f64_inplace(F32PTR data32, int N) {
+STATIC void avx512_f32_to_f64_inplace(F32PTR data32, int N) {
 
     F64PTR data64 = data32;
     int i = N - 16;
@@ -1245,7 +1249,7 @@ void avx512_f32_to_f64_inplace(F32PTR data32, int N) {
     for (; i >= 0; --i)   data64[i] = data32[i];    
     _mm256_zeroupper();    
 }
-void avx512_f64_to_f32_inplace(F64PTR data64, int N) {
+STATIC void avx512_f64_to_f32_inplace(F64PTR data64, int N) {
 
     F32PTR data32 = data64;
     int i = 0;
@@ -1268,7 +1272,7 @@ void avx512_f64_to_f32_inplace(F64PTR data64, int N) {
     _mm256_zeroupper();
     for (; i <N; ++i)      data32[i] = data64[i];         
 }
-void avx512_i32_to_f32_scaleby_inplace(I32PTR x, int N, F32 scale) {
+STATIC void avx512_i32_to_f32_scaleby_inplace(I32PTR x, int N, F32 scale) {
     __m512  C = set1(scale);
     int i = 0;
     for (; i < N - (NF4 - 1); i += NF4)
@@ -1285,7 +1289,7 @@ void avx512_i32_to_f32_scaleby_inplace(I32PTR x, int N, F32 scale) {
     //for (; i < N; i++)         x[i] += c;
 }
 
-void avx512_i32_increment_bycond_inplace(I32PTR x,  F32PTR cond, int N) {
+STATIC void avx512_i32_increment_bycond_inplace(I32PTR x,  F32PTR cond, int N) {
     __m512   C0 = set0();
     __m512i  C1 = set1_i32(1);
     int i = 0;
@@ -1307,7 +1311,7 @@ void avx512_i32_increment_bycond_inplace(I32PTR x,  F32PTR cond, int N) {
     }
     _mm256_zeroupper();
 }
-void avx512_i32_increment_vec2_bycond_inplace(I32PTR x, I32PTR y, F32PTR cond, int N) {
+STATIC void avx512_i32_increment_vec2_bycond_inplace(I32PTR x, I32PTR y, F32PTR cond, int N) {
     __m512   C0        = set0();
     __m512   Ceplison1 = set1(1e-10);
     __m512   Ceplison2 = set1(-1e-10);
@@ -1341,7 +1345,7 @@ void avx512_i32_increment_vec2_bycond_inplace(I32PTR x, I32PTR y, F32PTR cond, i
     }
     _mm256_zeroupper();
 }
-I32  avx512_i08_sum_binvec(U08PTR binvec, I32 N) {
+STATIC I32  avx512_i08_sum_binvec(U08PTR binvec, I32 N) {
     //stackoverflow.com/questions/36998538/fastest-way-to-horizontally-sum-sse-unsigned-byte-vector
 	I32   SUM = 0;
 	I32	  i   = 0;
@@ -1431,7 +1435,7 @@ SGEMM  performs one of the matrix - matrix operations
 * > an m by k matrix, op(B)  a  k by n matrixand C an m by n matrix.
 */
 
-void avx512_f32_gemm_XtY2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
+STATIC void avx512_f32_gemm_XtY2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
 { 
 	for (int col = 0; col < N; ++col) {
 		int row = 0;
@@ -1446,9 +1450,8 @@ void avx512_f32_gemm_XtY2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, in
 	}
  
 }
- 
- 
-void avx512_f32_gemm_XtY2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
+  
+STATIC void avx512_f32_gemm_XtY2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
 {
 	int COL;
  	for (COL = 0; COL < N-(2-1); COL+=2) {
@@ -1557,7 +1560,7 @@ void f32_gemm_XY2x1_old(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ld
 
 }
 */
-void avx512_f32_gemm_XY1x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
+STATIC void avx512_f32_gemm_XY1x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
 {
     // F32 Xrow[K] : variable-length array defined in C99 but optional in C11
     // MSVC seems not to support it
@@ -1585,7 +1588,7 @@ void avx512_f32_gemm_XY1x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int
     }  
 
 }
-void avx512_f32_gemm_XY2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
+STATIC void avx512_f32_gemm_XY2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
 { // F32 Xrow[K] : variable-length array defined in C99 but optional in C11
   // MSVC seems not to support it
   //    https://stackoverflow.com/questions/14666665/trying-to-understand-gcc-option-fomit-frame-pointer
@@ -1623,7 +1626,7 @@ void avx512_f32_gemm_XY2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int
 	}
 }
 
-void avx512_f32_gemm_XtYt2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
+STATIC void avx512_f32_gemm_XtYt2x2(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc)
 { // F32 Xrow[K] : variable-length array defined in C99 but optional in C11
   // MSVC seems not to support it
   //    https://stackoverflow.com/questions/14666665/trying-to-understand-gcc-option-fomit-frame-pointer
@@ -1713,7 +1716,7 @@ static INLINE F32 __avx512_f32_dot_stride(F32PTR  x, F32PTR y, int N, __mmask16 
      _mm256_zeroupper();    
     return sum;
 }
-void avx512_f32_gemm_XYt2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
+STATIC void avx512_f32_gemm_XYt2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb, F32PTR C, int ldc)
 {
     // F32 Xrow[K] : variable-length array defined in C99 but optional in C11
     // MSVC seems not to support it
@@ -1753,7 +1756,7 @@ void avx512_f32_gemm_XYt2x1(int M, int N, int K, F32PTR A, int lda, F32PTR B, in
 
 ///////////////////////////////////////////////////////////////////////////
 
-void avx512_f32_gemv_Xy1x1_slow(int N, int K, F32PTR X, int lda, F32PTR y, F32PTR C)
+STATIC void avx512_f32_gemv_Xy1x1_slow(int N, int K, F32PTR X, int lda, F32PTR y, F32PTR C)
 {     
     I32       nRemainder = K % NF;
     __mmask16 mask       = GetMoveMask(nRemainder);
@@ -1866,7 +1869,7 @@ static INLINE void __avx512_f32_ax1bx2py_inplace(const F32PTR a, const F32PTR x1
     }  
     _mm256_zeroupper(); 
 }
-void avx512_f32_gemv_Xb(int N, int K, F32PTR X, int lda, F32PTR b, F32PTR C)
+STATIC void avx512_f32_gemv_Xb(int N, int K, F32PTR X, int lda, F32PTR b, F32PTR C)
 {
     //I32     nRemainder = K % 8;
     //__mmask16 mask    = GetMoveMask(nRemainder);
@@ -2110,7 +2113,7 @@ static INLINE I32 _avx512_f32_findindex_cmp_eq(F32PTR  x, I32PTR indices, F32 va
 
     return cnt;
 }
-I32 avx512_f32_findindex(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag flag) {
+STATIC I32 avx512_f32_findindex(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag flag) {
     /*
     https://stackoverflow.com/questions/18971401/sparse-array-compression-using-simd-avx2
     https://stackoverflow.com/questions/36932240/avx2-what-is-the-most-efficient-way-to-pack-left-based-on-a-mask
@@ -2137,7 +2140,7 @@ I32 avx512_f32_findindex(F32PTR  x, I32PTR indices, F32 value, int N, CmpFlag fl
 }
 
 
-void avx512_f32_scatter_val_byindex(F32PTR  x, I32PTR index, F32 value, int N) {
+STATIC void avx512_f32_scatter_val_byindex(F32PTR  x, I32PTR index, F32 value, int N) {
     
     __m512  vec = set1(value);
     int     i   = 0;
@@ -2161,7 +2164,7 @@ void avx512_f32_scatter_val_byindex(F32PTR  x, I32PTR index, F32 value, int N) {
     
 }
 
-void avx512_f32_scatter_vec_byindex(F32PTR  x, I32PTR index, F32PTR value, int N) {
+STATIC void avx512_f32_scatter_vec_byindex(F32PTR  x, I32PTR index, F32PTR value, int N) {
 
     int     i   = 0;
     for (; i < N - (NF4 - 1); i += NF4) {
@@ -2189,7 +2192,7 @@ void avx512_f32_scatter_vec_byindex(F32PTR  x, I32PTR index, F32PTR value, int N
 #define vf5 __m512
 #define vi5 __m512i
 
-void avx512_f32_gatherVec_scatterVal_byindex(F32PTR  x, I32PTR index, F32PTR value, F32 newValue, int N) {
+STATIC void avx512_f32_gatherVec_scatterVal_byindex(F32PTR  x, I32PTR index, F32PTR value, F32 newValue, int N) {
 
     __m512  vec = set1(newValue);
 
@@ -2223,7 +2226,7 @@ void avx512_f32_gatherVec_scatterVal_byindex(F32PTR  x, I32PTR index, F32PTR val
     _mm256_zeroupper();
 
 } 
-void avx512_f32_gather2Vec_scatterVal_byindex(F32PTR  x, F32PTR  y, I32PTR index, F32PTR value, F32 newValue, int N) {
+STATIC void avx512_f32_gather2Vec_scatterVal_byindex(F32PTR  x, F32PTR  y, I32PTR index, F32PTR value, F32 newValue, int N) {
 
      __m512  vec = set1(newValue);
 
@@ -2258,7 +2261,7 @@ void avx512_f32_gather2Vec_scatterVal_byindex(F32PTR  x, F32PTR  y, I32PTR index
     _mm256_zeroupper();
 
 } 
-void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, const int N) {
+STATIC void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, const int N) {
     __m512  G = set1(gain);
     __m512  O = set1(offset);
     int i = 0;
@@ -2276,7 +2279,7 @@ void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, c
     //for (; i < N; i++)         x[i] += c;
 }
 
- void avx512_f32_hinge_pos(const F32PTR X, const F32PTR Y, const F32 knot, const int N){    
+STATIC void avx512_f32_hinge_pos(const F32PTR X, const F32PTR Y, const F32 knot, const int N){
     __m512  O = set0();
     __m512  C = set1(knot);
     int i = 0;
@@ -2297,7 +2300,7 @@ void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, c
     }
     _mm256_zeroupper();    
 }
- void avx512_f32_hinge_neg(const F32PTR X, const F32PTR Y, const F32 knot, const int N){    
+STATIC void avx512_f32_hinge_neg(const F32PTR X, const F32PTR Y, const F32 knot, const int N){
     __m512  O = set0();
     __m512  C = set1(knot);
     int i = 0;
@@ -2319,7 +2322,7 @@ void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, c
     _mm256_zeroupper();    
 }
 
-  void avx512_f32_step_pos(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
+STATIC void avx512_f32_step_pos(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
     __m512  O = set0();
     __m512  I = set1(1.0);
     __m512  C = set1(knot);
@@ -2341,7 +2344,7 @@ void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, c
     }
     _mm256_zeroupper();    
 }
-  void avx512_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
+STATIC void avx512_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N){
     __m512  O = set0();
     __m512  I = set1(1.0);
     __m512  C = set1(knot);
@@ -2363,6 +2366,7 @@ void avx512_f32_scale_inplace(const F32 gain, const F32 offset,const F32PTR x, c
     }
     _mm256_zeroupper();    
 }
+
 void SetupVectorFunction_AVX512() {
 
     FillMaskTemplate();

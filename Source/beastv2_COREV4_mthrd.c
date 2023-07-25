@@ -115,8 +115,8 @@ int beast2_main_corev4_mthrd(void* dummy)
 				ci[i].result     = resultChain.tCI,               //trend			
 			    ci[i].newDataRow = Xnewterm  + XnewtermOffset;    //trend		
 			else if (MODEL.b[i].type == OUTLIERID)
-				ci[i].result     = resultChain.oCI,      //outlier
-			    ci[i].newDataRow = Xnewterm + XnewtermOffset; //outlier       
+				ci[i].result     = resultChain.oCI,               //outlier
+			    ci[i].newDataRow = Xnewterm + XnewtermOffset;     //outlier       
 
 			XnewtermOffset += Npad * q;   //FOR MRBEAST
 		}
@@ -171,6 +171,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 	const U32  MCMC_CHAINNUM = opt->mcmc.chainNumber;
 	const U16  SEASON_BTYPE  = opt->prior.seasonBasisFuncType;
 	const U16  GROUP_MatxMat = (MODEL.sid <0 || opt->prior.seasonBasisFuncType != 3 )
+						       && (MODEL.vid < 0 || opt->prior.trendBasisFuncType != 3)
 							   && (MODEL.tid<0  || opt->prior.trendBasisFuncType!=2)
 		                       && ( MODEL.oid<0 || opt->prior.outlierBasisFuncType!=2);
 
@@ -193,7 +194,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		/***********MULTITHREAD*******************/
 		// Fecth a new time-series: set up Y, nMissing,  n, rowsMissing		
 		F32PTR MEMBUF           = Xnewterm; // Xnewterm is a temp mem buf.
-		BEAST2_fetch_next_timeSeries(&yInfo, pixelIndex,  MEMBUF, &(opt->io));
+		BEAST2_fetch_timeSeries(&yInfo, pixelIndex,  MEMBUF, &(opt->io));
 
 
 		F32PTR  Xtmp             = Xt_mars;
@@ -602,7 +603,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						   //#if !(defined(R_RELEASE) || defined(M_RELEASE))
 						   //r_printf("prec: %.4f| marg_lik_prop: %.4f | marg_like_curr: %.4f \n", MODEL.precVec[0], MODEL.prop.marg_lik, MODEL.curr.marg_lik);
 						   //#endif
-                           /***********MULTITHREAD*******************/
+                           			   /***********MULTITHREAD*******************/
 
 						   continue;
 					   }  else {
@@ -659,7 +660,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 					// Inserting XnewTerms into Xt_mars
 					if (NewCol.k2_old != KOLD && NewCol.k2_new != NewCol.k2_old)
-						MoveCOLsWithinMatrix(Xt_mars, Npad, NewCol.k2_old+1, KOLD, NewCol.k2_new+1);
+						shift_lastcols_within_matrix(Xt_mars, Npad, NewCol.k2_old+1, KOLD, NewCol.k2_new+1);
 					if (Knewterm != 0)
 						SCPY(Knewterm*Npad, Xnewterm, Xt_mars + (NewCol.k1-1) * Npad);
 					
@@ -956,7 +957,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						if (result->xorder != NULL) {
 							TORDER_PTR  ORDER = basis->ORDER;
 							for (I32 i = 0; i <= nKnot; ++i) {
-								I16 r1 = KNOT[i-1], r2 = KNOT[i]-1;
+								I32 r1 = KNOT[i-1], r2 = KNOT[i]-1;
 								r_ippsAddC_32s_ISfs(ORDER[i], result->xorder+r1 - 1, r2 - r1 + 1, 0);
 							}
 						}
@@ -1165,7 +1166,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				int   sum;
 				#define GetSum(arr) (r_ippsSum_32s_Sfs(arr, N, &sum, 0), sum) // parenthesis operator
 
-				I32   sMAXNUMKNOT = MODEL.sid >=0? MODEL.b[MODEL.sid].prior.maxKnotNum:-9999999;
+				I32   sMAXNUMKNOT = MODEL.sid >=0 || MODEL.vid >= 0 ? MODEL.b[0].prior.maxKnotNum:-9999999; // the seasonal cmpt is always the first one
 				I32   tMAXNUMKNOT = MODEL.tid>=0?  MODEL.b[MODEL.tid].prior.maxKnotNum:-9999999;
 				I32   oMAXNUMKNOT = MODEL.oid>=0?  MODEL.b[MODEL.oid].prior.maxKnotNum:- 9999999;
 				F32   inv_sample  = 1.f / sample;			
@@ -1331,7 +1332,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			/**************************************************/
 			if (!skipCurrentPixel) 
 			{
-				I32   sMAXNUMKNOT = MODEL.sid >=0? MODEL.b[MODEL.sid].prior.maxKnotNum:-9999999;
+				I32   sMAXNUMKNOT = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 				I32   tMAXNUMKNOT = MODEL.tid>=0?  MODEL.b[MODEL.tid].prior.maxKnotNum:-9999999;
 				I32   oMAXNUMKNOT = MODEL.oid>=0?  MODEL.b[MODEL.oid].prior.maxKnotNum:- 9999999;
 
@@ -1352,7 +1353,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				_1(marg_lik);
 				_q2(sig2);  //Fpr MRBEAST
 				
-				if (MODEL.sid >= 0) {					
+				if (MODEL.sid >= 0 || MODEL.vid >0) {
 					_1(sncp); _skn_1(sncpPr);	     _N(scpOccPr); _Nq(sY); _Nq(sSD);
 					if (extra.computeSeasonOrder)    _N(sorder);
 					if (extra.computeSeasonAmp)      _N(samp), _N(sampSD);
@@ -1410,7 +1411,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			/***********MULTITHREAD*******************/
 			// Jump out of the chainumber loop
 			if (skipCurrentPixel) {
-				//r_warning("WARNING(#%d):The max number of bad iterations exceeded. "
+				//q_warning("WARNING(#%d):The max number of bad iterations exceeded. "
 				//	     "Can't decompose the current time series\n", skipCurrentPixel);
 				break;
 			}
@@ -1434,7 +1435,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		{
 			I32  N = opt->io.N;			
 	
-			I32   sMAXNUMKNOT = MODEL.sid >= 0 ? MODEL.b[MODEL.sid].prior.maxKnotNum : -9999999;
+			I32   sMAXNUMKNOT = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 			I32   tMAXNUMKNOT = MODEL.tid >= 0 ? MODEL.b[MODEL.tid].prior.maxKnotNum : -9999999;
 			I32   oMAXNUMKNOT = MODEL.oid >= 0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
 
@@ -1454,7 +1455,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			F32 maxncpProb;	 
 			_1(marg_lik);			
 			_q2(sig2);
-			if (MODEL.sid >= 0) {
+			if (MODEL.sid >= 0 || MODEL.vid>0) {
 				_1(sncp); _skn_1(sncpPr);	     _N(scpOccPr); _Nq(sY); _Nq(sSD); 
 				if (extra.computeSeasonOrder)    _N(sorder);
 				if (extra.computeSeasonAmp)     {_N(samp), _N(sampSD);}
@@ -1527,7 +1528,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		}
 		if (!skipCurrentPixel) {		
 			I32  N = opt->io.N;  
-			if (MODEL.sid >= 0) 							tsRemoveNaNs(result.sSD, N);
+			if (MODEL.sid >= 0||MODEL.vid>0) 				tsRemoveNaNs(result.sSD, N);
 			if (MODEL.tid >= 0)								tsRemoveNaNs(result.tSD, N);
 			if (MODEL.tid >= 0 && extra.computeTrendSlope)  tsRemoveNaNs(result.tslpSD, N);		 
 			if (MODEL.oid >= 0) 							tsRemoveNaNs(result.oSD, N);
@@ -1539,7 +1540,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			I32     N         = opt->io.N;
 			F32     nan       = getNaN();     //A sloppy way to get a NAN
 
-			F32  	threshold = 0.001f;
+			F32  	threshold = 0.01f;
 			F32PTR	mem       = Xnewterm;  //Xnewterm must have a length larger than or equla to 5*N + max(sncp, tncp);
 			I32PTR  cptList   = (I32PTR)mem + 5LL * N;
 			F32PTR  cptCIList = (F32PTR)mem + 6LL * N;
@@ -1550,16 +1551,16 @@ int beast2_main_corev4_mthrd(void* dummy)
 			const F32 T0 = (F32)opt->io.meta.startTime;
 			const F32 dT = (F32)opt->io.meta.deltaTime;
 
-			I32   sMAXNUMKNOT = MODEL.sid >= 0 ? MODEL.b[MODEL.sid].prior.maxKnotNum : -9999999;
+			I32   sMAXNUMKNOT = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 			I32   tMAXNUMKNOT = MODEL.tid >= 0 ? MODEL.b[MODEL.tid].prior.maxKnotNum : -9999999;
 			I32   oMAXNUMKNOT = MODEL.oid >= 0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
 
-			I32   sMINSEPDIST = MODEL.sid >= 0 ? MODEL.b[MODEL.sid].prior.minSepDist : -9999999;
+			I32   sMINSEPDIST = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.minSepDist : -9999999;
 			I32   tMINSEPDIST = MODEL.tid >= 0 ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
-			I32   oMINSEPDIST = MODEL.oid >= 0 ? 1 : -9999999;
+			I32   oMINSEPDIST = MODEL.oid >= 0 ? 0 : -9999999;  //changed from 1 to 0 to pick up consecutive outlier spikes.
 
 			//--------------Season----------------------------
-			if (extra.computeSeasonChngpt && MODEL.sid >=0)  	{
+			if (extra.computeSeasonChngpt && (MODEL.sid >=0 || MODEL.vid>0 ))  	{
 				cptNumber      = sMAXNUMKNOT;
 				trueCptNumber = FindChangepoint((F32PTR)result.scpOccPr, mem, threshold, cptList, cptCIList, N, sMINSEPDIST, cptNumber);
 				//In the returned result, cptList is a list of detected changepoints, which are all zero-based indices.

@@ -7,7 +7,12 @@
 #include "abc_common.h"
 #include "abc_date.h"
 
-#if M_INTERFACE==1
+#if M_INTERFACE==1  
+
+
+int  JDN_to_DateNum(int jdn) {
+	return jdn - 1721059;
+}
 
 I32 GetConsoleWidth() {
 	mxArray *pOut[1], *pIn[2];
@@ -26,6 +31,9 @@ int IsClass(void* ptr, char* class) { return 0; }
 
 int IsCell(void* ptr) { return mxIsCell(ptr); }
 int IsChar(void* ptr)    { 
+
+	if (ptr == NULL) return 0;
+
 	if (IsCell(ptr)) {
 		// if ptr is a cell, iterate through all elements and return 1L if all the elems are char.
 		int n = GetNumberOfElements(ptr);
@@ -48,6 +56,7 @@ int IsSingle(void* ptr)  { return mxIsSingle(ptr); }
 int IsInt32(void* ptr)   { return mxIsInt32(ptr); }
 int IsInt16(void* ptr) { return mxIsInt16(ptr); }
 int IsInt64(void* ptr) { return mxIsInt64(ptr); }
+//int IsInt08(void* ptr) { return mxIsInt8(ptr); }
 int IsLogical(void* ptr) { return mxIsLogical(ptr); }
 
 VOID_PTR GetFieldByIdx(VOID_PTR ptr, I32 ind) {
@@ -57,14 +66,29 @@ VOID_PTR GetFieldByIdx(VOID_PTR ptr, I32 ind) {
 		return  mxGetCell(ptr, ind);
 	}
 	if (IsStruct(ptr)) {
-		mxGetFieldByNumber(ptr, 0, ind);
+		return mxGetFieldByNumber(ptr, 0, ind);
 	}
 	return NULL;
 }
- 
-I32 GetCharArray(void* ptr, char* dst,   int n) {
-	//Dsr needs to be at least of length (n+1);
 
+void GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char *str, int buflen) {
+	I32 numFlds   = mxGetNumberOfFields(strucVar); 
+	if (ind0 < numFlds) {
+		char* name = mxGetFieldNameByNumber(strucVar, ind0);
+		strncpy(str, name, buflen);
+		str[buflen - 1] = 0;
+	}	else {
+		str[0] = 0;
+	}
+	
+}
+
+I32 GetCharArray(void* ptr, char* dst,   int n) {
+	dst[0] = 0;
+	//Dsr needs to be at least of length (n+1);
+	if (ptr == NULL) {
+		return 0;
+	}
 	int len = 0;
 	if (mxIsChar(ptr)){		
 		// This func allocates new mem for tmp, which needs to be explicitlly dellocated later
@@ -97,6 +121,7 @@ I32 GetCharArray(void* ptr, char* dst,   int n) {
 		}
 	}
 	else {
+		dst[0] = 0;
 		return 0L;
 	}
 	
@@ -108,7 +133,12 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 	int len = 0;
 
 	if (IsCell(ptr) ) {
-		
+		int  nelem = mxGetNumberOfElements(ptr);
+		if (idx >= nelem) {
+			dst[0] = 0;
+			return 0;
+		}
+
 		void* elem = mxGetCell(ptr, idx);
 
 		if (mxIsChar(elem)) {
@@ -144,7 +174,40 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 			}
 		}
 		else {
+			dst[0] = 0;
 			return 0L;
+		}
+
+	}
+	else if (mxIsChar(ptr)) {
+		int            ndims = mxGetNumberOfDimensions(ptr);
+		const mwSize*  dims  = mxGetDimensions(ptr);
+		if (idx >= dims[0] || ndims > 2) {
+			dst[0] = 0;
+			return 0;
+		}
+		else {
+			int    cols = dims[1];
+			int    rows = dims[0];
+			//MATLAB uses 16-bit unsigned integer character encoding for Unicode® characters.
+			mwSize   newdims[2] = {1,cols };
+			mxArray* newrow     = mxCreateCharArray(2, newdims);
+			
+			mxChar* newpos = mxGetChars(newrow);
+			mxChar* oldpos = mxGetChars(ptr) + idx;
+			for (int i = 0; i < cols; i++) {
+				newpos[i] = *oldpos;
+				oldpos   += rows;
+			}			
+
+			char* tmp = mxArrayToString(newrow);
+			strncpy(dst, tmp, n); dst[n] = 0;
+			len = strlen(dst);
+			r_free(tmp);
+
+			mxDestroyArray(newrow);
+
+			return len;
 		}
 
 	}
@@ -175,7 +238,9 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 			return len;
 		}
 	}
+
 	else {
+		dst[0] = 0;
 		return 0L;
 	}
 
@@ -235,17 +300,32 @@ int    GetDim1(const void * ptr) {   return mxGetM((mxArray *)ptr); }
 int    GetDim2(const void * ptr) {   return mxGetN((mxArray *)ptr); }
 int    GetNumOfDim(const void * ptr) { return mxGetNumberOfDimensions((mxArray *)ptr); }
 void   GetDimensions(const void * ptr, int dims[], int ndims) {
-	int N = min(ndims, GetNumOfDim(ptr) );
-	const mwSize *dimArr = mxGetDimensions((mxArray *)ptr);
-	for (int i = 0; i < N; i++)
-	{
-		dims[i] = dimArr[i];
+	int   N            = min(ndims, GetNumOfDim(ptr) );
+	const mwSize *mxdims = mxGetDimensions((mxArray *)ptr);
+	for (int i = 0; i < N; i++) 	{
+		dims[i] = mxdims[i];
 	}	
+}
+
+void  * SetDimensions(const void* ptr, int dims[], int ndims) {
+	if (!ptr) return NULL;
+	mwSize mwdims[20];
+	for (int i = 0; i < ndims; i++) mwdims[i] = dims[i];
+	mwSize ndimension = ndims;
+	int res=mxSetDimensions(ptr, mwdims, ndimension);
+	mwSize* p = mxGetDimensions(ptr);
+	return ptr;
 }
 
 int    GetNumberOfElements(const void * ptr)
 { // Do not work for a vector of opaque objects for some reason 
-	return mxGetNumberOfElements(ptr);
+	if (mxIsChar(ptr)) {
+		// Suppose it is a 2d mxCharArray
+		const mwSize* dims = mxGetDimensions((mxArray*)ptr);
+		return dims[0]; 		
+	} else {
+		return mxGetNumberOfElements(ptr);
+	}	
 }
 
 void* CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr) {
@@ -323,6 +403,14 @@ void * CreateStructVar(FIELD_ITEM *fieldList, int nfields)
 	return (void*)out;
 }
 
+void ReplaceStructField(VOIDPTR s, char* fname, VOIDPTR newvalue){
+
+	mxArray *fld= mxGetField(s, 0, fname);
+	if (fld != NULL) {
+		mxDestroyArray(fld);
+	}
+	mxSetField(s, 0, fname, newvalue);
+}
 //https://www.mathworks.com/help/matlab/apiref/mxdestroyarray.html
 void  DestoryStructVar(VOID_PTR strutVar) {
 		mxDestroyArray(strutVar);
@@ -353,14 +441,19 @@ void RemoveAttribute(VOID_PTR listVar, const char* field) {
 //https://stackoverflow.com/questions/25998442/mex-options-when-compiling-with-visual-studio
 //https://undocumentedmatlab.com/articles/mex-ctrl-c-interrupt
 // The following 2 function are exported from libut.lib
-bool utIsInterruptPending();
-void utSetInterruptPending(bool);
+Bool utIsInterruptPending();
+void utSetInterruptPending(Bool);
 
+#ifndef O_INTERFACE
 I32  CheckInterrupt()         { return utIsInterruptPending(); }
-void ConsumeInterruptSignal() { utSetInterruptPending(false); }
+void ConsumeInterruptSignal() { utSetInterruptPending(_False_); }
+#else
+I32  CheckInterrupt() { return 0; }
+void ConsumeInterruptSignal() { ; }
+#endif
 
 #else
-const static achar = 'a';
+const static char achar = 'a';
 #endif
 
 

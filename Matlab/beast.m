@@ -2,8 +2,9 @@ function out = beast(y, varargin)
 %  
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Run 'help beast' to see the following
-%   USAGE: out=<strong>beast(y, ...) </strong>
 %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   USAGE: out=<strong>beast(y, ...) </strong>
 %
 %   <strong>y</strong>:  a regular time series; it should be a numeric vector. For ireggular 
 %   time series, use 'beast_irreg' or 'beast123' instead. For multiple time 
@@ -15,10 +16,10 @@ function out = beast(y, varargin)
 %   web(https://rdrr.io/cran/Rbeast/man/beast.html')">rdrr.io/cran/Rbeast/man/beast.html</a>. Unlike R, Matlab doesn't support keyword-style 
 %   arguments, so the beast parameters should be provided in the following forms:
 %
-%   <strong>beast(Nile, 'start', 1871, 'deltat', 1, 'season','none')</strong>
-%   <strong>beast(Yellowstone, 'start', [1981,7,7], 'tcp.minmax', [0,10], 'deltat', 1/24)</strong> 
+%   <strong>beast( Nile, 'start', 1871, 'deltat', 1, 'season','none' )</strong>
+%   <strong>beast( Yellowstone, 'start', [1981,7,7], 'tcp.minmax', [0,10], 'deltat', 1/24 )</strong> 
 %
-%   <strong>Possible Keywords</strong>:
+%   <strong>*Possible Keywords*</strong>:
 %      
 %   <strong>start</strong>: 
 %        the start time of the regular time series
@@ -57,16 +58,14 @@ function out = beast(y, varargin)
 %        polynomials used to model the trend
 %   <strong>tseg.min</strong>: 
 %        an integer; the min length of the segment for the trend component (i.e.,
-%        the min distance between neighorbing changepoints)
-%
+%        the min distance between neighorbing changepoints)%
 %   <strong>deseasonalize</strong>: 
 %        boolean; if true, the input time series will be first
 %        de-seasonalized before applying BEAST by removing a global seasonal 
 %        component
 %   <strong>detrend</strong>: 
 %        boolean; if true, the input time series will be first
-%        de-trend before applying BEAST by removing a global trend 
-%
+%        de-trend before applying BEAST by removing a global trend %
 %   <strong>mcmc.seed</strong>: 
 %        a seed for the random number generator; set it to a non-zero
 %        integer to reproduce the results among different runs
@@ -77,13 +76,16 @@ function out = beast(y, varargin)
 %   <strong>mcmc.burnin</strong>: 
 %        the number of initial samples of each chain to be discarded
 %   <strong>mcmc.chains</strong>: 
-%        the number of MCMC chains
-%
+%        the number of MCMC chains%
 %   <strong>print.progress</strong>: 
 %        boolean; if true, a progress bar is shown
 %   <strong>print.options</strong>: 
-%        boolean; if true, print the BEAST paramers. The keywords for beast() 
-%        are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
+%        boolean; if true, print the BEAST paramers. 
+%   <strong>gui</strong>: 
+%       boolean; if true, show a gui to demostrate the MCMC sampling; runs only 
+%       on Windows not Linux or MacOS
+%
+%   The keywords for beast() are converted to 'metadata', 'prior','mcmc', and 'extra' options used 
 %        in the beast123() interface. Some examples are:
 %            deseasonalize <-> metadata.deseasonalize
 %            scp.minmax(1) <-> prior.seasonMinOrder
@@ -91,9 +93,9 @@ function out = beast(y, varargin)
 %            sseg.min      <-> prior.seasonMinSepDist
 %            mcmc.seed     <-> mcmc.seed
 %            tcp.minmax(1) <-> prior.trendMinKnotNumber
-%       <strong> Experts should use the the beast123 function.</strong>
+%   <strong>Experts should use the the beast123 function.</strong>
 %
-%   <strong>Result/Output</strong>: The output is a struct variable; example of the fields include
+%   <strong>*Result/Output*</strong>: The output is a struct variable; example of the fields include
 %
 %       marg_lik: marginal likilood; the larger, the better
 %       sig2    : variance  of error
@@ -128,8 +130,8 @@ function out = beast(y, varargin)
 %      beast(Y,<strong>start</strong>=1987,<strong>freq</strong>=1) is beast(Y,<strong>'start'</strong>, 1987, <strong>'freq'</strong>,1).
 %      
 %   <strong>Examples</strong>:
-%       %%Nile river annual streamflow: trend-only data
-%       load('Nile.mat')             
+%       % Nile river annual streamflow: trend-only data
+%       load('Nile.mat')              
 %       o = beast(Nile, 'start', 1871, 'season','none') 
 %       printbeast(o)
 %       plotbeast(o)
@@ -156,6 +158,9 @@ function out = beast(y, varargin)
 %       % Do not print the options 
 %       o=beast(Nile, 'start', 1871, 'deltat',1.0,'season','none','print.options',false)
 %
+%       % Show a gui window to demostrate the BEAST sampling process in
+%       % real-time (for Windows only not Linux and MacOS)% 
+%       beast(Nile,'season','none', 'gui',true) 
 %
 %       %% Monthly google trend of the search word 'beach'
 %       load('googletrend.mat')   
@@ -251,7 +256,8 @@ function out = beast(y, varargin)
    
    ci               =GetValueByKey(KeyList, ValList, 'ci',   false);   
    printProgressBar =GetValueByKey(KeyList, ValList, 'print.progress',  true);     
-   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);           
+   printOptions     =GetValueByKey(KeyList, ValList, 'print.options',  true);      
+   gui              = GetValueByKey(KeyList, ValList, 'gui',  false); 
 %% Convert the opt parameters to the individual option parameters (e.g.,
 %  metadata, prior, mcmc, and extra)
 
@@ -268,10 +274,10 @@ function out = beast(y, varargin)
    metadata.time             = time;
  
    if strcmp(metadata.season, 'svd')
-       if isempty(freq)|| freq <= 1.1 || isnan(freq)
-           error("When season=svd, freq must be specified and larger than 1.");
-       end
-       metadata.svdTerms = svdbasis(y, freq, deseasonalize);
+      % if isempty(freq)|| freq <= 1.1 || isnan(freq)
+      %     error("When season=svd, freq must be specified and larger than 1.");
+      % end
+      % metadata.svdTerms = svdbasis(y, freq, deseasonalize);
    end
    metadata.missingValue     = NaN;
    metadata.maxMissingRate   = 0.75;
@@ -338,7 +344,11 @@ function out = beast(y, varargin)
    extra.numParThreads        = 0;
 %......End of displaying extra ......
 %%
-  out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ if (gui)
+    out=Rbeast('beastv4demo',y,metadata, prior,mcmc, extra);
+ else
+    out=Rbeast('beastv4',y,metadata, prior,mcmc, extra);
+ end
 end
 
 
@@ -352,186 +362,7 @@ function value=GetValueByKey(KeyList, ValList, key,defaultValue)
    end
 end
 
-%% Geth SVD-based basis vector
-function U=svdbasis(x, p , residual)
-
-x  = x(:);
-n  = length(x);
-
-goodidx = find(~isnan(x));
-ngood   = length(goodidx);
  
-if(n==ngood)
-    SSS=getseason_polyfit(x,p,residual) ;
-else
-    SSS=getseason_polyfit_bad(x,p,goodidx,residual);
-end
-
-
-M    =  floor(n/p);
-SSS  = reshape(SSS(1:(M*p)), p,M);
-[u, s,v] = svd(SSS);    
-
-U     = zeros(n,p);
-M1    = floor((n+(p-1))/p);
-for i=1:p
-    ui=u(:,i);
-    ui=(ui-mean(ui))/std(ui);
-    ucol=repmat(ui,M1);    
-    U(:,i)=ucol(1:n);
-end
-end
-
-%%
-function beta=getbeta(X,Y)
-  XtX=X'*X;
-  XtY=X'*Y;
-  beta=linsolve(XtX,XtY);
-end
-
-function SSS=getseason_polyfit (x, p, residual)
-
-%%
-n  = length(x);
-p1 = floor(p/2);
-p2 = p-p1-1;
-
-maxTrendOder = 7;
-t            = (1:n)';
-XXX          = zeros(n, p1*2+1+maxTrendOder);
-for i = 1:p1
-    ttt = 2*pi*i*t/p;
-    XXX(:,(i-1)*2+1)=sin(ttt);
-    XXX(:, i*2)     =cos(ttt);
-end
-
-t             = t/n;
-t             =zscore(t);
-XXX(:,p1*2+1) = 1;
-y             = x(:);
-%%
-bestAIC  =1e300;
-bestOrder=0;
-for  order = 1:maxTrendOder 
-    xdim        = p1*2+1+order;
-    XXX(:, xdim)=t.^order;
-    beta        = getbeta(XXX(:,1:xdim), y);%XXX(:,1:xdim)\y;
-    yfit        = XXX(:,1:xdim)* beta;
-    res         = y-yfit;
-    newAIC      = n*log(sum(res.*res))+2*(order+1);
-    
-    if (newAIC > bestAIC+2)
-        break
-    else
-        if (newAIC < bestAIC)
-            bestAIC   =newAIC;
-            bestOrder=order;
-        end
-        
-    end
-end % for  order = 1:maxTrendOder
-%%
- 
-XXX     = XXX(:, 1:(p1*2+bestOrder+1) );
-beta    = getbeta(XXX,y);%XXX\y;
-trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-season = y-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-
-end
-
-function SSS=getseason_polyfit_bad(x, p, goodIdx, residual)
-
-ngood=sum(goodIdx);
-%%
-n  = length(x);
-p1 = round(p/2);
-p2 = p-p1-1;
-
-maxTrendOder = 7;
-t            = (1:n)';
-XXX          = zeros(n, p1*2+1+maxTrendOder);
-for i = 1:p1
-    ttt = 2*pi*i*t/p;
-    XXX(:,(i-1)*2+1)=sin(ttt);
-    XXX(:, i*2)     =cos(ttt);
-end
-
-t             =  t/n;
-XXX(:,p1*2+1) = 1;
-y             = x(:);
-%%
-bestAIC  =1e300;
-bestOrder=0;
-for  order = 1:maxTrendOder
-    xdim       = p1*2+1+order;
-    XXX(:, xdim)=t.^order;
-    beta       = getbeta( XXX(goodIdx,1:xdim),  y(goodIdx) );%XXX(goodIdx,1:xdim)\y(goodIdx);
-    yfit       = XXX(goodIdx,1:xdim)* beta;
-    res        = y(goodIdx)-yfit;
-    newAIC     = ngood*log(sum(res.*res))+2*(order+1);
-    
-    if (newAIC > bestAIC+2)
-        break;
-    else
-        if (newAIC < bestAIC)
-            bestAIC   =newAIC;
-            bestOrder=order;
-        end
-        
-    end
-end % for  order = 1:maxTrendOder
-
-XXX     = XXX(:,1:(p1*2+bestOrder+1));
-beta    = getbeta(XXX(goodIdx,:),y(goodIdx));% XXX(goodIdx,:)\y(goodIdx);
-trend   = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-season = y-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-
-
-XXX            = XXX(:, 1:(p1*2+bestOrder+1) );
-beta           = XXX(goodIdx,:)\y(goodIdx);
-trend          = XXX(:, (p1*2+1):(p1*2+bestOrder+1))*beta((p1*2+1):(p1*2+bestOrder+1));
-
-yfull          = XXX*beta;
-yfull(goodIdx) = y(goodIdx);
-
-season = yfull-trend;
-
-if (residual)
-    seasonAvg=season;
-    for i=1:p
-        idx           =i:p:n;
-        seasonAvg(idx)=mean(season(idx));
-    end
-    SSS=season-seasonAvg;
-else
-    SSS=season;
-end
-end
-
 
 
 

@@ -168,7 +168,7 @@ static  INLINE void  F77__sgemm(int transa, int transb, int m, int n, int k, F32
 	                  lda, B, ldb, beta, C, ldc)  \
 	F77__sgemm(CBLAS_TRANSPOSE_A, CBLAS_TRANSPOSE_B, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 
-/* END>>>>>>>:  C interfaces to the Fortran Math functions            */
+/* CODE_EOF>>>>>>>:  C interfaces to the Fortran Math functions            */
 
 
 /***************************************************************************************/
@@ -308,7 +308,7 @@ void F77__CALL(RSMNSD)(F32 * SX, int * N, F32PTR MEAN, F32PTR  STD);
 F32 F77__CALL(RSDOT)(const int *n, const F32 * x, const int *incx, const F32PTR y, const int *incy);
 void F77__CALL(RSSCAL)(const int *n, const F32 * alpha, F32PTR x, const int *incx);
 void F77__CALL(RIADDC)(const int *C, int *x, const int *N);
-/*Declarations of Vector-based Fortran math funcitions Vector-based Fortran math funcitions END>>>>>>
+/*Declarations of Vector-based Fortran math funcitions Vector-based Fortran math funcitions CODE_EOF>>>>>>
 */
 
 /************************************************************************/
@@ -416,7 +416,7 @@ static INLINE void  F77__iaddc(const int C, int *X, const int N){
 }
 
 /************************************************************************/
-/****** END : C interfaces to the Fortran Math functions          *******/
+/****** CODE_EOF : C interfaces to the Fortran Math functions          *******/
 /************************************************************************/
 
 

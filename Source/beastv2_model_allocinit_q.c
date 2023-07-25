@@ -252,7 +252,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 		
 
 	I32 isComponentFixed[3] = {0,0,0};
-	MODEL.did = MODEL.sid = MODEL.tid = MODEL.oid = -1;
+	MODEL.did = MODEL.sid = MODEL.tid = MODEL.oid = MODEL.vid= -1;
 	for (int i = 0; i < NumBasis; i++) 	{
 
 		BEAST2_BASIS_PTR	basis	= MODEL.b + i;
@@ -540,8 +540,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			I32 sMAXORDER  = opt->io.meta.deseasonalize? opt->io.meta.period: basis->prior.maxOrder;
 			SVD->TERMS     = MyALLOC(*MEM, N*sMAXORDER ,              F32, 64);
 			SVD->SQR_CSUM  = MyALLOC(*MEM, (N + 1L) * sMAXORDER ,     F32, 64);
-			CopyNumericArrToF32Arr(SVD->TERMS, opt->io.meta.svdTerms, N* sMAXORDER);
-			{
+			if(opt->io.meta.svdTerms_Object)	{
+				CopyNumericObjToF32Arr(SVD->TERMS, opt->io.meta.svdTerms_Object, N* sMAXORDER);
 				F32PTR ptr  = SVD->TERMS;
 				F32PTR ptr1 = SVD->SQR_CSUM; 
 
@@ -552,6 +552,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 						ptr1 += N + 1;
 				} // or (rI32 order = 1; order <= maxSeasonOrder; order++)
 			}
+ 
 			/****************************************************************************/
 			//				Pre-compute the scaling factor
 			/****************************************************************************/

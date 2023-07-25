@@ -8,13 +8,11 @@
 
 
 
- 
 
-
-void  (*i32_add_val_inplace)(const int C, const I32PTR X, const int N)=NULL;
-I32   (*i32_sum)(const I32PTR X, const int N)=NULL;
-void  (*f32_fill_val)(const F32 C, F32PTR X, int N);
-F32   (*f32_sum)(const F32PTR X, int N)=NULL;
+void (*i32_add_val_inplace)(const int C, const I32PTR X, const int N)   = NULL;
+I32  (*i32_sum)(const I32PTR X, const int N)                            = NULL;
+void (*f32_fill_val)(const F32 C, F32PTR X, int N);
+F32  (*f32_sum)(const F32PTR X, int N)=NULL;
 void (*f32_add_vec)(const F32PTR SRC1, const F32PTR SRC2, F32PTR DST, int N);
 void (*f32_sub_vec)(const F32PTR SRC1, const F32PTR SRC2, F32PTR DST, int N);
 void (*f32_add_vec_inplace)(const F32PTR SRC, const F32PTR DST, const int N);
@@ -80,7 +78,8 @@ void  (*f32_hinge_pos)(const F32PTR X, const F32PTR Y, const F32 knot, const int
 void  (*f32_step_neg)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
 void  (*f32_step_pos)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 knot, const int N);
 void  (*f32_axpy_inplace)(const F32 a, const F32PTR x, F32PTR y, const int N);
-void print_funcs() {
+
+void print_funcs(void) {
 
 	r_printf("\n\n"  );
 	r_printf("%s:%05x\n",  "i32_add_val_inplace", i32_add_val_inplace);
@@ -162,6 +161,8 @@ void f32_cumsum_inplace(const F32PTR X, int N) {
 	for (; i < N; ++i) {
 		csum += X[i];     X[i] = csum;
 	}
+
+	#undef UNROLL_NUMBER
 }
 void f32_cumsumsqr_inplace(const F32PTR X, int N) {
 
@@ -215,6 +216,7 @@ void f32_sumfilter(const F32PTR X,  F32PTR Y, int N, int winSize) {
 		csumRightEnd += X[i];
 	}
  
+		#undef UNROLL_NUMBER
 }
 F32  f32_corr_rmse_nan(const F32PTR X,  const F32PTR Y, int N, F32PTR rmse) {
 
@@ -246,8 +248,10 @@ F32  f32_corr_rmse_nan(const F32PTR X,  const F32PTR Y, int N, F32PTR rmse) {
 	*rmse = sqrtf(DXY2 / n);
  
 	return r;
+
+		#undef UNROLL_NUMBER
 }
-void  f32_truncate_inplace(const F32PTR X,  F32 value, int N) {
+void f32_truncate_inplace(const F32PTR X,  F32 value, int N) {
 
 	#define UNROLL_NUMBER  4
 	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
@@ -266,6 +270,7 @@ void  f32_truncate_inplace(const F32PTR X,  F32 value, int N) {
 		X[i] = X[i] > value ? value : X[i];
 	}
  
+		#undef UNROLL_NUMBER
 }
 
 I32  f32_find_nans(const F32PTR X, int N, I32PTR index ) {
@@ -294,6 +299,7 @@ I32  f32_find_nans(const F32PTR X, int N, I32PTR index ) {
 		nMissing += X[i] != X[i];
 	}
 	return nMissing;
+   #undef UNROLL_NUMBER
 }
 //https://stackoverflow.com/questions/20065406/whats-the-largest-denormalized-and-normalized-number64bit-iee-754-1985
 // Denormalized floating nubmer are 10x slower to process
@@ -325,6 +331,70 @@ On SandyBridge Intel has fixed this for addition – I was unable to produce any
 
 #include "math.h"
 
+// the index is zero-based
+I32 i32_maxidx(const I32PTR  X, const  int N, I32PTR val) {
+
+	#define UNROLL_NUMBER  2 // it would be even slower if changed to 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+
+	I32 maxVal = X[0];
+	I32 maxIdx = 0;
+	I32 i = 0;
+	for (; i < regularPart; i+= UNROLL_NUMBER) {
+		I32 val;
+		I32 idx = X[i + 1] > X[i] ? (val=X[i+1],i + 1) : (val = X[i], i);
+		if (maxVal < val) {
+			maxVal = val;
+			maxIdx = idx;
+		}		
+	}
+
+	for (; i < N; i++) {
+		if (maxVal < X[i]) {
+			maxVal = X[i];
+			maxIdx = i;
+		}
+	}
+
+	*val = maxVal;
+	return maxIdx;
+
+	#undef UNROLL_NUMBER
+}
+
+// the index is zero-based
+//F77__sminidx(F32* X, int N, F32PTR val, int* idx);
+I32 i32_minidx(const I32PTR  X, const int  N, I32PTR val) {
+
+	#define UNROLL_NUMBER  2 // it would be even slower if changed to 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+
+	I32 minVal = X[0];
+	I32 minIdx = 0;
+	I32 i = 0;
+	for (; i < regularPart; i+= UNROLL_NUMBER) {
+		I32 val;
+		I32 idx = X[i + 1] < X[i] ? (val=X[i+1],i + 1) : (val = X[i], i);
+		if (minVal > val) {
+			minVal = val;
+			minIdx = idx;
+		}		
+	}
+
+	for (; i < N; i++) {
+		if (minVal > X[i]) {
+			minVal = X[i];
+			minIdx = i;
+		}
+	}
+
+	*val = minVal;
+	return minIdx;
+
+	#undef UNROLL_NUMBER
+}
+
+
 F32 f32_sumlog(const F32PTR  X, const int N) {
 // first take the products of multiple elements to reduce the number of calling logf
 	F64 sumlog	= 0;
@@ -341,7 +411,6 @@ F32 f32_sumlog(const F32PTR  X, const int N) {
 	sumlog += logf(cumprod);
 	return sumlog;
 }
- 
 
 I32  i08_find_nth_onebyte_binvec(U08PTR binvec, I32 N, I32 nth)
 {
@@ -393,6 +462,7 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec, I32 N, I32 nth)
 }
 
 #include "stdio.h"
+
 I32  i08_find_nth_onebyte_binvec_v2(U08PTR binvec, I32 N, I32 numOneBytes, U32 rnd)
 {
 	static int I1 = 0, I2 = 0;
@@ -452,30 +522,84 @@ I32  i08_find_nth_onebyte_binvec_v2(U08PTR binvec, I32 N, I32 numOneBytes, U32 r
 	return nthPos;
 }
 
+I64 i08_sum(I08PTR x, int N) {
 
-
-void f32_transpose_inplace(F32PTR Mat, I32 ROW, I32 COL)
-{ //w: number of rows, h: number of columns
-  //https: //rosettacode.org/wiki/Matrix_transposition#C
-	
-	I32 totalElement = ROW * COL;
-	for (I32 start = 0; start < totalElement; start++) {
-		I32 next = start;
-		I32 i    = 0;
-		do {
-			++i;
-			next = (next % COL) * ROW + next / COL;
-		} while (next > start);
-		if (next < start || i == 1) continue;
-
-		F32 tmp = Mat[next = start];
-		do {
-			i = (next % COL) * ROW + next / COL;
-			Mat[next] = (i == start) ? tmp : Mat[i];
-			next = i;
-		} while (next > start);
-	}
+#define UNROLL_NUMBER 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+	// vectorsize. This works only if vectorsize is a power of 2)
+	I32 i   = 0;
+	I64 sum = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) sum += (I64) x[i] + (I64)x[i+1] + (I64)x[i+2] + (I64)x[i+3];
+	for (; i < N; ++i)  sum += (I64) x[i];
+	return sum;
+#undef UNROLL_NUMBER
 }
+
+int i32_insert_noduplicate(I32PTR x, I32 N, I32PTR Xnew, I32 Nnew) {
+
+	for (int i = 0; i < Nnew; i++) {
+		int newvalue = Xnew[i];
+		int matched = _False_;
+		for (int j = 0; j < N; j++) {
+			if (x[j] == newvalue) {
+				matched = _True_;
+				break;
+			}
+		}
+		if (!matched) {
+			x[N++] = newvalue;
+		}
+	}
+
+	// the number of elements of the new vector
+	return N;
+}
+
+int i32_unique_inplace(I32PTR x, int N) {
+	int Nuniq = 0;
+	int next  = 0;
+	while (next < N) {
+		int xcur = x[next];
+		// first, move Inext foward to check if consectuve elements are the same
+		while (next < (N - 1) && x[next + 1] == xcur) {
+			next++;
+		}
+
+		int matched = 0;
+		for (int i = 0; i < Nuniq; ++i) {
+			if (x[i] == xcur) {
+				matched = 1;
+				break;
+			}
+		}
+		if (!matched) {
+			x[Nuniq++] = xcur;
+		}
+		next++;
+	}
+
+	return Nuniq;
+}
+
+int i32_exclude_inplace(I32PTR x, int N, I32PTR excludeList, I32 Nexclude) {
+
+	if (x == NULL || excludeList == NULL) return N;
+
+	for (int i = 0; i < Nexclude && N>0; i++) {
+		int xcur = excludeList[i];
+		for (int j = 0; j < N; j++) {
+			if (x[j] == xcur) {
+				// find a match; move the last element to fill the pos
+				x[j] = x[N - 1];
+				N--;
+				break;
+			}
+		}
+	}
+	return N;
+}
+
 
 void f32_fill_val_matrixdiag(F32PTR mat, const F32 value, I32 N) {
 	for (int i = 0; i < N; ++i) {
@@ -499,14 +623,15 @@ F32 f32_sum_matrixdiag(F32PTR mat,  I32 N) {
 	}
 	return sum;
 }
+
 F32 f32_abs_sum(F32PTR X, I32 N) {
 	F64 sum = 0;
 	for (int i = 0; i < N; ++i) {
-		sum += fabs(X[i]);
-		 
+		sum += fabs(X[i]);		 
 	}
 	return sum;
 }
+
 void f32_mat_multirows_extract_set_by_scalar(F32PTR X, I32 ROW, I32 COL, F32PTR Xcopy, I32PTR RowIndices, I32 nRows, F32 newValue) {
 	// equivalent to Matlab: Xcopy=X(idx,:);X(idx,:)=val;
 	int i = 0;
@@ -520,41 +645,9 @@ void f32_mat_multirows_set_by_submat(F32PTR X, I32 ROW, I32 COL, F32PTR Xcopy, I
 }
 
 
-void f32_to_strided_f32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset)
-{
-	dst = (F32PTR)dst + dstOffset;
 
-	if (stride == 1)
-		memcpy(dst, src, sizeof(F32) * N);
-	else {
-
-		#define UNROLL_NUMBER 4
-		const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
-		// (AND-ing with -vectorsize will round down to nearest lower multiple of 
-		// vectorsize. This works only if vectorsize is a power of 2)
-		I32 i = 0;
-		for (; i < regularPart; i += UNROLL_NUMBER) {
-			*(F32PTR)dst              = src[i];
-			*( (F32PTR)dst+stride)    = src[i+1];
-			*( (F32PTR)dst+2*stride)  = src[i+2];
-			*( (F32PTR)dst+3*stride)  = src[i+3];
-
-			dst = (F32PTR)dst + 4*stride;
-		}
-		for (; i < N; ++i) {
-			*(F32PTR)dst = src[i];			
-			dst = (F32PTR)dst + stride;
-		}	 
-		
-	 
-	} //stide ==1
- 
-}
-
-void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset)
-{
+void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
 	dst = (F64PTR)dst + dstOffset;
-
 	#define UNROLL_NUMBER 4
 	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
 	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
@@ -565,19 +658,95 @@ void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffs
 		*((F64PTR)dst + stride) = src[i + 1];
 		*((F64PTR)dst + 2 * stride) = src[i + 2];
 		*((F64PTR)dst + 3 * stride) = src[i + 3];
-
 		dst = (F64PTR)dst + 4 * stride;
 	}
 	for (; i < N; ++i) {
 		*(F64PTR)dst = src[i];
 		dst = (F64PTR)dst + stride;
 	}
-
-
-
- 
- 
+#undef UNROLL_NUMBER
 }
+void f32_to_strided_i64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
+	dst = (I64PTR)dst + dstOffset;
+	#define UNROLL_NUMBER 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+	// vectorsize. This works only if vectorsize is a power of 2)
+	I32 i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		*(I64PTR)dst                = src[i];
+		*((I64PTR)dst + stride)     = src[i + 1];
+		*((I64PTR)dst + 2 * stride) = src[i + 2];
+		*((I64PTR)dst + 3 * stride) = src[i + 3];
+		dst = (I64PTR)dst + 4 * stride;
+	}
+	for (; i < N; ++i) {
+		*(I64PTR)dst = src[i];
+		dst = (I64PTR)dst + stride;
+	}
+}
+void f32_to_strided_f32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
+	dst = (F32PTR)dst + dstOffset;
+	if (stride == 1)
+		memcpy(dst, src, sizeof(F32) * N);
+	else {
+		#define UNROLL_NUMBER 4
+		const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+		// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+		// vectorsize. This works only if vectorsize is a power of 2)
+		I32 i = 0;
+		for (; i < regularPart; i += UNROLL_NUMBER) {
+			*(F32PTR)dst              = src[i];			*( (F32PTR)dst+stride)    = src[i+1];
+			*( (F32PTR)dst+2*stride)  = src[i+2];		*( (F32PTR)dst+3*stride)  = src[i+3];
+			dst = (F32PTR)dst + 4*stride;
+		}
+		for (; i < N; ++i) {
+			*(F32PTR)dst = src[i];			
+			dst = (F32PTR)dst + stride;
+		}	 	 
+	} //stide ==1 
+
+#undef UNROLL_NUMBER
+}
+void f32_to_strided_i32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
+	dst = (I32PTR)dst + dstOffset;
+	#define UNROLL_NUMBER 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+	// vectorsize. This works only if vectorsize is a power of 2)
+	I32 i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		*(I32PTR)dst = src[i];			*((I32PTR)dst + stride) = src[i + 1];
+		*((I32PTR)dst + 2 * stride) = src[i + 2];		*((I32PTR)dst + 3 * stride) = src[i + 3];
+		dst = (I32PTR)dst + 4 * stride;
+	}
+	for (; i < N; ++i) {
+		*(I32PTR)dst = src[i];
+		dst = (I32PTR)dst + stride;
+	} 
+#undef UNROLL_NUMBER
+}
+void f32_to_strided_i16(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
+	dst = (I16PTR)dst + dstOffset;
+	#define UNROLL_NUMBER 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+	// vectorsize. This works only if vectorsize is a power of 2)
+	I32 i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		*(I16PTR)dst                = src[i];		
+		*((I16PTR)dst + stride) = src[i + 1];
+		*((I16PTR)dst + 2 * stride) = src[i + 2];	
+		*((I16PTR)dst + 3 * stride) = src[i + 3];
+		dst = (I16PTR)dst + 4 * stride;
+	}
+	for (; i < N; ++i) {
+		*(I16PTR)dst = src[i];
+		dst = (I16PTR)dst + stride;
+	} 
+#undef UNROLL_NUMBER
+}
+
 
  /*
 	// If omissonVaue is not an NaN
@@ -591,34 +760,8 @@ void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffs
  */
  
 
-void f32_from_strided_f32(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset)
-{ 
-		src = (F32PTR)src + srcOffset;
-		if (srcStride == 1) {
-			memcpy(dst, src, sizeof(F32) * N);
-		}
-		else {
-			   #define UNROLL_NUMBER 4
-				const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
-				// (AND-ing with -vectorsize will round down to nearest lower multiple of 
-				// vectorsize. This works only if vectorsize is a power of 2)
-				I32 i = 0;
-				for (; i < regularPart; i += UNROLL_NUMBER) {
-					  dst [i]  = *(F32PTR)src;
-					  dst[i+1] = *((F32PTR)src + srcStride);
-					  dst[i+2] = *((F32PTR)src + 2*srcStride);
-					  dst[i+3] = *((F32PTR)src + 3*srcStride);
+void f32_from_strided_f64(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset) { 
 
-					  src = (F32PTR)src + 4* srcStride;
-				}
-				for (; i < N; ++i) {
-					 dst[i] = *(F32PTR)src;
-					 src = (F32PTR)src + srcStride;
-				}	
-		}
-}
-void f32_from_strided_f64(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset)
-{ 
 	src = (F64PTR)src + srcOffset;
 	#define UNROLL_NUMBER 4
 	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
@@ -626,21 +769,22 @@ void f32_from_strided_f64(F32PTR dst, VOID_PTR src, int N, int srcStride, int sr
 	// vectorsize. This works only if vectorsize is a power of 2)
 	I32 i = 0;
 	for (; i < regularPart; i += UNROLL_NUMBER) {
-		dst[i]     = *(F64PTR)src;
-		dst[i + 1] = *((F64PTR)src + srcStride);
-		dst[i + 2] = *((F64PTR)src + 2 * srcStride);
-		dst[i + 3] = *((F64PTR)src + 3 * srcStride);
+		dst[i]     = (F32) *(F64PTR)src;
+		dst[i + 1] = (F32) *((F64PTR)src + srcStride);
+		dst[i + 2] = (F32) *((F64PTR)src + 2 * srcStride);
+		dst[i + 3] = (F32) *((F64PTR)src + 3 * srcStride);
 
 		src = (F64PTR)src + 4 * srcStride;
 	}
 	for (; i < N; ++i) {
-		dst[i] = *(F64PTR)src;
+		dst[i] = (F32) *(F64PTR)src;
 		src = (F64PTR)src + srcStride;
 	}
-		 
+#undef UNROLL_NUMBER		 
 }
-void f32_from_strided_i64(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset)
-{ 
+
+void f32_from_strided_i64(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset) { 
+
 	src = (I64PTR)src + srcOffset;
 	#define UNROLL_NUMBER 4
 	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
@@ -659,7 +803,35 @@ void f32_from_strided_i64(F32PTR dst, VOID_PTR src, int N, int srcStride, int sr
 		dst[i] = *(I64PTR)src;
 		src = (I64PTR)src + srcStride;
 	}
-		 
+#undef UNROLL_NUMBER	 
+}
+
+void f32_from_strided_f32(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset) {
+
+	src = (F32PTR)src + srcOffset;
+	if (srcStride == 1) {
+		memcpy(dst, src, sizeof(F32) * N);
+	}
+	else {
+#define UNROLL_NUMBER 4
+		const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+		// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+		// vectorsize. This works only if vectorsize is a power of 2)
+		I32 i = 0;
+		for (; i < regularPart; i += UNROLL_NUMBER) {
+			dst[i] = *(F32PTR)src;
+			dst[i + 1] = *((F32PTR)src + srcStride);
+			dst[i + 2] = *((F32PTR)src + 2 * srcStride);
+			dst[i + 3] = *((F32PTR)src + 3 * srcStride);
+
+			src = (F32PTR)src + 4 * srcStride;
+		}
+		for (; i < N; ++i) {
+			dst[i] = *(F32PTR)src;
+			src = (F32PTR)src + srcStride;
+		}
+	}
+#undef UNROLL_NUMBER
 }
 void f32_from_strided_i32(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset)
 { 
@@ -681,7 +853,7 @@ void f32_from_strided_i32(F32PTR dst, VOID_PTR src, int N, int srcStride, int sr
 		dst[i] = *(I32PTR)src;
 		src = (I32PTR)src + srcStride;
 	}
-		 
+#undef UNROLL_NUMBER	 
 }
 
 void f32_from_strided_i16(F32PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset)
@@ -704,23 +876,79 @@ void f32_from_strided_i16(F32PTR dst, VOID_PTR src, int N, int srcStride, int sr
 		dst[i] = *(I16PTR)src;
 		src = (I16PTR)src + srcStride;
 	}
-		 
+#undef UNROLL_NUMBER	 
 }	
  
-void f32_set_nan_by_value(F32PTR a, I32 N, F32 missingValue) {
+
+void f64_from_strided_f64(F64PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset) { 
+
+	src = (F64PTR)src + srcOffset;
+	#define UNROLL_NUMBER 4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;
+	// (AND-ing with -vectorsize will round down to nearest lower multiple of 
+	// vectorsize. This works only if vectorsize is a power of 2)
+	I32 i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		dst[i]     = *(F64PTR)src;
+		dst[i + 1] = *((F64PTR)src + srcStride);
+		dst[i + 2] = *((F64PTR)src + 2 * srcStride);
+		dst[i + 3] = *((F64PTR)src + 3 * srcStride);
+		src = (F64PTR)src + 4 * srcStride;
+	}
+	for (; i < N; ++i) {
+		dst[i] = *(F64PTR)src;
+		src = (F64PTR)src + srcStride;
+	}
+#undef UNROLL_NUMBER	 
+}
+
+void f32_to_strided_mem(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset, DATA_TYPE dstDtype) {
+	if (dstDtype == DATA_FLOAT) 		    f32_to_strided_f32(src, dst, N, stride, dstOffset);
+	else if (dstDtype == DATA_DOUBLE)    	f32_to_strided_f64(src, dst, N, stride, dstOffset);
+	else if (dstDtype == DATA_INT64)    	f32_to_strided_i64(src, dst, N, stride, dstOffset);
+	else if (dstDtype == DATA_INT32)    	f32_to_strided_i32(src, dst, N, stride, dstOffset);
+	else if (dstDtype == DATA_INT16)    	f32_to_strided_i16(src, dst, N, stride, dstOffset);
+}
+
+void f32_from_strided_mem(F32PTR dst,  VOID_PTR src, int N, int srcStride, int srcOffset, DATA_TYPE srcDataType) {
+
+	if      (srcDataType== DATA_FLOAT) 	   f32_from_strided_f32(dst, src, N, srcStride, srcOffset);
+	else if (srcDataType == DATA_DOUBLE)   f32_from_strided_f64(dst, src, N, srcStride, srcOffset);
+	else if (srcDataType == DATA_INT64)    f32_from_strided_i64(dst, src, N, srcStride, srcOffset);
+	else if (srcDataType == DATA_INT32) {
+		f32_from_strided_i32(dst, src, N, srcStride, srcOffset);
+		#if R_INTERFACE==1
+		//https://www.markvanderloo.eu/yaRb/2012/07/08/representation-of-numerical-nas-in-r-and-the-1954-enigma/
+		// In R, the smallest negative interger is treated as NA
+		I32 INTMIN    = 0x80000001;
+		F32 NAinteger = (F32)(INTMIN);  //the most negative integer
+		f32_set_value_to_nan(dst, N, NAinteger);
+		#endif
+	}
+	else if (srcDataType == DATA_INT16)	   f32_from_strided_i16(dst, src, N, srcStride, srcOffset);
+
+}
+
+void arr_from_strided_mem(VOID_PTR dst, VOID_PTR src, int N, int srcStride, int srcOffset, DATA_TYPE srcDstDataType) {
+
+	if (srcDstDataType == DATA_FLOAT) {
+		f32_from_strided_f32(dst, src, N, srcStride, srcOffset);
+	} else if (srcDstDataType == DATA_DOUBLE) {
+		f64_from_strided_f64(dst, src, N, srcStride, srcOffset);
+	}
+
+}
+
+void f32_set_value_to_nan(F32PTR a, I32 N, F32 missingValue) {
 
 	if (missingValue != missingValue)		
 		return;
+		
+	/* TODO: THis is terribly wrong bcz the first element a[0] is never visited and a[n] is accidently visted
+	  for (I32 i = N; i > 0; i--) {	a[i] = fabsf(a[i]- missingValue) < 1e-10 || IsInf(a[i]) ?  nan: a[i] ;} */
 
 	// If omissonVaue is not an NaN
-	F32 nan      = getNaN();
-	/*
-	TODO: THis is terribly wrong bcz the first element a[0] is never visited and a[n]
-	is accidently visted
-	for (I32 i = N; i > 0; i--) {
-		a[i] = fabsf(a[i]- missingValue) < 1e-10 || IsInf(a[i]) ?  nan: a[i] ;
-	}
-	*/
+	F32 nan = getNaN();
 	for (I32 i = N-1; i >= 0; i--) {
 		a[i] = fabsf(a[i] - missingValue) < 1e-10 || IsInf(a[i]) ? nan : a[i];
 	}
@@ -730,22 +958,25 @@ void f32_set_nan_by_value(F32PTR a, I32 N, F32 missingValue) {
 int f32_normalize_multicols_zeroout_nans(F32PTR Y, I32PTR BadRowIndices, I32 ldy, I32 N, I32 q, F32PTR mean, F32PTR sd) {
 	// BadRowIndices must be at least of length N.
 
-	if (q == 1) {
-		// only 1 col needs to be normalized
+    /***********************************************/
+	// If only 1 col needs to be normalized
+	/***********************************************/
+	if (q == 1) {		
 		I32     nMissing = 0;
 		F64     sumY     = 0,  sumYY = 0;
 		for (I32 i = 0; i < N; i++) {
-			if (Y[i] != Y[i]) 
-				BadRowIndices[nMissing++] = i;			
-			else {
-				sumY  += Y[i];
-				sumYY += Y[i] * Y[i];
-			}
+			BadRowIndices[nMissing] = i;
+			nMissing                = nMissing + (Y[i] != Y[i] || IsInf(Y[i])  );
+
+			F32  y = (Y[i] != Y[i]  || IsInf(Y[i]) ) ? 0.f : Y[i]; // Is NAN or Inf
+ 			sumY  += y;
+			sumYY += y*y;		 
+			
 		}
-		I32 n = N - nMissing;
+		I32 n      = N - nMissing;
 		F32 MEAN32 = sumY / n;
 		F64 SD32   = (sumYY / n - MEAN32 * MEAN32); //https://www.mun.ca/biology/scarr/Simplified_calculation_of_variance.html
-		SD32 = SD32 > 0 ? sqrt(SD32) : 1.f;
+		SD32       = SD32 > 0 ? sqrt(SD32) : 1.f;
 
 		I32   jOmit = 0;
 		for (I32 i = 0; i < N; ++i) {
@@ -770,19 +1001,20 @@ int f32_normalize_multicols_zeroout_nans(F32PTR Y, I32PTR BadRowIndices, I32 ldy
 	memset(isNANValue,0,sizeof(I32)* N);
 	for (I32 i = 0; i < q; i++) {
 		for (I32 j = 0; j < N; j++) { 	 
-			if ( Y[j]!= Y[j])	isNANValue[j] = 1;			 
+			// Is NAN or Inf
+			if ( Y[j]!= Y[j] || IsInf(Y[i]) ) 	isNANValue[j] = 1;
 		}
 		Y += ldy;
 	}
 	Y -= ldy * q;
 
     // Find the indices from the binary vector isNNAValue
-	// isNANValue ad BadRowindices point to the same buf
+	// isNANValue and BadRowindices point to the same buf
 	I32 nMissing = 0; 	
 	for (I32 j = 0; j < N; j++) {
 		I32 keep = BadRowIndices[j];
 		BadRowIndices[nMissing] = j;
-		nMissing += keep;
+		nMissing               += keep;
 	}
 
 
@@ -822,10 +1054,9 @@ int f32_normalize_multicols_zeroout_nans(F32PTR Y, I32PTR BadRowIndices, I32 ldy
 	}
 
 	return nMissing;
-
-
-
 }
+
+
 void f32_normalize_std_avg_inplace(F32PTR X, I32 N, F32PTR avg, F32PTR std) {
 	f32_avgstd(X, N, avg, std);
 	F32 gain    = 1 / std[0];
@@ -847,6 +1078,330 @@ void f32_normalize_x_factor_inplace(F32PTR X, I32 N, F32 factor) {
 	f32_scale_inplace(gain, offset, X, N);
 }
 
+void f32_interp1dvec_cycled_inplace(F32PTR Y, int P, I32PTR goodIndices, int Pgood) {
+	// Y has all the values filled at the goodIndices. The function predicts the missing 
+	// values at the bad points, assuming a periodic boundary condition
 
+	int lastIdx = goodIndices[Pgood - 1];
+	int lastGoodIdx = lastIdx - P;
+	for (int j = 0; j < Pgood; j++) {
+		int curGoodIdx = goodIndices[j];
+		if ((lastGoodIdx + 1) < curGoodIdx) {
+			// Bad vaules located
+			F32 curv = Y[curGoodIdx];
+			F32 lastv = Y[lastGoodIdx >= 0 ? lastGoodIdx : lastGoodIdx + P];
+			F32 full = curGoodIdx - lastGoodIdx;
+			for (int k = lastGoodIdx + 1; k < curGoodIdx; k++) {
+				Y[k >= 0 ? k : k + P] = lastv * (curGoodIdx - k) / full + curv * (k - lastGoodIdx) / full;
+			}
+		}
+		lastGoodIdx = curGoodIdx;
+	}
+}
+
+
+void f32_rep_vec1d_upto_inplace(F32PTR Y, int P, int N) {
+	// Y has P values initially, and repeat it up to a length of N
+	// N may be not an integer multiplicity of P
+    
+	int Ncylce_int = N / P;
+	for (int i = 1; i < Ncylce_int; ++i) {
+		memcpy(Y + i * P, Y, P * sizeof(F32));
+	}
+
+	int j = 0;
+	for (int i = Ncylce_int * P; i < N; i++) {
+		Y[i] = Y[j++];
+	}
+}
+
+void f32_compute_seasonal_avg(F32PTR y, int N, int P, F32PTR mean, I32PTR NumGoodPtsPerTime) {
+	// mean and NUmgoodPtsPer time must at least have a length of P
+	// NumGoodPtsPerTime cannot be NULL
+	memset(NumGoodPtsPerTime, 0, P * sizeof(I32));
+		
+	if ( mean == NULL) {
+		int p = 0;
+		for (int i = 0; i < N; i++) {
+			NumGoodPtsPerTime[p] += (y[i] == y[i]);
+			p++;
+			p = (p == P) ? 0 : p;
+		}
+	} else {
+		memset(mean, 0, P * sizeof(F32));;
+		int p = 0;
+		for (int i = 0; i < N; i++) {
+			NumGoodPtsPerTime[p] += (y[i] == y[i]);
+			mean[p]              += (y[i] == y[i])? y[i]:0.f;
+			p++;
+			p = (p == P) ? 0 : p;
+		}
+
+		for (int i = 0; i < P; i++) {
+			mean[i] = (NumGoodPtsPerTime[i] > 0) ? mean[i] / NumGoodPtsPerTime[i] : getNaN();
+		}	
+	}
+
+}
+
+F32 f32_nansum(F32PTR x, int N) {
+
+	#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+
+	F32  sum = 0;
+	int  i   = 0;	
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		sum += x[i] == x[i] ? x[i] : 0;
+		sum += x[i + 1] == x[i + 1] ? x[i + 1] : 0;
+		sum += x[i + 2] == x[i + 2] ? x[i + 2] : 0;
+		sum += x[i + 3] == x[i + 3] ? x[i + 3] : 0;
+	}
+		
+	for (; i < N; ++i) {
+		sum += x[i] == x[i] ? x[i] : 0;
+	}		 
+	return sum;
+   #undef UNROLL_NUMBER 
+}
+
+F32 f32_nanmean(F32PTR x, int N, int * Ngood) {
+
+#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+
+	F32  sum = 0;
+	int  NgoodNum = 0;
+	int  i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		sum       += x[i] == x[i] ? x[i] : 0;     
+		NgoodNum += x[i] == x[i];
+
+		sum += x[i + 1] == x[i + 1] ? x[i + 1] : 0;
+		NgoodNum += x[i+1] == x[i+1];
+
+		sum += x[i + 2] == x[i + 2] ? x[i + 2] : 0;
+		NgoodNum += x[i + 2] == x[i + 2];
+
+		sum += x[i + 3] == x[i + 3] ? x[i + 3] : 0;
+		NgoodNum += x[i + 3] == x[i + 3];
+	}
+
+	for (; i < N; ++i) {
+		sum       += x[i] == x[i] ? x[i] : 0;
+		NgoodNum += x[i] == x[i];
+	}
+	if (Ngood) Ngood[0] = NgoodNum;
+	return sum / NgoodNum;;
+#undef UNROLL_NUMBER 
+}
+
+F32 f32_absmax(F32PTR x, int N) {
+
+#define UNROLL_NUMBER  4
+	const int regularPart = N & (-UNROLL_NUMBER); // 4: 100 ; -4: ffff00;    
+
+	F32  maxVal  = 0;
+	
+	int  i = 0;
+	for (; i < regularPart; i += UNROLL_NUMBER) {
+		F32 a = max(fabsf(x[i]), fabsf(x[i+1]));
+		F32 b = max(fabsf(x[i+2]), fabsf(x[i + 3]));
+		maxVal = max(maxVal, a);
+		maxVal = max(maxVal, b);
+	}
+
+	for (; i < N; ++i) {
+		maxVal = max(maxVal,fabsf(x[i]));
+	}
+	
+	return maxVal;;
+#undef UNROLL_NUMBER 
+
+}
+
+void f32_deseasonalize_inplace(F32PTR y, int N, int P,  F32PTR mean_tmp, I32PTR NumGoodPtsPerTime_tmp) {
+
+	// mean_buf and NUmgoodPtsPertime_Buf have at least a lenght of P
+	f32_compute_seasonal_avg(y, N, P, mean_tmp,  NumGoodPtsPerTime_tmp);
+	int p = 0;
+	for (int i = 0; i < N; i++) {
+		y[i] -= mean_tmp[p];
+		p++;
+		p = (p == P) ? 0 : p;
+	}
+
+}
+
+I64  sub2ind(int *dims, int ndim, int * subs) {
+	
+	if (ndim == 1) {
+		return subs[0];
+	} else if (ndim == 2) {
+		I32 rows = dims[0];		
+		return subs[0] + (subs[1] - 1) * rows;
+	} else if (ndim == 3) {
+		I64 rows = dims[0];
+		I64 cols = dims[1];
+		return subs[0] + (subs[1] - 1) * rows + (subs[2] - 1) * rows*cols;
+	}	else {
+		I64 idx    = subs[0];
+		I64 stride = 1;
+		for (int i = 1; i < ndim; i++) {
+			stride = stride *dims[i - 1];
+			idx = idx + subs[i] * stride;		
+		}		
+		return  idx;
+	}	
+}
+void ind2sub(int *dims, int ndim, I64 ind, int * subs) {
+	
+	if (ndim == 1) {
+		subs[0] = ind;
+	} else if (ndim == 2) {
+		I32 ROW = dims[0];				
+		int c   = (ind - 1) / ROW;
+		int r   = ind - c * ROW;
+		c = c + 1;
+		subs[0] = r;
+		subs[1] = c;
+	} else if (ndim == 3) {
+		I64 ROW = dims[0];
+		I64 COL = dims[0];
+		I64 ind0 = ind - 1; // zero-based index
+		int d3 = ind0 / (ROW * COL);
+		ind0 = ind0 - d3 * (ROW * COL);
+		int d2 = ind0 / ROW;
+		int d1 = ind0 - d2 * ROW;
+		subs[0] = d1+1;
+		subs[1] = d2+1;
+		subs[1] = d2+1;
+		
+	}	else {	 
+		I64 ind0 = ind - 1; // zero-based index		
+
+		subs[0] = 1; // subs used here as a temp buf
+		for (int i = 1; i < ndim; i++) {
+			// cacluate the stride of each dim
+			subs[i] = dims[i-1] * subs[i - 1];
+		}
+		for (int i = ndim-1; i >0; i--) {
+			// cacluate the stride of each dim
+			I32 dimStride = subs[i];
+			subs[i]       = ind0 / dimStride;          // now subs[i] is the index for the ith dim
+			ind0          = ind0 - subs[i] * dimStride;
+			subs[i]++;
+		}
+		subs[0] = ind0 + 1;
+	}	
+
+}
+
+ 
+int ndarray_get1d_stride_offset(int *dims, int ndim, int *subs, int whichdim, I64 * stride,  I64 *offset) {
+	// the dimensio requested is indicated by 0 or -1 in subs
+
+	int whichdim0 = whichdim - 1;
+
+	I64 STRIDE;
+	I64 OFFSET         = 0;
+	I64 CulDimStride   = 1;
+	for (int i = 0; i < ndim; i++) {
+		if (i == whichdim0) {STRIDE = CulDimStride;	} 
+		OFFSET       += CulDimStride * (subs[i] - 1);
+		CulDimStride *= dims[i];		
+	}		
+	OFFSET -= STRIDE * (subs[whichdim0] - 1);
+
+	*stride = STRIDE;
+	*offset = OFFSET;
+	return dims[whichdim0];
+}
+
+void f32_get1d_from_ndarray(F32PTR dst, VOID_PTR src, int* dims, int ndim, int* subs,int whichdim, DATA_TYPE srcDtype) {
+
+	I64 stride, offset;
+	int N= ndarray_get1d_stride_offset(dims, ndim, subs, whichdim, &stride, &offset);
+	 
+	f32_from_strided_mem(dst, src,N, stride, offset, srcDtype);
+
+}
+
+void f32_set1d_to_ndarray(F32PTR src, VOID_PTR dst, int* dims, int ndim, int* subs, int whichdim, DATA_TYPE dstDtype) {
+
+	I64 stride, offset;
+	int N = ndarray_get1d_stride_offset(dims, ndim, subs, whichdim, &stride, &offset);
+	f32_to_strided_mem(src, dst, N, stride, offset, dstDtype);
+}
+
+void f32_get2d_from_ndarray(F32PTR dst, VOID_PTR src, int* dims, int ndim, int* subs, int d1, int d2, DATA_TYPE srcDtype) {
+
+	d1--; 
+	d2--;
+	if (d1 > d2) {
+		int tmp = d1;
+		d1 = d2;
+		d2 = tmp;
+	}
+
+	I64 stride1, stride2;
+	I64 cumstride = 1;
+	I64 offset    = 0;
+	for (int i = 0; i < ndim; i++) {
+		if (i == d1) { stride1 = cumstride; };
+		if (i == d2) { stride2 = cumstride; };
+		offset    += cumstride * (subs[i]-1);
+		cumstride *= dims[i];
+	}
+	offset -= stride1 * (subs[d1]-1);
+	offset -= stride2 * (subs[d2]-1);
+
+	int n1 = dims[d1];
+	int n2 = dims[d2];
+	if (d2 - d1 == 1) {		
+		f32_from_strided_mem(dst, src, n1 * n2, stride1, offset, srcDtype);
+	} else {
+		for (int i = 0; i < n2; i++) {
+			f32_from_strided_mem(dst, src, n1, stride1, offset, srcDtype);
+			dst    += n1;
+			offset += stride2;
+		}
+	}
+}
+
+void f32_set2d_from_ndarray(F32PTR src, VOID_PTR dst, int* dims, int ndim, int* subs, int d1, int d2, DATA_TYPE dstDtype) {
+
+	d1--; 
+	d2--;
+	if (d1 > d2) {
+		int tmp = d1;
+		d1 = d2;
+		d2 = tmp;
+	}
+
+	I64 stride1, stride2;
+	I64 cumstride = 1;
+	I64 offset    = 0;
+	for (int i = 0; i < ndim; i++) {
+		if (i == d1) { stride1 = cumstride; };
+		if (i == d2) { stride2 = cumstride; };
+		offset    += cumstride * (subs[i]-1);
+		cumstride *= dims[i];
+	}
+	offset -= stride1 * (subs[d1]-1);
+	offset -= stride2 * (subs[d2]-1);
+
+	int n1 = dims[d1];
+	int n2 = dims[d2];
+	if (d2 - d1 == 1) {		
+		f32_to_strided_mem(src,dst, n1 * n2, stride1, offset, dstDtype);
+	} else {
+		for (int i = 0; i < n2; i++) {
+			f32_to_strided_mem(src, dst, n1, stride1, offset, dstDtype);
+			src    += n1;
+			offset += stride2;
+		}
+	}
+}
 
 #include "abc_000_warning.h"

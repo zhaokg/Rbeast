@@ -44,15 +44,23 @@ struct {
 };
  */
 
+void gen_pcg_print_state(local_pcg32_random_t* rng) {
+
+	r_printf("PCG State: \n");
+	r_printf("State: %"  PRIx64 "\n", rng->STATE);	
+	r_printf("Increment: %"  PRIx64  "\n", rng->INCREMENT);
+ 
+}
+
+
 void gen_pcg_random(local_pcg32_random_t* rng, U32PTR rnd, I32 N);
 void gen_pcg_set_seed(local_pcg32_random_t* rng, U64 initstate, U64 initseq)
 {
 
 	initstate = PCG_DEFAULT_GLOBAL_STATE_64 ^ initseq; //Added bcz only initseq is supplied as a seed. We run initseq to randomize initstate a little bit
 
-	initstate = initstate == 0 ? PCG_DEFAULT_GLOBAL_STATE_64 : initstate;
-	initseq   = initseq == 0 ?   PCG_DEFAULT_GLOBAL_INCREMENT_64 : initseq;
-
+	initstate = initstate == 0 ? PCG_DEFAULT_GLOBAL_STATE_64     : initstate;
+	initseq   = initseq == 0   ? PCG_DEFAULT_GLOBAL_INCREMENT_64 : initseq;
 
 	rng->STATE		 = 0U;
 	rng->INCREMENT   = (initseq << 1u) | 1u;  	//inc must be an odd number
@@ -61,6 +69,9 @@ void gen_pcg_set_seed(local_pcg32_random_t* rng, U64 initstate, U64 initseq)
 	gen_pcg_random(rng, &rnd, 1);
 	rng->STATE += initstate;
 	gen_pcg_random(rng, &rnd, 1);
+
+	extern void init_gauss_rnd(void);
+	init_gauss_rnd(); //Indepedent of PCG, used to initialize the GAUSS structure
 }
  
 void gen_pcg_random(local_pcg32_random_t* rng, U32PTR rnd, I32 N) 
@@ -83,7 +94,8 @@ void gen_pcg_random(local_pcg32_random_t* rng, U32PTR rnd, I32 N)
 void SetupPCG_GENERIC() {
 
 	local_pcg_set_seed = gen_pcg_set_seed;
-	local_pcg_random = gen_pcg_random;
+	local_pcg_random   = gen_pcg_random;
+	local_pcg_print_state = gen_pcg_print_state;
 }
 /**********************************************/
 #include "abc_000_warning.h"

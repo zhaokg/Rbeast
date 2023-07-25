@@ -12,7 +12,7 @@ extern void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR T);
 //Need to check to make sure Xnewterm/GlobalMEMBuf is big enough to handle ts aggregration. 
 //Raw ts may be longer than the aggregated ts but Xnewterm is allocated based on the length 
 // of the aggegrate ts			
-extern void  BEAST2_fetch_next_timeSeries(A(YINFO_PTR)  yInfo, int pixelIndex, F32PTR GlobalMEMBuf, A(IO_PTR)  io);
+extern void  BEAST2_fetch_timeSeries(A(YINFO_PTR)  yInfo, int pixelIndex, F32PTR GlobalMEMBuf, A(IO_PTR)  io);
 extern I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F32PTR Xtmp, BEAST2_OPTIONS_PTR opt);
 
 /****************beastv2_out_allocmem******************/

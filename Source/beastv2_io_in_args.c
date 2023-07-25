@@ -10,768 +10,638 @@
 #include "abc_datatype.h"
 #include "abc_blas_lapack_lib.h"
 #include "abc_ide_util.h"  //printf
-#include "abc_common.h"  //strcicmp
+#include "abc_common.h"    //strcicmp
 #include "abc_ts_func.h"
 #include "abc_date.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
+ 
+#define CondErrMsgRet0(cond, ...)   if(cond) { r_error(__VA_ARGS__); return 0;}
+#define CondErrActionRet0(cond, Action, ...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
+#define ifelse(cond, a, b)  ((cond)?(a):(b))
+static int  GetArg_0th_Data(VOIDPTR prhs[], int nrhs, BEAST2_IO_PTR _OUT_ io) {
 
-#define IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-3 )
-static int  GetArg_1st_MetaData(VOIDPTR prhs[], int nrhs, BEAST2_METADATA_PTR meta)
-{
-	
 	// Check the number of inputs:  the first arg is the algorithm name.
-	if (nrhs < 2L) {	
-		r_error("ERROR: At least one input argument is needed!\n");
+	CondErrMsgRet0( nrhs < 2L, "ERROR: At least one input argument is needed!\n" );
+
+	VOIDPTR DATA  = prhs[1];
+	int     numel = GetNumberOfElements(DATA);
+	// Check if the input 'data' is numeric and lengthy enough 	
+	if (IsEmpty(DATA) || (/*beg*/ !(IsNumeric(DATA) && numel > 2) && !(IsStruct(DATA) && numel >= 1) && !IsCell(DATA) /*end*/) ) {
+		/* IsCell  true Only for Matlab*/
+		// Yobj has multivariate time series if it is a struct variable
+		r_error("ERROR: The input data should be numeric and must be long enough.\n");
 		return 0;
 	}
-
-	meta->rawInput     = prhs[1];	
-	
  
-
-	I08 metaProcessed = 0;
-	if (nrhs < 3) {
-		meta->isMetaStruct		= 0;
-		meta->isRegularOrdered  = 1; //We asumme the data is regular if no meta is supplied
-		meta->hasSeasonCmpnt    = 1;
-		meta->hasOutlierCmpnt   = 0;
-		meta->seasonForm        ='S';
-		meta->detrend           = 0;
-		meta->deseasonalize     = 0;
-		meta->period			= getNaN();
-
-		meta->startTime = 1.f;
-		meta->deltaTime = 1.f;	
-		meta->missingValue = getNaN();// FLOAT_MAX;
-		meta->maxMissingRate = 0.75;
-		meta->whichDimIsTime = -1; //Not used
-		meta->rawTimeVec      = NULL;
-
-		metaProcessed = 1;
+	/*****************************************************************************************/
+	/* If pY is not a string but a matrix or vector  find the dimesions, and configure io-*/
+	/*****************************************************************************************/
+	I32       q = 0;
+	VOID_PTR  Y = NULL;
+	if ((IsStruct(DATA) && numel >= 1) || IsCell(DATA)) {
+		// For MRBEAST only: Yobj is a struct variable with multivariate time series						
+		q = numel;
+		// Mem to be dellocated in DeallocatTimeSeriesIO
+		io->pdata = malloc(sizeof(VOID_PTR) * q);
+		io->dtype = malloc(sizeof(DATA_TYPE) * q);
+		//TODO: For MRBEAST,the dimensions of all elments are assumed to be the same
+		// A sanity check needs to be done to ensure that is the case.
+		for (int i = 0; i < q; i++) {
+			Y = GetFieldByIdx(DATA, i);
+			io->pdata[i] = GetData(Y);
+			io->dtype[i] = GetDataType(Y);
+		}		
+	} else {
+		//DATA is a vector of numeric type, and not a struct variable with multivariate time series			
+		q = 1;
+		//Mem to be dellocated in DeallocatTimeSeriesIO
+		io->pdata   = malloc(sizeof(VOID_PTR) * q);
+		io->dtype    = malloc(sizeof(DATA_TYPE) * q);
+		io->pdata[0] = GetData(DATA);
+		io->dtype[0] = GetDataType(DATA);
+		Y = DATA;
 	}
-
-	if (nrhs >= 3 && IsNumeric(prhs[2L])) {
-
-		VOIDPTR pmeta = prhs[2L];
-
-		meta->isMetaStruct = 0;
-		meta->isRegularOrdered = 1L; //We asumme the data is regular if meta is a scalar numeric value.
-		meta->hasSeasonCmpnt   = 1L;
-		meta->hasOutlierCmpnt  = 0L;
-		meta->seasonForm        ='S';
-		meta->detrend           = 0;
-		meta->deseasonalize     = 0;
-
-		meta->period    = GetScalar(pmeta);
-		meta->startTime = 1.f;
-		meta->deltaTime = 1.f;
-		meta->missingValue = getNaN();// FLOAT_MAX;
-		meta->maxMissingRate = 0.75;
-		meta->whichDimIsTime = -1; //Not used
-		meta->rawTimeVec     = NULL;
-
-		metaProcessed = 1;
+	for (int i = 0; i < q; i++) {
+		CondErrMsgRet0( io->dtype[i] == DATA_UNKNOWN, "ERROR: The input data has an uknown numeric type!\n");		
 	}
+	io->q = q;
 
-	if (nrhs >= 3 && IsStruct(prhs[2L])  ) {
+	/*************************************************/
+	/* Get the dimension of the input              */
+	/*************************************************/
+	io->timedim = UnknownStatus;   // A filler to indicate hte status is undetermined
+	I32 ndims = GetNumOfDim(Y);	
+	if (ndims == 0 ||	 // the input is a vector: ndims == 0  is possible only for R vectors (not  Matlab)
+		ndims == 1)      // the input is a vector: ndims == 1  is possible only for Python vectors (not R or matlab)
+	{
+		I32 N = GetNumberOfElements(Y);
+		io->ndim    = 1L;
+		io->dims[0] = N;
+		io->dims[1] = 1L;
+		io->dims[2] = 1L; 
+		io->timedim = 1L; 		
+	}
+	else if (ndims == 2) {
+		// Matlab: a vector or matrix;
+		// R:      a matrix or a vector with a dim attribute.
+		int N = GetDim1(Y);
+		int M = GetDim2(Y);
 
-		meta->isMetaStruct = 1;
-	
-		VOIDPTR pmeta = prhs[2L];
-		VOIDPTR tmp;
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->isRegularOrdered = (tmp = GetField123Check(pmeta, "isRegularOrdered",2)) ? GetScalar(tmp) : 1L;
-		if (tmp == NULL)
-			r_warning("WARNING: metadata$isRegularOrdered is not specified. A default 'metadata$isRegularOrdered=TRUE' is assumed.\n");
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		// Get the season string to determine the number and types of season components: harnomic or dummy
-		
-		
-		if ((tmp = GetField123Check(pmeta, "season",2)) != NULL && IsChar(tmp)) {			
-			char season[20 + 1];
-			GetCharArray(tmp, season, 20);
-			ToUpper(season);
-
-			char a = season[0], b = season[1];
-			if      (a=='N' && b=='O') 		meta->hasSeasonCmpnt = 0;							    //none
-			else if (a=='H' && b=='A') 		meta->hasSeasonCmpnt = 1, meta->seasonForm = 'S'; 	//harmonic
-			else if (a=='D' && b=='U')		meta->hasSeasonCmpnt = 1, meta->seasonForm = 'D';			//dummy
-			else if (a=='S' && b=='V')		meta->hasSeasonCmpnt = 1, meta->seasonForm = 'V';			//svd			
-			else {
-				meta->hasSeasonCmpnt = 1;
-				meta->seasonForm     = 'S';  //the default form is harmonic
-				r_warning("WARNING: metadata$season=%s is specified but has an unrecongizable string. A default metadata$season='harmonic' is used instead.\n", season);
-			}
-
-			if (meta->seasonForm == 'V') meta->svdTerms = GetFieldCheck(pmeta, "svdTerms");
-
-		} else  {
-			meta->hasSeasonCmpnt = 1;
-			meta->seasonForm     = 'S';
-			r_warning("WARNING: metadata$season is either missing or not given as a valid specifier string (e.g., none, harmonic, or dummy). A default "
-				      "metadata$season='harmonic' is assumed.\n");
-		}	
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->hasOutlierCmpnt = (tmp = GetField123Check(pmeta, "hasOutlierCmpnt",2)) ? GetScalar(tmp) : 0L;
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->detrend         = (tmp = GetField123Check(pmeta, "detrend"      ,3)) ?  GetScalar(tmp) : 0L;
-		meta->deseasonalize   = (tmp = GetField123Check(pmeta, "deseasonalize",3)) ?  GetScalar(tmp) : 0L;
- 
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->period = (tmp = GetField123Check(pmeta, "period",2)) ? GetScalar(tmp) : getNaN();
-		if (!meta->hasSeasonCmpnt && tmp != NULL)
-			r_warning("WARNING: For metadata$season='none' (i.e., no periodic component in the time series), metadata$period is ignored!\n");
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		I08 isDefaultStartTime = 0;
-		tmp = GetField123Check(pmeta, "startTime",2);
-		if     (tmp && IsClass(tmp,"Date")) 		{
-			// this branch is true only for R and Matlab's IsClass always return FALSE
-			// in R, tmp is an integer array
-			int   days      = GetScalar(tmp);
-			meta->startTime = fractional_civil_from_days(days);
-		}
-		else if (tmp && IsNumeric(tmp)) {
-			I32 n = GetNumberOfElements(tmp);
-			if (n==1)
-				meta->startTime = GetScalar(tmp);
-			else if (n == 2) {
-				F32 Y = GetNumericElement(tmp, 0);
-				F32 M = GetNumericElement(tmp, 1);
-				meta->startTime = YMDtoF32time(Y, M, 15);
-				r_warning("WARNING: Your metadata$startTime (%f, %f) is interpreted as (Year: %d, Month: %d, Day: 15) and converted to "
-					       "a numeric value of %f. If not making sense, make sure to supply a correct start time: "
-					       "startTime can take a numeric scalar, a vector of two values (year, month), or a vector of three values (year, month,day).",
-					       Y,M, (int)Y, (int)M, meta->startTime);
-			}
-			else if (n == 3) {
-				F32 Y = GetNumericElement(tmp, 0);
-				F32 M = GetNumericElement(tmp, 1);
-				F32 D = GetNumericElement(tmp, 2);
-				meta->startTime = (F32) YMDtoF32time((int)Y, (int)M, (int)D);
-				r_warning("WARNING: Your metadata$startTime (%f, %f, %f) is interpreted as (Year: %d, Month: %d, Day: %d) and converted to "
-					"a numeric value of %f. If not making sense, make sure to supply a correct start time: "
-					"startTime can take a numeric scalar, a vector of two values (year, month), or a vector of three values (year, month,day).",
-					Y, M,D, (int)Y, (int)M, (int)D, meta->startTime);
-			}
-			else { 
-				r_error("ERROR: Your metadata$startTime is a vector of more than three elements. A valid 'startTime' should be either a numeric scalar,"
-					     "a vector of two values (year, month), or a vector of three values (year, month,day)."	);
-				return 0;
-			}
-			
+		if (min(N, M) == 1L) {
+			//PY is a vector
+			N = max(N, M),
+			io->ndim   = 1L;
+			io->dims[0] = N;
+			io->dims[1] = 1L;
+			io->dims[2] = 1L;
+			io->timedim = 1L;
 		} else {
-			meta->startTime = 1L;
-			isDefaultStartTime = 1L;
-		}
-
-		////////////////////////////P//////////////////////////////////////////////////////////////////
-		I08 isDefaultDeltaTime = 0;
-		meta->deltaTime = (tmp = GetField123Check(pmeta, "deltaTime",3)) ? GetScalar(tmp) : getNaN();			
-		if (!meta->isRegularOrdered && IsNaN(meta->deltaTime) ) {
-			r_error("ERROR: when metadata$isRegualrOrdered=FALSE, the input data is considered irregular/unordered in time AND "
-			 	   "metadata$deltaTime must be specified for BEAST to pre-process and aggregate the irregular input to a regular time series spaced at deltaTime.\n");
-			return 0;
-		} 
-		if (meta->deltaTime <= 0  ) {
-			r_error("ERROR: metadata$deltaTime must be a positive time interval!\n");
-			return 0;
-		}
-		if (meta->isRegularOrdered && IsNaN(meta->deltaTime)) {
-			meta->deltaTime    = 1.f;
-			isDefaultDeltaTime = 1;		
-		}
-		
-		if (meta->isRegularOrdered ) {
-			if (isDefaultDeltaTime && isDefaultStartTime) {
-				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE, the input data is assumed to be regular and ordered in time AND the times of "
-					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But metadata$startTime and deltaTime "
-					"are missing and a default value 1 is used for both!\n");
-			}
-			else if (isDefaultStartTime) {
-				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE, the input data is assumed to be regular and ordered in time AND the times of "
-					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But startTime is missing "
-					"and a default value 1 is used!\n");
-			}
-			else if (isDefaultDeltaTime) {
-				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE, the input data is assumed to be regular and ordered in time AND the times of "
-					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But deltaTime is missing and a default"
-					" value 1 is used!\n");	
-			}			
-		}
-		
-
- 
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->rawTimeVec = (tmp = GetField123Check(pmeta, "time",2)) ? tmp : NULL;
-		if (meta->isRegularOrdered && tmp)
-			r_warning("WARNING: metadata$time is specified but ignored. For regular ordered time series, 'metadata$startTime=%f' and 'metadata$deltaTime=%f' "
-					  "alone are enough to determine the times for all data points. \n", meta->startTime, meta->deltaTime);
-		if (!meta->isRegularOrdered && tmp == NULL) {
-			r_error("ERROR: metadata$isRegualrOrdered=0 (false) indicates that the input data is irregular or unordered in time; 'metadata$time' must be "
-				     "also supplied to specify the times at which individual data points are collected.\n");
-			return 0;
-		}
-
-		//////////////////////////////////////////////////////////////////////////////////////////////
-		meta->missingValue			= (tmp = GetField123Check(pmeta, "missingValue",2))   ? GetScalar(tmp) : getNaN();// FLOAT_MAX;
-		meta->maxMissingRate 		= (tmp = GetField123Check(pmeta, "maxMissingRate",2)) ? GetScalar(tmp) : 0.75;
-		meta->whichDimIsTime		= (tmp = GetField123Check(pmeta, "whichDimIsTime",2)) ? GetScalar(tmp) : -1;
-
-		metaProcessed = 1;
-
-	} //else if (nrhs >= 3)
-
-	if (metaProcessed == 0 ) {
-		r_error("ERROR: The 'metadata' parameter given is of unsupported type.\n");
+			//PY is a matrix
+			io->ndim = 2L;
+			io->dims[0] = N;
+			io->dims[1] = M;
+			io->dims[2] = 1L; // for 2d matrix input, the last dimenion is always set to 1L 
+		}//PY is a matrix
+	}
+	else if (ndims == 3) {
+		// If the input is a 3D array
+		io->ndim = 3L;
+		GetDimensions(Y, io->dims, 3L);	
+	}
+	else {
+		r_printf("ERROR: The maximum dimension allowed is 3 when data is a 3D stack of images over time, but the input has a dimension of %d.\n", ndims);
 		return 0;
 	}
 
-	/*************************************************/
-	// Convert period to the unit of deltaTime
-	/*************************************************/
-	if (meta->hasSeasonCmpnt) {	
-		meta->period = meta->period / meta->deltaTime;
-		F32 period   = meta->period;
-		if (period == 0) {
-			r_error("ERROR: Your input parameters are \"metadata$period=0\" and \"metadata$season='%s'\". BEAST can't handle a time series with no perodicity. "
-				"If you mean to handle a trend-only time series, please use the trend-only version of the BEAST algorithm by specifying metadata$season='none'."
-				, meta->seasonForm == 'S' ? "harmonic" : "dummy" );
-			return 0;
-		}
-
-		if (meta->seasonForm == 'D' && !IsNaN(period) && !IsAlmostInteger(period)  ) {
-			r_error("ERROR: Your input parameters are \"metadata$period=%f\" and \"metadata$season='%s'\". For a dummy seasonal component, "
-				"period must be a multiple of deltaTime by an INTEGER number. Your period/deltaTime is %f.",	
-				 period*meta->deltaTime, "dummy", period );
-			return 0;
-		}
-	
-	}
-
-	// Up to this point, if period=NAN, it will be further determined in ParseInputData
-
-
-
-	meta->nrhs = nrhs;
 	return 1;
 }
 
-static INLINE I32 __GetRawTimeDimension(BEAST2_IO_PTR io) {
-	 return io->dims[io->meta.whichDimIsTime - 1];
-}
+static float ParsePeriod(BEAST2_IO_PTR _OUT_ io);
+static int   Parse_whichDimIsTime(BEAST2_IO_PTR _OUT_ io, int Nrawtime, int userWhichDim);
 
-static int  ___PraseMetaData_RegularTS_Dim123(A(METADATA_PTR) meta, BEAST2_IO_PTR io) {
-	/*  If the input is regular time series */ 
-	if (meta->nrhs < 3 && io->ndim >=2 ) {
-		// No metadata input
-		r_error("ERROR: For a 2D matrix or 3D stack input, 'metadata$whichDimIsTime' must be given to specify which dim of the input refers to time.\n");
-		return 0;
-	} 
-	if (meta->isMetaStruct==0 && io->ndim >= 2) {
-		r_error("ERROR: For a 2D matrix or 3D stack input, the 'metadata' argument must be a LIST (for R) or STRUCT (for Matlab) variable "
-			    "(e.g., metedata$period' and 'metadata$whichDimIsTime) providing additional info on the 2D or 3D input.\n");
-		return 0;
-	}
-	io->N = __GetRawTimeDimension(io);
-	return 1L;
-}
-
-
-
-int __ReadRawTime(F32PTR time, VOID_PTR timeField, const I32 Nraw) {		
-	// time should have been pre-allocated, with a length of Nraw
-
-	// TimeField is not a struct variable
-	if ( IsStruct(timeField)==0 ) {	
-
-		if (IsNumeric(timeField)==0) {
-			r_error("ERROR: metadata$time is not numeric. If times are strings, please use metadata$time$dateStr and metadata$time$strFmt to specify data observation times.\n");
-			return 0;
-		} else {
-			I32  Ntime = GetNumberOfElements(timeField);
-			if ( Ntime != Nraw ) {
-				r_error("ERROR: 'metadata$time' (%d) must be of the same length as the time dim of the input data (%d).\n", Ntime, Nraw);
-				return 0;			
-			}
-					
-			if ( IsClass(timeField, "Date")) {
-				// this branch is true only for R and Matlab's IsClass always return FALSE
-				// in R, tmp is an integer array
-				F64PTR days = GetData(timeField);
-				for (int i = 0; i < Ntime; ++i) {
-					time[i] = fractional_civil_from_days((int)days[i]);
-				}	
-				return 1L;
-			}
-			else {
-				if (CopyNumericArrToF32Arr(time, timeField, Ntime))
-					return 1L;
-				else {
-					r_error("ERROR: metadata$time has an unsupported data format or type.\n");
-					return 0;
-				}			
-			}
-
-
-				
-		}
-		
-	}
-
-   // TimeField is a struct variable
-	VOIDPTR yr  = GetField123Check(timeField, "year",1);
-	VOIDPTR mn  = GetField123Check(timeField, "month",1);
-	VOIDPTR day = GetField123Check(timeField, "day",3);
-	VOIDPTR doy = GetField123Check(timeField, "doy",3);
-
-	int isTimeProcessed = 0;
-	if (!isTimeProcessed && yr && mn && IsNumeric(yr) && IsNumeric(mn)  && GetNumberOfElements(yr)==Nraw && GetNumberOfElements(mn) == Nraw) 	{
+static int  GetArg_1st_MetaData(VOIDPTR prhs[], int nrhs, BEAST2_IO_PTR _OUT_ io) {
 	
-		F32PTR yr32  = time;
-		F32PTR mn32  = malloc(sizeof(F32) *2*Nraw); // one for mn32 and another for day32
-		F32PTR day32 = mn32+Nraw;
 
-		if (!CopyNumericArrToF32Arr(yr32, yr, Nraw)) {
-			r_error("ERROR: metadata$time$year has an unsupported data format or type.\n");
-			free(mn32);
-			return 0;
-		}
-		if (!CopyNumericArrToF32Arr(mn32, mn, Nraw)) {
-			r_error("ERROR: metadata$time$month has an unsupported data format or type.\n");
-			free(mn32);
-			return 0;
-		}
- 
-		if (day && IsNumeric(day) && GetNumberOfElements(day) == Nraw) {
-		// time$day is present
-			if (!CopyNumericArrToF32Arr(day32,day, Nraw)) {
-				r_error("ERROR: metadata$time$day has an unsupported data format or type.\n");
-				free(mn32);
-				return 0;
-			}
-			
-			for (int i = 0; i < Nraw; ++i) {
-				yr32[i] = YMDtoF32time(yr32[i], mn32[i], day32[i]);
-				if (yr32[i] < -1e9) {
-					r_error("ERROR: The (%d)-ith date (metadata$time$year=%d,metadata$time$month=%d, and metadata$time$day=%d) is not valid.\n",i+1, (int) yr32[i], (int)mn32[i], (int)day32[i] );
-					free(mn32);
-					return 0;
-				}
-			}
-			
-		} else {
-			// time$day is not present
-			r_warning("WARNING: metadata$time$day is not specified, so only time$year and time$month are used!\n");
+	BEAST2_METADATA_PTR meta = &io->meta;
+	meta->nrhs = nrhs;
 
-			for (int i = 0; i < Nraw; ++i) {
-				yr32[i] = YMDtoF32time(yr32[i], mn32[i], 15);
-				if (yr32[i] < -1e9) {
-					r_error("ERROR: The (%d)-ith date (metadata$time$year=%d,and metadata$time$month=%d) is not valid.\n", i+1, (int)yr32[i], (int)mn32[i]);
-					free(mn32);
-					return 0;
-				}
-			}			
-		}
+	/**********************************/
+	// Get the type of metadata
+	/**********************************/
+	int METADATA_NONE          = _False_;
+	int METADATA_NumericScalar = _False_;
+	int METADATA_NumericVector = _False_;
+	int METADATA_CharVector    = _False_;
+	int METADATA_CharScaler    = _False_;
+	int METADATA_Struct        = _False_;
+	int METADATA_OTHER         = _False_;
 
-		isTimeProcessed = 1;
-		free(mn32);
-		return 1L;
-
-	}  
-
-	if (!isTimeProcessed && yr && doy && IsNumeric(yr) && IsNumeric(doy) && GetNumberOfElements(yr) == Nraw && GetNumberOfElements(doy) == Nraw)
-	{
-		F32PTR yr32  = time;
-		F32PTR doy32 = malloc(sizeof(F32) * Nraw); 
-
-		if (!CopyNumericArrToF32Arr(yr32, yr, Nraw)) {
-			r_error("ERROR: metadata$time$year has an unsupported data format or type.\n");
-			free(doy32);
-			return 0L;
-		}
-		if (!CopyNumericArrToF32Arr(doy32, doy, Nraw)) {
-			r_error("ERROR: metadata$time$doy has an unsupported data format or type.\n");
-			free(doy32);
-			return 0L;
-		}
- 
-		for (int i = 0; i < Nraw; ++i) {
-			yr32[i] = YDOYtoF32time(yr32[i], doy32[i] );
-			if (yr32[i] < -1e9) {
-				r_error("ERROR: The (%d)-ith date (metadata$time$year=%d,and metadata$time$doy=%d) is not valid.\n", i + 1, (int)yr32[i], (int)doy32[i] );
-				free(doy32);
-				return 0;
-			}
-		}
-
-		isTimeProcessed = 1;
-		free(doy32);
-		return 1L;
-	}
-
-
-	VOIDPTR datestr = GetField123Check(timeField, "dateStr",3);
-	VOIDPTR strfmt  = GetField123Check(timeField, "strFmt",3); 
-	if (!isTimeProcessed && datestr && strfmt && IsChar(datestr) && IsChar(strfmt) && GetNumberOfElements(datestr)==Nraw ) 	{		
-
-		char STRFmt[255 + 1];
-		GetCharArray(strfmt, STRFmt, 255);
-		
-		DateFmtPattern1 fmt1;	
-		if (GetStrPattern_fmt1(STRFmt, &fmt1)) {
-			
-			for (int i = 0; i < Nraw; ++i) {	
-				char TMP[255 + 1];
-				if (!GetCharVecElem(datestr, i, TMP, 255)) {
-					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n", i + 1);
-					return 0L;
-				}
-				time[i] = Str2F32time_fmt1(TMP, &fmt1);
-				if (time[i] < -1e9) {
-					r_error("ERROR: The %d-th string ($metadata$time$dateStr=\"%s\") is invalid, incompatiable with the specified "
-							" metadata$time$strFmat=\"%s\".\n", i + 1, TMP, STRFmt);
-					return 0L;
-				}
-			}	
-		}
-	 
-		DateFmtPattern2 fmt2;	
-		if (GetStrPattern_fmt2(STRFmt, &fmt2)) {
-			
-			for (int i = 0; i < Nraw; ++i) {	
-				char TMP[255 + 1];
-				if (!GetCharVecElem(datestr, i, TMP, 255)) {
-					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n", i + 1);
-					return 0L;
-				}
-				time[i] = Str2F32time_fmt2(TMP, &fmt2);
-				if (time[i] < -1e9) {
-					r_error("ERROR: The %d-th string (metadata$time$dateStr=\"%s\") is invalid, incompatiable with the specified "
-							" metadata$time$strFmat=\"%s\".\n", i + 1, TMP, STRFmt);
-					return 0L;
-				}
-			}	
-		}
-
-
-		DateFmtPattern3 fmt3;	
-		if (GetStrPattern_fmt3(STRFmt, &fmt3)) {
-			
-			for (int i = 0; i < Nraw; ++i) {	
-				char TMP[255 + 1];
-				if (!GetCharVecElem(datestr, i, TMP, 255)) {
-					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n", i + 1);
-					return 0L;
-				}
-				time[i] = Str2F32time_fmt3(TMP, &fmt3);
-				if (time[i] < -1e9) {
-					r_error("ERROR: The %d-th string ($metadata$time$dateStr=\"%s\") is invalid, incompatiable with the specified "
-							" metadata$time$strFmat=\"%s\".\n", i + 1, TMP, STRFmt);
-					return 0L;
-				}
-			}	
-		}
-		return 1L;
-
-	}
-	 
-
-	return 0L;
-}
-static int  ___PraseMetaData_IrregularTS_Dim123(BEAST2_METADATA_PTR meta, BEAST2_IO_PTR io) {
-	// If the input time series data are irregular
-	if (meta->nrhs < 3 || meta->isMetaStruct==0) {
-		r_printf("ERROR: For irregular time series (i.e., metadata$isRegularOdered=FALSE), the argument 'metadata' must be supplied and it should be a LIST (for R) or struct (for Matlab) variable!");
-		return 0;
-	}
-	if (meta->rawTimeVec == NULL) {
-		r_printf("ERROR: For irregular time series (i.e., metadata$isRegularOdered=FALSE), metadata$time must be given to "
-			     "specify the times at which data points are collected.");
-		return 0;
-	}
-
-	/************************************************************/
-	// REad the raw time and gather the info needed for aggragration
-	/************************************************************/
-	I32    Nraw = __GetRawTimeDimension(io);
-	F32PTR time = malloc(sizeof(F32) * Nraw);	
-	// Nraw must is the same as the length of rawTimeVec, to be checked in __ReadRawTime		
-	if (__ReadRawTime(time, meta->rawTimeVec, Nraw)) {
-		F32  dT = meta->deltaTime;
-		io->N   = tsAggegrationPrepare(
-					time, Nraw, dT, &io->T.sortedTimeIdx, &io->T.numPtsPerInterval,
-					&io->T.startIdxOfFirsInterval, &meta->startTime
-				); // meta->stattTime may be adjustd slightly to better match the real start of the time series
-		free(time);
+	VOIDPTR pmeta              = (nrhs < 3) ? NULL : prhs[2L];
+	VOIDPTR TIMEobj            = NULL;
+	int     userWhichDimIsTime = UnknownStatus;
+	if ( pmeta==NULL || IsEmpty(pmeta) ) {
+		METADATA_NONE       = _True_;
+	} else if ( IsNumeric(pmeta) ) {
+		int  numel = GetNumberOfElements(pmeta);
+		if      (numel == 0) METADATA_NONE          = _True_;
+		else if (numel == 1) METADATA_NumericScalar = _True_;
+		else if (numel > 1 ) METADATA_NumericVector = _True_, TIMEobj = pmeta;
+		else 			     METADATA_OTHER         = _True_;
+	} else if ( IsChar(pmeta) ) {
+		int numel = GetNumberOfElements(pmeta);
+		if      (numel == 0) METADATA_NONE          = _True_;
+		else if (numel == 1) METADATA_CharScaler    = _True_;
+		else if (numel > 1 ) METADATA_CharVector    = _True_, TIMEobj = pmeta;
+		else 			     METADATA_OTHER         = _True_;
+	} else if (IsStruct(pmeta) ) {
+		METADATA_Struct      = _True_;
+		TIMEobj              =  GetField123Check(pmeta, "time", 2) ; // if time is NULL or empty []	VOIDPTR  tmp;
+		VOIDPTR  tmp;
+		userWhichDimIsTime  = (tmp = GetField123Check(pmeta, "whichDimIsTime", 2)) ? GetScalar(tmp) : UnknownStatus;
 	} else {
-		free(time);
-		r_error("ERROR: Unable to read and intepret 'metadata$time'!\n");
-		return 0;
+		METADATA_OTHER = _True_;
+	}
+	CondErrMsgRet0(METADATA_OTHER == _True_, "ERROR: The 'metadata' parameter given is of unsupported type.\n");
+
+	//*****************************************************************
+	// Determnie if it has a seaosn component or not: Moved here
+	// becuase period is needed in TSaggragatePrepare()
+	//*****************************************************************	
+	meta->hasSeasonCmpnt = UnknownStatus;
+	I08 ISDATE   = UnknownStatus;
+	F32 START    = getNaN();
+	F32 DT       = getNaN();
+	F32 PERIOD   = getNaN();
+	//////////////////////////////////////////////////////////////////////////////////
+	if (METADATA_NONE || METADATA_NumericScalar || METADATA_CharVector || METADATA_CharScaler ||  METADATA_NumericVector) {
+		//meta->isRegularOrdered  = 1; // We asumme the data is regular/orderred if no meta is supplied
+	 
+		START  = getNaN();
+		DT     = getNaN();
+		PERIOD = getNaN();
+		if (METADATA_NumericScalar) {
+			PERIOD = GetScalar(pmeta);
+			if (!IsNaN(PERIOD) ) {
+				if (PERIOD <= 0.) {
+					q_warning("WARNING: A negative or zero value of period (%g) means no periodic/seasonal component in the input time series!\n", meta->period);
+				} else{ //meta->period > 0;
+					CondErrMsgRet0(!_IsAlmostInteger(PERIOD),
+						"ERROR: When metadata is supplied as a single number %g, it must be an integer to specify the period of the regular time seires!\n", meta->period);
+					PERIOD = round(PERIOD);
+				}
+			}
+			meta->hasSeasonCmpnt = PERIOD <= 0.0? _False_ :_True_; // Period may be still a NAN  if meta is a NAN
+		}	else if (METADATA_CharScaler) {
+		// there is only one possibiliyt: Period nyst be the string 'none"
+			char period[10+1];
+			GetCharArray(pmeta, period, 10L);
+			CondErrMsgRet0( strcicmp(period, "none") != 0, "ERROR: When metadata is supplied as a string to speciify period, it can only be 'none'!\n");
+ 			meta->hasSeasonCmpnt = _False_;
+			PERIOD               = 0.0;
+		}	else {
+			// has a seasonal component with period still being NAN and to be determined
+			meta->hasSeasonCmpnt = _True_;
+		}
+		meta->seasonForm        = ifelse( meta->hasSeasonCmpnt, 'S','N');
+
+		meta->hasOutlierCmpnt   = _False_;		
+		meta->detrend           = _False_;
+		meta->deseasonalize     = _False_;
+		meta->missingValue      = getNaN();// FLOAT_MAX;
+		meta->maxMissingRate    = 0.75f;
+	}
+	else if (METADATA_Struct) {
+	//*****************************************************************
+	// Determnie if it has a seaosn component or not when  METADATA_Struct =1
+	//*****************************************************************	
+		VOIDPTR  tmp;
+
+		//  Deermine the startTime property
+		tmp = GetField123Check(pmeta, "startTime", 2); // IsEmpty is checked inside GetField123Check
+		TimeScalarInfo timevalue;
+		Parse_SingelDateObject(tmp, &timevalue);
+		START = timevalue.value;
+		if (timevalue.unit == 'Y')  ISDATE = _True_;
+		CondErrMsgRet0(timevalue.unit == 'B', "ERROR: cannot interpret the metadata$startTime input,'\n");
+
+		//  Deermine the deltaTime property		
+		tmp = GetField123Check(pmeta, "deltaTime", 3);
+		Parse_TimeIntervalObject(tmp, &timevalue);
+		DT  = timevalue.fyear;
+		if (timevalue.unit != 'U' && timevalue.unit != 'B') ISDATE = _True_;
+		CondErrMsgRet0(timevalue.unit == 'B', "ERROR: cannot interpret the metadata$deltaTime input,'\n");
+		CondErrMsgRet0(DT             <= 0,   "ERROR: metadata$deltaTime must be a positive time interval!\n");
+
+		//  Deermine the period property
+		tmp = GetField123Check(pmeta, "period", 2);
+		Parse_TimeIntervalObject(tmp, &timevalue);
+		PERIOD  = timevalue.fyear;
+		if (timevalue.unit != 'U' && timevalue.unit != 'B') ISDATE = _True_;
+		CondErrMsgRet0(timevalue.unit == 'B', "ERROR: cannot interpret the metadata$period input,'\n");
+
+		if (PERIOD<=0) {
+			meta->hasSeasonCmpnt = _False_;
+			q_warning("WARNING: A negative or zero value of period (%g) indicates no periodic/seasonal component in the input time series!\n", PERIOD);
+		}
+		if (PERIOD > 0 && PERIOD /DT >= 2.0) {
+			meta->hasSeasonCmpnt = _True_;			
+		}
+		if (PERIOD > 0 && PERIOD /DT < 2.0) {
+			meta->hasSeasonCmpnt = _False_;
+			q_warning("WARNING: The value metadata$period/metadata$deltTime=%g/%g=%g is unreasonalbe for a siginal with seasonal componet, so no seasonal component is "
+				"assumed and the trend-only model is fitted. Perios is also set to 0.0\n", PERIOD, DT, PERIOD/DT);
+			PERIOD = 0;
+		}
+
+		/////////////////////////////////////////////////////////// 
+		//   Get the season string to determine the number and types of season components: harnomic or dummy
+		////////////////////////////////////////////////////////// 
+		tmp = ( tmp=GetField123Check(pmeta, "season", 2) , tmp && !IsChar(tmp) ? NULL : tmp);
+		char season[20 + 1];
+		GetCharArray(tmp, season, 20); // Will check if tmp is NULL inside the function
+		ToUpper(season);
+		char a = season[0], b = season[1];
+	
+	   if (meta->hasSeasonCmpnt == _False_ && a != 'N' && a != '\0' ) {
+		   // period has been set and used to determine hasSeasonCMpnt or not
+			   q_warning("WARNING: A confilict found between metadata$season=%s and period=%g. '%s' suggests a time series with periodic variations but "
+				         "period=%g or period='none' suggests a trend-only time series without any periodic variations. The season parameter is "
+				         "ignored and no seasonal component is assumed for the input.\n", season, PERIOD, season, PERIOD);
+		} else if  (tmp  && IsChar(tmp) ) {			
+			// tmp may be an empty string "" (a=0).
+			int  hasSeasonCmpt_bySeasonStr = _True_;			
+			if    ((a=='N' && b=='O') || a == '\0')		hasSeasonCmpt_bySeasonStr = _False_;								//none
+			else if (a=='H' && b=='A') 					hasSeasonCmpt_bySeasonStr = _True_, meta->seasonForm = 'S';    	//harmonic
+			else if (a=='D' && b=='U')					hasSeasonCmpt_bySeasonStr = _True_, meta->seasonForm = 'D';		//dummy
+			else if (a=='S' && b=='V')					hasSeasonCmpt_bySeasonStr = _True_, meta->seasonForm = 'V';		//svd			
+			else {
+				hasSeasonCmpt_bySeasonStr = _True_;
+				meta->seasonForm          = 'S';  //the default form is harmonic
+				q_warning("WARNING: metadata$season='%s' has an unrecongizable string. The default season='harmonic' is used instead.\n", season);
+			}
+
+			if (meta->hasSeasonCmpnt == _True_ && hasSeasonCmpt_bySeasonStr == _False_) {
+				hasSeasonCmpt_bySeasonStr = _True_;
+				meta->seasonForm          = 'S';
+				q_warning("WARNING: A confilict found between metadata$season='none' and period=%g. season='none' suggests a time series with "
+					       "no periodic variations but period=%g suggests otherwise. The season='none' parameter is ignored and "
+					      "the data is assumed to have a seasonal component.\n", PERIOD, PERIOD);
+			}
+			meta->hasSeasonCmpnt = hasSeasonCmpt_bySeasonStr;
+		} 	else	{
+			if (meta->hasSeasonCmpnt == UnknownStatus || meta->hasSeasonCmpnt == _True_) {
+				meta->hasSeasonCmpnt = _True_;
+				meta->seasonForm     = 'S';
+				q_warning("WARNING: metadata$season is either missing or not given as a valid specifier string (e.g., none, harmonic, or dummy). A default season='harmonic' is assumed.\n");
+			}
+		}	
+
+		if (meta->seasonForm == 'V') {
+			meta->svdTerms_Object   = GetFieldCheck(pmeta, "svdTerms");
+			meta->svdYseason_Object = GetFieldCheck(pmeta, "svdYseason");
+		}
+
+		meta->hasOutlierCmpnt = (tmp = GetField123Check(pmeta, "hasOutlierCmpnt", 2)) ? GetScalar(tmp) : _False_;
+		meta->detrend         = (tmp = GetField123Check(pmeta, "detrend"      ,3)) ?  GetScalar(tmp)   : _False_;
+		meta->deseasonalize   = (tmp = GetField123Check(pmeta, "deseasonalize",3)) ?  GetScalar(tmp)   : _False_;
+		meta->missingValue	  = (tmp = GetField123Check(pmeta, "missingValue",0))   ? GetScalar(tmp)   : getNaN();// FLOAT_MAX;
+		meta->maxMissingRate  = (tmp = GetField123Check(pmeta, "maxMissingRate",0)) ? GetScalar(tmp)   : 0.75;
+	} //else if (nrhs >= 3)
+	else {
+		CondErrMsgRet0(  _True_, "ERROR: The 'metadata' parameter given is of unsupported type.\n");
 	}
 
-	// Npad:N_extended; the mutiples of 8 closest to N, defined for 32-byte alginment	
-	//opt->Npad16 = (N+15)/16 *16;   //(I32)ceil((F32)N / 16.f) * 16;
-	return 1L;
-}
-static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
+	////////////////////////////////////////////////////////////////////////////////
+	// Sanity check
+	CondErrMsgRet0(meta->hasSeasonCmpnt == UnknownStatus, "ERROR: Cnnot determine whether the input time series has a seasonal/periodic componnet or net.\n");
+	if (meta->hasSeasonCmpnt == 0) PERIOD = 0;        //just double check to make sure it is the case that period=0 for trend-only data
+	if (DT  < 0.)      DT     = getNaN(); //dT should never < 0 at this point, but just double check.
+	////////////////////////////////////////////////////////////////////////////////
 
-		// Check if the input 'data' is numeric and lengthy enough
-		VOIDPTR DATA  =	 io->meta.rawInput;
-		int     numel =  GetNumberOfElements(DATA);
-		if (!(IsDouble(DATA) && numel > 2) && 	!(IsSingle(DATA) && numel > 2) &&
-			!(IsInt32(DATA)  && numel > 2) &&	!(IsInt16(DATA) && numel > 2) &&
-			!(IsInt64(DATA) && numel > 2)  && !(IsStruct(DATA) && numel >= 1 ) &&
-			!(IsCell(DATA) ) /*Only true for Matlab*/      // Y=rawInput is a struct variable with multivariate time series
-		   ) {   
-			r_error("ERROR: The input data should be numeric and must be long enough.\n");
+	/**********************************/
+    // If there is a time object suppiked
+	/**********************************/
+	TimeVecInfo tvec = { 0 };
+	TimeVec_init(&tvec);
+
+     if (TIMEobj) { 
+		//  Allocated mem that needs to be freeed explicilty for tvec.fyear, but noo mem allocated if TIMEObj
+		//  is NULL, which means that the ts is regular/ordered, as dertermined by start and dt only
+		int Nrawtime = TimeVec_from_TimeObject(TIMEobj, &tvec);        // isDate may be updated inside based on the TimeObj
+	    if(tvec.isDate == 1) ISDATE =_True_;                            // this is the LAST chance to decide whether the time is date
+	   
+		// Nawtime must be larger than 1L.
+		CondErrMsgRet0( Nrawtime<=1, "ERROR: Unable to read and intepret 'time' or 'metadata$time'!\n");
+
+		// io->timedim and meta->whichDim are filled insside
+		// Nrawtime>1: we know the time series length
+		userWhichDimIsTime=Parse_whichDimIsTime(io, Nrawtime, userWhichDimIsTime);  
+		CondErrMsgRet0(userWhichDimIsTime <= 0, "ERROR: Unable to dtermine which dimo of the input data refers to the time'!\n");
+	
+	} else {
+	 /**********************************/
+    // TIMEobj=NULLL If there is no time object suppiled; it must be a regular ts
+	// Assume it is a regular time series
+	/**********************************/
+		int Nrawtime = 0;
+
+		// io->timedim and meta->whichDim are filled insside
+		// Nrawtime>0: we know the time series length
+		userWhichDimIsTime = Parse_whichDimIsTime(io, Nrawtime, userWhichDimIsTime);
+		CondErrMsgRet0(userWhichDimIsTime <= 0, "ERROR: Unable to dtermine which dimo of the input data refers to the time'!\n");
+
+		int isDefaultDeltaTime = 0;
+		int isDefaultStartTime = 0;
+		if (IsNaN(START)) {
+			START              = 1.f;
+			isDefaultStartTime = 1L;
+		}
+		if (IsNaN(DT)) {
+			DT   = 1.f;
+			isDefaultDeltaTime = 1L;
+		}
+
+		char *warningMsg= "WARNING: If the input data is regular and ordered in time, the times of individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'.";
+		if (isDefaultDeltaTime && isDefaultStartTime) {
+			q_warning("%s But startTime and deltaTime are missing and a default value 1 is used for both!\n", warningMsg);
+			if (ISDATE == _True_) { // as determined from the period field
+				q_warning("WARNING! The default sartTime=1 and deltaTime=1  are used, but the 'period' field specifies that the time is date\n");
+			}
+		} else if (isDefaultStartTime) {
+			q_warning("%s But startTime is missing and a default value 1 is used!\n", warningMsg);
+			if (ISDATE == _True_) { // as determined from the period field
+				q_warning("WARNING! The default startTime=1 is used, but the 'period' field specifies that the time is date\n");
+			}
+		} else if (isDefaultDeltaTime) {
+			q_warning("%s But deltaTime is missing and a default value 1 is used!\n", warningMsg);
+			if (ISDATE == _True_) { // as determined from the period field
+				q_warning("WARNING! The default deltaTime=1 is used, but the 'period' field specifies that the time is date\n");
+			}
+		}
+
+		int N = io->dims[userWhichDimIsTime - 1];   // filled in Parse_whichDimIsTime;
+
+		TimeVec_from_StartDeltaTime(&tvec, START, DT, N, ISDATE);         // isDate is not updated inise		
+		PERIOD          = tvec.isDateNum == 1 ? PERIOD * 365 : PERIOD; // time unit may be changed to datenum inside the function above
+		START           = tvec.data_start;   // time unit might have been changed
+		DT              = tvec.data_dt;      // time unit might have been changed
+	}
+	// No change to update IsData any longer, so if it is still undetermined, then, it is not date
+	ISDATE = ISDATE == UnknownStatus ? _False_ : ISDATE; 
+
+	// Sorted_time_indices are allocated here taht need to be de-allocated explicilty
+	TimeVec_SortCheckRegularOrder(&tvec); // Update data_start and data_dT
+
+	tvec.isDate       = ISDATE;
+	tvec.data_period  = PERIOD;
+	tvec.out.start    = START; // may be still NA in the case of TimeObj != NULL
+	tvec.out.dT       = DT;  // may be still NA in the case of TimeObj != NULL
+
+	// datt_period may be changed inside when f32time is converted to days
+   // out.start may be adjustd slightly to better match the real start of the time series
+	TimeVec_UpdateUserStartDt(&tvec); // PERIOD may be needed in this function to get a better estiamte of dT
+	                                  
+	if (TIMEobj && IsNaN(DT)) {
+	// When TIMEObj is not NULL and dT is not available from the input
+	//FOr regular inpus: q_warning("WARNING: The input time series is regular and metadata$deltaTime/deltat is missing, the regular time interval %g is used. If not making sense, "
+	//      "please specify metadata$deltaTime/deltat explicitly. \n", io->T.dT);
+		F32 dT_new = tvec.out.dT;
+		if (io->T.isRegular == 0) {
+			if (ISDATE && io->T.out.asDailyTS==1) {
+				q_warning("WARNING: The input time series is irregular (or may span across leap years) and BEAST needs to aggregate/resample it into regular data "
+					"at a user-specified interval 'metadata$deltaTime/deltat' (for faster computation). But deltaTime is missing, a best guess of it %g year = %g months = %g days is used. "
+					"If not making sense, please specify metadata$deltaTime/deltat explicitly. \n", dT_new, dT_new * 12, dT_new * 365.0);
+			} else {
+				q_warning("WARNING: The input data is irregular and for faster computaiton, BEAST needs to aggregate/resample it into regular data "
+					"at a user-specified interval 'metadata$deltaTime/deltat' But deltaTime is missing, a best guess of it %g is used. "
+					"If not making sense, please specify metadata$deltaTime/deltat explicitly. \n", dT_new);
+			}
+		}
+	}
+	PERIOD = tvec.data_period;
+	START  = tvec.out.start;
+	DT     = tvec.out.dT;;
+
+	io->N = tsAggegrationPrepare(&tvec);
+
+	/////////////////////////////////////////////////////////
+	// PERIOD is still uknown. Guess it via auto-correlation
+	// Up to this point, if period=NAN, it will be further determined via auto-correlaton, It must be an intger
+	/////////////////////////////////////////////////////////	
+	meta->IsPeriodEstimated = 0;
+	if ( meta->hasSeasonCmpnt && IsNaN(PERIOD)) {		
+		io->T = tvec; // TODO: must update io->T because it is needed inside ParsePeriod
+		F32  estPeriod = ParsePeriod(io);
+		char* season;
+		char* msg;
+		season =io->meta.seasonForm == 'S' ?      "harmonic" :
+			    io->meta.seasonForm == 'V' ?     "svd":
+			                                     "dummy";
+		msg   = "suggests that the time series has a periodic/seasonal component. \"metadata$period\" is needed but missing.";
+		if (estPeriod > 0) {
+			q_warning( "WARNING: metadata$season='%s' %s A BEST GUESS of numbers of datapoints per period is %d, giving period = num_sample_per_period * deltaTime "
+				"= %d*%g = %g. Please make sure this estimate makes sense; otherwise, the BEAST decomposition result will be incorrect.\n",
+				season,  msg,  (int)estPeriod, (int)estPeriod, DT, DT * estPeriod);
+		}	else {
+			r_error("ERROR: metadata$season='%s' %s BEAST tried to estimate it via an auotcorrelation method but failed to get a reliable estimate. "
+				"Please specify the period value EXPLICILTY. Or if your input has no periodic/seasonal component at all, "
+				" set metadata$season='none' or period=0, which will fit a trend-only model.\n", season, msg);
 			return 0;
 		}
+		meta->IsPeriodEstimated = 1;
+		PERIOD = estPeriod * DT; // Convert period to the unit of deltaTime
+	}
 
-		/*************************************************/
-		/* If pY is not a string but a matrix or vector  */
-		/* find the dimesions, and configure io-*/
-		/*************************************************/
-		I32       q;
-		VOID_PTR  Y;
-		if ( (IsStruct(DATA) && numel >= 1) || IsCell(DATA)) {
-			// For MRBEAST only
-			// rawInput is a struct variable with multivariate time series						
-			q = numel;
+ 
+	// Another check on PERIOD: make sure there are at least 2 point per period
+	if (meta->hasSeasonCmpnt == 1) {	
+		F32 freq = PERIOD / DT;
+		CondErrMsgRet0(freq <= 0, "ERROR: BEAST can't handle a time series with a periodic componnet (\"metadata$season='%s'\") but with metadata$period=%g or period='none' specified. If you mean to "
+				    "handle trend-only time series, use the trend-only BEAST version by specifying metadata$season='none'.", meta->seasonForm == 'S' ? "harmonic" : "dummy" ,PERIOD);
+		CondErrMsgRet0(freq <2, "ERROR: BEAST can't handle a time series with a periodic componnet (\"metadata$season='%s'\") but with metadata$period=%g and metadata$deltaTime=%g specified, "
+			                    "which gives only 'period/deltatime=%g' data points per period, If you mean to "
+							    "handle trend-only time series, use the trend-only BEAST version by specifying metadata$season='none'.", meta->seasonForm == 'S' ? "harmonic" : "dummy", PERIOD, DT, PERIOD/DT);
+		CondErrMsgRet0(meta->seasonForm == 'D' && !IsNaN(freq) && !_IsAlmostInteger(freq), "ERROR: For a dummy seasonal component (\"metadata$season='dummy'\"), metadata$period=%g must be a multiple of metadata$deltaTime by an INTEGER number. "
+			"Your period/deltaTime ratio is %g.", freq* DT, freq);
+		CondErrMsgRet0(meta->seasonForm == 'V' && !IsNaN(freq) && !_IsAlmostInteger(freq), "ERROR: For a SVD seasonal component (\"metadata$season='dummy'\"), metadata$period=%g must be a multiple of metadata$deltaTime by an INTEGER number. "
+			"Your period/deltaTime ratio is %g.", freq* DT, freq);	 
+	}
 
-			//Mem to be dellocated in DeallocatTimeSeriesIO
-			io->pdata = malloc(sizeof(VOID_PTR) * q);
-			io->dtype = malloc(sizeof(DATA_TYPE) * q);
-			//TODO: For MRBEAST, here the data type an dimensions of all elments are assumed to be the same
-			// A sanity check needs to be done to ensure that is the case.
-			for (I32 i = 0; i < q; i++) {
-				 Y           = GetFieldByIdx(DATA, i);
-				io->pdata[i] = GetData(Y);
-				io->dtype[i] = GetDataType(Y);
-			}		
-			//Aded for MRBEAST
-			
-		} else {
-		    //rawIinput is a vector of numeric type, and not a struct variable with multivariate time series			
-			q = 1;
-			//Mem to be dellocated in DeallocatTimeSeriesIO
-			io->pdata    = malloc(sizeof(VOID_PTR) * q);
-			io->dtype    = malloc(sizeof(DATA_TYPE) * q);
-			io->pdata[0] = GetData(DATA);
-			io->dtype[0] = GetDataType(DATA);
-			Y = DATA;
-		}				
-		for (I32 i = 0; i < q; i++) {
-			if (io->dtype[i] == DATA_UNKNOWN) {
-				r_error("ERROR: The input data has an uknown numeric type!\n");
-				return 0;
-			}
+
+	meta->startTime   = START;  //shound't be NAN
+	meta->deltaTime   = DT;     //shound't be NAN
+	meta->period      = PERIOD/DT;
+
+	TimeVec_kill_fyearArray(&tvec); // Deallocate f64time only; the other allocate mem is still needed
+	io->T = tvec;
+
+ 
+	return 1;
+}
+
+static int Parse_whichDimIsTime(BEAST2_IO_PTR _OUT_ io, int Nrawtime, int userWhichDim) {
+	   // Nrawtime = 0 when TIMEObject is NULL (only start and dt are provided)
+	   // Nrawtime >1 when TIMEObjc is not NULL (metadata$time is provided)
+
+		int whichDim_final = userWhichDim;
+
+		if ( io->ndim == 1 && userWhichDim != UnknownStatus && userWhichDim != 1) {
+			q_warning("WARNING: metadata$whichDimIsTime = %d is ignored because 'whichDimIsTime' is used only for 2D matrix or 3D array inputs but your input is a 1D vector.\n", userWhichDim);
+            // in this case, io->timedim has been assigned 1 in Get_DATA
 		}
-		io->q = q;
-		/*************************************************/
-		/* Get the dimension of the input              */		
-		/*************************************************/
-		I32 ndims = GetNumOfDim(Y);
-		if (ndims == 0) {
-			// the input is a vector: this branch is possible only for R vectors (not  Matlab)
-			I32 N = GetNumberOfElements(Y);
+    
 
-			io->numOfPixels = 1L;
-			io->ndim		= 1L;
-			io->dims[0]		= N;
-			io->dims[1]		= 1L;
-			
-			if (io->meta.whichDimIsTime != -1) 
-				r_warning("WARNING: metadata$whichDimIsTime=%d is ignored because 'whichDimIsTime' is used only if the input "
-					      "is a 2D matrix or 3D array but your input is a 1D vector.\n", io->meta.whichDimIsTime);
+		if (Nrawtime > 0) {
+			// TImeobjec is not NULL: We know the the length of the time dim
 
-			//TODO: always set it to 1 for 1D and 2D inputs
-			// If hte input is a vector, the time dim is always 1
-			io->meta.whichDimIsTime = 1L;
-		} 
-		else if (ndims == 1) {
-			// the input is a vector: this branch is possible only for Python vectors (not R or matlab)
-			I32 N = GetNumberOfElements(Y);
-
-			io->numOfPixels = 1L;
-			io->ndim     = 1L;
-			io->dims[0]  = N;
-			io->dims[1]  = 1L;
-
-			if (io->meta.whichDimIsTime != -1)
-				r_warning("WARNING: metadata$whichDimIsTime=%d is ignored because 'whichDimIsTime' is used only if the input "
-					"is a 2D matrix or 3D array but your input is a 1D vector.\n", io->meta.whichDimIsTime);
-
-			//TODO: always set it to 1 for 1D and 2D inputs
-			// If hte input is a vector, the time dim is always 1
-			io->meta.whichDimIsTime = 1L;
-		}
-		//ndims is impossible to be 1L
-		else if (ndims == 2) { 
-		// Matlab: a vector or matrix;
-		// R:      a matrix or a vector with a dim attribute.
-
-			int N = GetDim1(Y);
-			int M = GetDim2(Y);
-
-			if (min(N, M) == 1L)  //PY is a vector
-			{
-				N = max(N, M),
-				io->numOfPixels = 1,
-				io->ndim      = 1L,
-				io->dims[0]   = N,
-				io->dims[1]   = 1L,
-				io->meta.whichDimIsTime = 1L;
-
-				// If hte input is a vector, the time dim is always 1
-				if (io->meta.whichDimIsTime != -1)
-					r_warning("WARNING: metadata$whichDimIsTime=%d is ignored because 'whichDimIsTime' is used only if the input "
-						"is a 2D matrix or 3D array but your input is a 1D vector.\n", io->meta.whichDimIsTime);
+			int matcheNumDims = (Nrawtime == io->dims[0]) + (Nrawtime == io->dims[1]) + (Nrawtime == io->dims[2]);
+			if (matcheNumDims == 0) {
+				r_error("ERROR: The input data must have the same length as the time in metadata.\n");
+				return -1;
 			}
-			else                 //PY is a matrix
-			{
-				io->ndim	= 2L,
-				io->dims[0] = N,
-				io->dims[1] = M;
-
-
-				I32 whichDimIsTime = io->meta.whichDimIsTime;
-				if (whichDimIsTime == -1 || (whichDimIsTime != 1 && whichDimIsTime != 2 )) {
+			else if (matcheNumDims == 1) {
+				int  timeDimMatched;
+				if (Nrawtime == io->dims[0])  timeDimMatched = 1;
+				if (Nrawtime == io->dims[1])  timeDimMatched = 2;
+				if (Nrawtime == io->dims[2])  timeDimMatched = 3;
+				if (userWhichDim != UnknownStatus && userWhichDim != timeDimMatched) {
+					q_warning("WARNING: the specified metadata$whichDimIsTime=%d is ignored; 'whichDimIsTime=%d' is instead used based on the match between the input data and time.\n", userWhichDim, timeDimMatched);
+				}
+				whichDim_final = timeDimMatched;
+			}
+			else { // matcheNumDims =2 or 3
+				if (userWhichDim == UnknownStatus || (io->ndim == 2 && userWhichDim != 1 && userWhichDim != 2)) {
 					r_error("ERROR: For a 2D matrix input of size [%d x %d] (i.e., multiple time series), metadata$whichDimIsTime must be given "
-						    "to tell which dim of the matrix  refers to time. It must take a value out of 1 or 2 only.\n", N, M);
+						"to tell which dim of the matrix  refers to time. It must take a value out of 1 or 2 only.\n", io->dims[0], io->dims[1]);
+					return 0;
+				}
+				if (userWhichDim == UnknownStatus || (io->ndim == 3 && userWhichDim != 1 && userWhichDim != 2 && userWhichDim != 3)) {
+					r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e., stacked time series images), metadata$whichDimIsTime must be given "
+						"to tell which dim of the 3D array  refers to time. It must take a value out of 1, 2 or 3 only.\n", io->dims[0], io->dims[1], io->dims[2]);
 					return 0;
 				}
 
-				io->numOfPixels = (I64)io->dims[0] * io->dims[1]  / io->dims[io->meta.whichDimIsTime - 1L];
-			}//PY is a matrix
-
-			
-		}
-		else if (ndims == 3) {
-			// If the input is a 3D array
-			io->ndim = 3L;
-			GetDimensions(Y, io->dims, 3L);
-
-			I32 whichDimIsTime = io->meta.whichDimIsTime;
-			if (whichDimIsTime == -1 ||	(whichDimIsTime!=1 && whichDimIsTime!=2 && whichDimIsTime!=3 )  ) {
-				r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e., stacked time series images), metadata$whichDimIsTime must be given "
-					     "to tell which dim of the 3D array  refers to time. It must take a value out of 1, 2 or 3 only.\n", 
-					     io->dims[0], io->dims[1], io->dims[2]);
-				return 0;	}
-
-			io->numOfPixels = (I64)io->dims[0] * io->dims[1] * io->dims[2] / io->dims[io->meta.whichDimIsTime - 1L];
-		}
+				if (userWhichDim>3 || userWhichDim <1) {
+					r_error("ERROR: the input (whichDimIsTime=%d) muust be an integer of 1, 2, or 3.\n", userWhichDim+1);
+					return 0;
+				} else {
+					if (io->dims[userWhichDim - 1] != Nrawtime) {
+						r_error("ERROR: The length of the time dimension of the input (whichDimIsTime=%d) doesn't match the length of time/metadata$time (i.e., %d!=%d).\n", userWhichDim, io->dims[userWhichDim], Nrawtime);
+						return 0;
+					}
+				}
+		
+				whichDim_final = userWhichDim;
+			}
+		}	
 		else {
-			r_printf("ERROR: The maximum dimension allowed is 3 when the data is a 3D stack of images over time,"
-				    " but the input data has a dimension of %d .\n", ndims);
-			return 0;
+		// Nraw=0: rregular inputs wihtout the time object
+
+			if (io->timedim == UnknownStatus) {
+				// io->timedim has been determined for 1D signals; this branch is only for 2D or 3D data 
+				if (userWhichDim == UnknownStatus || (io->ndim == 2 && userWhichDim != 1 && userWhichDim != 2)) {
+					r_error("ERROR: For a 2D matrix input of size [%d x %d] (e.g., multiple time series), metadata$whichDimIsTime must be given "
+						"to tell which matrix dim refers to time. It must take a value out of 1 or 2 only.\n", io->dims[0], io->dims[1]);
+					return 0;
+				}
+				if (userWhichDim == UnknownStatus || (io->ndim == 3 && userWhichDim != 1 && userWhichDim != 2 && userWhichDim != 3)) {
+					r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e., stacked time series images), metadata$whichDimIsTime must be given "
+						"to tell which aray dim refers to time. It must take a value out of 1, 2 or 3 only.\n", io->dims[0], io->dims[1], io->dims[2]);
+					return 0;
+				}
+				whichDim_final = userWhichDim;
+			}	else {
+				// it can be only 1
+				whichDim_final = io->timedim;
+			}
+		
 		}
 
-	
+		io->timedim = io->meta.whichDimIsTime = whichDim_final;
 
+		if (io->meta.whichDimIsTime == 1) { io->rowdim = 2, io->coldim = 3, io->timedim = 1; }
+		if (io->meta.whichDimIsTime == 2) { io->rowdim = 1, io->coldim = 3, io->timedim = 2; }
+		if (io->meta.whichDimIsTime == 3) { io->rowdim = 1, io->coldim = 2, io->timedim = 3; }
+
+		io->imgdims[0]  = io->dims[io->rowdim - 1];
+		io->imgdims[1]  = io->dims[io->coldim - 1];
+		io->numOfPixels = (I64)io->dims[0] * io->dims[1] * io->dims[2] / io->dims[io->timedim - 1L];
+
+		//int N = io->dims[io->timedim - 1L];
+		return whichDim_final;		
+}
+
+ static float ParsePeriod(BEAST2_IO_PTR _OUT_ io ) {
+		
 		/*************************************************/
-		// Check and get the values for period, startTime, deltaTime
-		// or period_in_time
-		/*************************************************/
-		int res = io->meta.isRegularOrdered? ___PraseMetaData_RegularTS_Dim123(  &io->meta, io):
-											 ___PraseMetaData_IrregularTS_Dim123(&io->meta, io); //set io->N
-		if (res == 0)
-			return 0;
-
-		// Period is not needed for trend-only data
-		// or if there is a season compnt and the period is already a valid value
-		if ( !io->meta.hasSeasonCmpnt   || io->meta.period > 0)
-			return 1;
-
-
 		// There is a seasonal componet, and we need to check and get period	 
+		/*************************************************/
+		//if ( io->meta.hasSeasonCmpnt==0 ||    // Period is not needed for trend-only data
+		//	 io->meta.period        > 0    )  // or if there is a season compnt and the period is already a valid value			 
+
 		/*************************************************/
 		//  if period<=0 or IsNan(period)
 		//  Determine the period perameter via auto-correlation
 		/*************************************************/
-		BEAST2_YINFO yInfo;
+		BEAST2_YINFO Yinfo;
 		F32PTR       MEMBUF;
-		I32   N    = io->N;
-		I32   Nraw = __GetRawTimeDimension(io);
-		F32PTR tmp = malloc(sizeof(F32)*(N*q +N+q +q +q*q +Nraw )); //alocate mem for yInfo and MEMBUF
+		int    N    = io->N;		
+		int    q    = io->q;
+		int    Nraw = io->dims[io->timedim - 1];
+		F32PTR tmp  = malloc(sizeof(F32)*(N*q +N+q +q +q*q +Nraw )); //alocate mem for yInfo and MEMBUF
 
-		yInfo.Y               = tmp;
-		yInfo.rowsMissing     = tmp+N*q;
-		yInfo.mean            = tmp + N * q+N;
-		yInfo.sd                = tmp + N * q +N+q;
-		yInfo.YtY_plus_alpha2Q  = tmp + N * q +N+q+q;
+		Yinfo.Y                 = tmp;
+		Yinfo.rowsMissing       = tmp+N*q;
+		Yinfo.mean              = tmp + N * q+N;
+		Yinfo.sd                = tmp + N * q +N+q;
+		Yinfo.YtY_plus_alpha2Q  = tmp + N * q +N+q+q;
 		MEMBUF                  = tmp + N * q +N+q+q+q*q; //needed only for irregular time series
 
-		F32 period              = -1;
 		F32 nan                 = getNaN();
+		F32 period              = nan;
 		I32 goodPixelVisited    = 0;
 		I32 MaxNumPixelVisisted = 200;
-
 		// THe pixel index is 1-based and not zero-based
 		for (int i = 1; i <= io->numOfPixels; ++i) {
 
-			BEAST2_fetch_next_timeSeries(&yInfo, i, MEMBUF, io);
-			// yInfo has been fillted above and now compaute mean, std, and YtY			
-			int    N = io->N;
-			int    q = io->q;
-			//Normalize Y with NaN ommitted and then pre-comoute Y'*Y: YtY_plus_Q using gemm
-			yInfo.nMissing = f32_normalize_multicols_zeroout_nans(yInfo.Y, yInfo.rowsMissing, N, N, q, yInfo.mean, yInfo.sd);
-			U08 skipCurrentPixel = yInfo.nMissing > (N * io->meta.maxMissingRate) ? 1 : 0;
+			BEAST2_fetch_timeSeries(&Yinfo, i, MEMBUF, io);
+			// yInfo has been fillted above and now compaute mean, std, and YtY						
+			// Normalize Y with NaN ommitted and then pre-comoute Y'*Y: YtY_plus_Q using gemm
+			Yinfo.nMissing = f32_normalize_multicols_zeroout_nans(Yinfo.Y, Yinfo.rowsMissing, N, N, q, Yinfo.mean, Yinfo.sd);
+
+			U08 skipCurrentPixel = Yinfo.nMissing > (N * io->meta.maxMissingRate);
 			if (skipCurrentPixel) {
 				continue;
-			}
-		
+			}		
 			
 			for (int j = 0; j < q; ++j) {
-				F32PTR y = yInfo.Y + j * N;
-				for (int k = 0; k < yInfo.nMissing; ++k) {y[yInfo.rowsMissing[k]] = nan;}
 
-				F32 curPeriod = DeterminePeriod(y, N);  // return -1 if failing to estimate the period
-				if (j == 0){ //if it is the 1st out of the q time series				
-					period = curPeriod;
-					if (period < 0) {
-						break;
-					}
+				F32PTR y = Yinfo.Y + j * N;
+				for (int k = 0; k < Yinfo.nMissing; ++k) {
+					y[Yinfo.rowsMissing[k]] = nan;
+				}
+
+				F32 jthPeriod = DeterminePeriod(y, N);  // return -1 if failing to estimate the period
+				if (j == 0) { 
+					//if it is the 1st out of the q time series	
+					period = jthPeriod;
+					if (period < 0)	break;					
 				} else {
-					if (period != curPeriod) {
+					if (jthPeriod != period ) {
 						//if a later time series dones't give the same period as the first one
-						period = -1;
+						period = nan;
 						break;
 					}
 				}
 			}
 
-			if (period > 0) {
-				break;
-			}
-
-			if (++goodPixelVisited > MaxNumPixelVisisted)
-				break;
+			if (period > 0   )                           	break;
+			if (++goodPixelVisited > MaxNumPixelVisisted) 	break;
 		}
 		free(tmp);
-		
-
-		if (period > 0) {
-			r_warning("WARNING: When metadata$season='%s' (i.e., the time series has a periodic component), \"metadata$period\" "
-				"MUST be known in advance and specified by the user but it is missing. A BEST GUESS of it is %f (period=freq*deltaTime=%d*%f) and "
-				"will be used. Please make sure this estimate makes sense; otherwise, the BEAST decomposition result will be incorrect.\n",
-				io->meta.seasonForm == 'S' ? "harmonic" : "dummy", period* io->meta.deltaTime, (int)period, io->meta.deltaTime);
-		} else {
-			r_error("ERROR: When metadata$season='%s' (i.e., a periodic component present in the input time series), the \"metadata$period\" parameter "
-				"must be known in advance and specified by the user but it is missing. BEAST tried to estimate it via an auotcorrelation method but failed to "
-				"get a reliable estimate. Please specify the value for metadata$period EXPLICILTY. Or if your input has no periodic component at all, "
-				" set  metadata$season='none', which will fit a trend-only model.\n", io->meta.seasonForm == 'S' ? "harmonic" : "dummy");
-			return 0;
-		}
-
-		io->meta.period = period;
-		return 1;
-
+ 
+	return period;
 }
 
 static int __GetPrecPriorType( VOID_PTR S ) {
@@ -789,7 +659,7 @@ static int __GetPrecPriorType( VOID_PTR S ) {
 		if (value == 2) return ComponentWise;
 		if (value == 3) return OrderWise;
 
-		r_warning("WARNING: The arg prior$precPriorType=(%d) is not a valid value; the default prior$precPriorType='%s' is assumed instread!", value, "uniform");
+		q_warning("WARNING: The arg prior$precPriorType=(%d) is not a valid value; the default prior$precPriorType='%s' is assumed instread!", value, "uniform");
 		return UniformPrec;
 	} 
 	else if (IsChar(tmp)) {
@@ -803,11 +673,11 @@ static int __GetPrecPriorType( VOID_PTR S ) {
 		if (a == 'C' && c == 'M')	return ComponentWise;
 		if (a == 'C' && c == 'N')	return ConstPrec;	
 
-		r_warning("WARNING: The arg prior$precPriorType=(%s) is not recongizable; the default prior$precPriorType='%s' is assumed instread!", str, "uniform");
+		q_warning("WARNING: The arg prior$precPriorType=(%s) is not recongizable; the default prior$precPriorType='%s' is assumed instread!", str, "uniform");
 		return UniformPrec;
 	}
 	
-	r_warning("WARNING: The arg prior$precPriorType has an supported format or value; the default prior$precPriorType='%s' is assumed instread!",  "uniform");
+	q_warning("WARNING: The arg prior$precPriorType has an supported format or value; the default prior$precPriorType='%s' is assumed instread!",  "uniform");
 	return UniformPrec;
 }
 
@@ -845,26 +715,31 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	if (nrhs >= 4) {		 
 		VOIDPTR S = prhs[3L];
 		if (!IsStruct(S)) {
-			r_warning("WARNING: The arg 'prior' is ignored because it is not a List/Struct variable.");
+			q_warning("WARNING: The arg 'prior' is ignored because it is not a List/Struct variable.");
 			memset(&m, 1L, sizeof(struct PRIOR_MISSING));
 		}
 		else {
 			VOIDPTR tmp;
-			o.seasonMinOrder    = (tmp = GetField123Check(S, "seasonMinOrder",10)) ?    GetScalar(tmp) : (m.seasonMinOrder = 1);
-			o.seasonMaxOrder    = (tmp = GetField123Check(S, "seasonMaxOrder", 10)) ?   GetScalar(tmp) : (m.seasonMaxOrder = 1);
-			o.trendMinOrder     = (tmp = GetField123Check(S, "trendMinOrder", 10)) ?    GetScalar(tmp) : (m.trendMinOrder = 1);
-			o.trendMaxOrder     = (tmp = GetField123Check(S, "trendMaxOrder", 10)) ?    GetScalar(tmp) : (m.trendMaxOrder = 1);
+			if (io->meta.hasSeasonCmpnt) {
+				o.seasonMinOrder = (tmp = GetField123Check(S, "seasonMinOrder", 10)) ? GetScalar(tmp) : (m.seasonMinOrder = 1);
+				o.seasonMaxOrder = (tmp = GetField123Check(S, "seasonMaxOrder", 10)) ? GetScalar(tmp) : (m.seasonMaxOrder = 1);
+				o.seasonMinSepDist = (tmp = GetField123Check(S, "seasonMinSepDist", 10)) ? GetScalar(tmp) : (m.seasonMinSepDist = 1);
+				o.seasonMinKnotNum = (tmp = GetField123Check(S, "seasonMinKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMinKnotNum = 1);
+				o.seasonMaxKnotNum = (tmp = GetField123Check(S, "seasonMaxKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum = 1);
+			}
+
+			o.trendMinOrder     = (tmp = GetField123Check(S, "trendMinOrder",  10)) ?   GetScalar(tmp) : (m.trendMinOrder = 1);
+			o.trendMaxOrder     = (tmp = GetField123Check(S, "trendMaxOrder",  10)) ?   GetScalar(tmp) : (m.trendMaxOrder = 1);
 			o.trendMinSepDist   = (tmp = GetField123Check(S, "trendMinSepDist", 10)) ?  GetScalar(tmp) : (m.trendMinSepDist = 1);
-			o.seasonMinSepDist  = (tmp = GetField123Check(S, "seasonMinSepDist", 10)) ? GetScalar(tmp) : (m.seasonMinSepDist = 1);
-			o.trendMinKnotNum   = (tmp = GetField123Check(S, "trendMinKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMinKnotNum = 1);
-			o.seasonMinKnotNum  = (tmp = GetField123Check(S, "seasonMinKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMinKnotNum = 1);
+			o.trendMinKnotNum   = (tmp = GetField123Check(S, "trendMinKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMinKnotNum = 1);			
 			o.trendMaxKnotNum   = (tmp = GetField123Check(S, "trendMaxKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum = 1);
-			o.seasonMaxKnotNum  = (tmp = GetField123Check(S, "seasonMaxKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum = 1);
-			o.outlierMaxKnotNum = (tmp = GetField123Check(S, "outlierMaxKnotNum", 10))? GetScalar(tmp) : (m.outlierMaxKnotNum = 1);
-			o.K_MAX             = (tmp = GetField123Check(S, "K_MAX",1)) ?			GetScalar(tmp) : (m.K_MAX = 1);
+			
+			if (io->meta.hasOutlierCmpnt) {
+				o.outlierMaxKnotNum = (tmp = GetField123Check(S, "outlierMaxKnotNum", 10)) ? GetScalar(tmp) : (m.outlierMaxKnotNum = 1);
+				o.outlierSigFactor = (tmp = GetFieldCheck(S, "outlierSigFactor")) ? GetScalar(tmp) : (m.outlierSigFactor = 1);
+			}
 
 			o.sigFactor         = (tmp = GetFieldCheck(S,  "sigFactor")) ?			GetScalar(tmp) : (m.sigFactor        = 1);
-			o.outlierSigFactor  = (tmp = GetFieldCheck(S,  "outlierSigFactor")) ?	GetScalar(tmp) : (m.outlierSigFactor = 1);
 
 			o.sig2              = (tmp = GetField123Check(S, "sig2",2)) ?				GetScalar(tmp) : (m.sig2 = 1);
 			o.precValue		    = (tmp = GetField123Check(S, "precValue",5)) ?		GetScalar(tmp) : (m.precValue = 1);
@@ -873,10 +748,11 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			o.delta1			= (tmp = GetField123Check(S, "delta1",0)) ?			GetScalar(tmp) : (m.delta1 = 1);
 			o.delta2			= (tmp = GetField123Check(S, "delta2",0)) ?			GetScalar(tmp) : (m.delta2 = 1);
 
-		
-			o.seasonBasisFuncType	= (tmp = GetField123Check(S, "seasonBasisFuncType",10)) ?  GetScalar(tmp) : (m.seasonBasisFuncType = 1);
-			o.trendBasisFuncType	= (tmp = GetField123Check(S, "trendBasisFuncType", 10)) ?   GetScalar(tmp) : (m.trendBasisFuncType = 1);
-			o.outlierBasisFuncType	= (tmp = GetField123Check(S, "outlierBasisFuncType", 10)) ? GetScalar(tmp) : (m.outlierBasisFuncType = 1);
+			o.K_MAX = (tmp = GetField123Check(S, "K_MAX", 1)) ? GetScalar(tmp) : (m.K_MAX = 1);
+
+			if (io->meta.hasSeasonCmpnt)  o.seasonBasisFuncType	  = (tmp = GetField123Check(S, "seasonBasisFuncType",10)) ?  GetScalar(tmp) : (m.seasonBasisFuncType = 1);
+			if (1L)                       o.trendBasisFuncType	  = (tmp = GetField123Check(S, "trendBasisFuncType", 10)) ?   GetScalar(tmp) : (m.trendBasisFuncType = 1);
+			if (io->meta.hasOutlierCmpnt) o.outlierBasisFuncType  = (tmp = GetField123Check(S, "outlierBasisFuncType", 10)) ? GetScalar(tmp) : (m.outlierBasisFuncType = 1);
 			o.modelPriorType		= (tmp = GetField123Check(S, "modelPriorType",  10)) ?		GetScalar(tmp) : (m.modelPriorType = 1);
 			
 			//o.precPriorType		    = (tmp = GetFieldCheck(S, "precPriorType")) ?	    GetScalar(tmp) : (m.precPriorType = 1);
@@ -890,12 +766,12 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	o.numBasis       = 1L + io->meta.hasSeasonCmpnt + io->meta.hasOutlierCmpnt;
 	I32  basisIdx    = 0;	
 	if (io->meta.hasSeasonCmpnt) {
-		I08  seasonFrom = io->meta.seasonForm;
+		I08      seasonFrom = io->meta.seasonForm;
 		if      (seasonFrom == 'S')	o.basisType[basisIdx++] = SEASONID;
 		else if (seasonFrom == 'D') o.basisType[basisIdx++] = DUMMYID;
 		else if (seasonFrom == 'V') o.basisType[basisIdx++] = SVDID;
 		else {
-			r_error("ERROR: the seasonform character is unrecognized. It must be one of 'S', 'D', or 'V'. \n");
+			r_error("ERROR: the season character is unrecognized. Valid values are 'none', 'harmonic', 'dummy', and 'svd'. \n");
 			return 0;
 		}
 	}
@@ -909,23 +785,27 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	I32 N      = io->N;
 	/**************************/
 
-	if (m.seasonMinOrder)    o.seasonMinOrder   = 1L;				   o.seasonMinOrder   = min(o.seasonMinOrder, period / 2 - 1);    o.seasonMinOrder = max(o.seasonMinOrder, 1L);
-	if (m.seasonMaxOrder)    o.seasonMaxOrder   = (period/2 - 1);      o.seasonMaxOrder   = min(o.seasonMaxOrder, (period / 2 - 1));  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
-	if (m.trendMinOrder)     o.trendMinOrder    = 0L;				   o.trendMinOrder	  = max(o.trendMinOrder, 0L);
-	if (m.trendMaxOrder)     o.trendMaxOrder    = 1L;				   o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);
-	if (m.seasonMinSepDist || o.seasonMinSepDist == 0)				   o.seasonMinSepDist = period / 2;       o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
+	if (io->meta.hasSeasonCmpnt) {
+		if (io->meta.seasonForm == 'S') {
+			if (m.seasonMinOrder)      o.seasonMinOrder = 1L;				   o.seasonMinOrder = min(o.seasonMinOrder, period / 2 - 1);    o.seasonMinOrder = max(o.seasonMinOrder, 1L);
+			if (m.seasonMaxOrder)      o.seasonMaxOrder = (period / 2 - 1);    o.seasonMaxOrder = min(o.seasonMaxOrder, (period / 2 - 1));  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
+		}	else if (io->meta.seasonForm == 'V') {
+			if (m.seasonMinOrder)      o.seasonMinOrder = 1L;				   o.seasonMinOrder = min(o.seasonMinOrder, period - 1);   o.seasonMinOrder = max(o.seasonMinOrder, 1L);
+			if (m.seasonMaxOrder)      o.seasonMaxOrder = (period / 2 - 1);    o.seasonMaxOrder = min(o.seasonMaxOrder, period );  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
+		}
+		
+		if (m.seasonMinSepDist || o.seasonMinSepDist <= 0)   o.seasonMinSepDist = period / 2;          o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
+		if (m.seasonMinKnotNum)                              o.seasonMinKnotNum = 0;                   o.seasonMinKnotNum = max(min(o.seasonMaxKnotNum, o.seasonMinKnotNum), 0);
+		if (m.seasonMaxKnotNum)                              o.seasonMaxKnotNum = min(floor(N / (o.seasonMinSepDist + 1) - 1.f), 5);  o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, floor(N / (o.seasonMinSepDist + 1) - 1.f));   o.seasonMaxKnotNum = max(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+	}
 	
-	if (m.trendMinSepDist || o.trendMinSepDist == 0)   o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ;
-	o.trendMinSepDist = max(o.trendMinSepDist, (o.trendMaxOrder+1));
-	o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
-	
-	
-	if (m.seasonMinKnotNum)  o.seasonMinKnotNum = 0;                   o.seasonMinKnotNum = max(min(o.seasonMaxKnotNum, o.seasonMinKnotNum), 0);
-	if (m.trendMinKnotNum)   o.trendMinKnotNum  = 0;	               o.trendMinKnotNum  = max( min(o.trendMaxKnotNum,  o.trendMinKnotNum),0);
-	
-	if (m.seasonMaxKnotNum)  o.seasonMaxKnotNum  = min(floor(N / (o.seasonMinSepDist + 1) - 1.f), 5);  o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, floor(N / (o.seasonMinSepDist + 1) - 1.f));
-	if (m.trendMaxKnotNum)   o.trendMaxKnotNum   = min( floor(N/(o.trendMinSepDist  + 1) - 1.f),  10); o.trendMaxKnotNum  = min(o.trendMaxKnotNum,  floor(N / (o.trendMinSepDist + 1) - 1.f));	
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;                                  o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
+	if (m.trendMinOrder)                             o.trendMinOrder    = 0L;				                      o.trendMinOrder	  = max(o.trendMinOrder, 0L);
+	if (m.trendMaxOrder)                             o.trendMaxOrder    = 1L;				                      o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);	
+	if (m.trendMinSepDist || o.trendMinSepDist <= 0) o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ; o.trendMinSepDist = max(o.trendMinSepDist, o.trendMaxOrder + 1);	o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
+	if (m.trendMinKnotNum)                           o.trendMinKnotNum = 0;	                                      o.trendMinKnotNum = max(min(o.trendMaxKnotNum, o.trendMinKnotNum), 0);
+	if (m.trendMaxKnotNum)                           o.trendMaxKnotNum = min(floor(N / (o.trendMinSepDist + 1) - 1.f), 10); o.trendMaxKnotNum = min(o.trendMaxKnotNum, floor(N / (o.trendMinSepDist + 1) - 1.f)); o.trendMaxKnotNum = max(o.trendMaxKnotNum, o.trendMinKnotNum);
+
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;      o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
 	
 	if (m.K_MAX )            o.K_MAX            = 500;                  
 	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = max(o.sigFactor,        1.02);
@@ -960,7 +840,6 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 		else if (o.precPriorType == OrderWise)          o.outlierBasisFuncType = 1;
 	}	 
 	if (m.modelPriorType)			o.modelPriorType        = 1L;
-	
 
 	return 1;
 
@@ -991,25 +870,24 @@ static int  GetArg_3rd_MCMC___(VOIDPTR prhs[], int nrhs, BEAST2_MCMC_PTR mcmc,  
 
 		VOIDPTR S = prhs[4L];
 		if (!IsStruct(S)) {
-			r_warning("WARNING: The arg 'mcmc' is ignored because it is not a LIST variable.");
+			q_warning("WARNING: The arg 'mcmc' is ignored because it is not a LIST variable.");
 			memset(&m, 1L, sizeof(struct MCMC_MISSING));
 		} else {
 			VOIDPTR tmp;
 			o.maxMoveStepSize = (tmp = GetField123Check(S, "maxMoveStepSize",2))? GetScalar(tmp) : (m.maxMoveStepSize = 1);
-			o.samples         = (tmp = GetField123Check(S, "samples", 2)) ?        GetScalar(tmp) : (m.samples = 1);
+			o.samples         = (tmp = GetField123Check(S, "samples", 3)) ?        GetScalar(tmp) : (m.samples = 1);
 			o.thinningFactor  = (tmp = GetField123Check(S, "thinningFactor", 2)) ? GetScalar(tmp) : (m.thinningFactor = 1);
 			o.burnin          = (tmp = GetField123Check(S, "burnin", 2)) ?         GetScalar(tmp) : (m.burnin = 1);
 			o.chainNumber     = (tmp = GetField123Check(S, "chainNumber", 2)) ?    GetScalar(tmp) : (m.chainNumber = 1);
-			o.seed			  = (tmp = GetField123Check(S, "seed", 2)) ?			GetScalar(tmp) : (m.seed = 1);
+			o.seed			  = (tmp = GetField123Check(S, "seed", 4)) ?			GetScalar(tmp) : (m.seed = 1);
 			o.ridgeFactor	  = (tmp = GetField123Check(S, "ridgeFactor", 2)) ?	GetScalar(tmp) : (m.ridgeFactor = 1);
 
-			o.trendResamplingOrderProb  = (tmp = GetField123Check(S, "trendResamplingOrderProb",  2)) ? GetScalar(tmp) : (m.trendResamplingOrderProb = 1);
-			o.seasonResamplingOrderProb = (tmp = GetField123Check(S, "seasonResamplingOrderProb", 2)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb = 1);
+			o.trendResamplingOrderProb  = (tmp = GetField123Check(S, "trendResamplingOrderProb",  5)) ? GetScalar(tmp) : (m.trendResamplingOrderProb = 1);
+			o.seasonResamplingOrderProb = (tmp = GetField123Check(S, "seasonResamplingOrderProb", 5)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb = 1);
 			o.credIntervalAlphaLevel    = (tmp = GetField123Check(S, "credIntervalAlphaLevel",    2)) ? GetScalar(tmp) : (m.credIntervalAlphaLevel = 1);
 		}
 
 	} // if (nrhs >= 5)
-
  
 	//r_printf("move :%d  %d %d\n", o.maxMoveStepSize, opt->io.meta.hasSeasonCmpnt , opt->prior.trendMinSepDist  );
 	if (m.maxMoveStepSize || o.maxMoveStepSize==0) o.maxMoveStepSize = opt->io.meta.hasSeasonCmpnt? opt->io.meta.period: (opt->prior.trendMinSepDist + 1);
@@ -1023,11 +901,12 @@ static int  GetArg_3rd_MCMC___(VOIDPTR prhs[], int nrhs, BEAST2_MCMC_PTR mcmc,  
 
 	if (m.trendResamplingOrderProb)  o.trendResamplingOrderProb  = .1f;
 	if (m.seasonResamplingOrderProb) o.seasonResamplingOrderProb = .17f;
-
+ 
 	return 1;
 
 #undef o
 }
+
 static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra, I32 whichDimIsTime, I32 ndims)
 {
 	// Before running this function, meta.whichDimIsTime must be first obtained
@@ -1074,7 +953,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 	if (nrhs >= 6) {
 		VOIDPTR S = prhs[5L];
 		if (!IsStruct(S)) {
-			r_warning("WARNING: The arg 'extra' is ignored because it is not a LIST variable.");
+			q_warning("WARNING: The arg 'extra' is ignored because it is not a LIST variable.");
 			memset(&m, 1L, sizeof(struct OUTFLAGS_MISSING));
 		}
 		else {
@@ -1090,9 +969,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 			#define _1(x)       o.x = (tmp=GetFieldCheck(S,#x))? GetScalar(tmp): (m.x=1)
 			#define _2(x,y)     _1(x);_1(y)
 			#define _3(x,y,z)   _1(x);_2(y,z)
-			#define _4(x,y,z,w) _2(y,z);_2(y,z)
-			#define _5(x,y,z,w) _2(y,z);_3(y,z)
-
+			#define _4(x,y,z,w) _2(x,y);_2(z,w)
+			
 			_2(printProgressBar, printOptions);
 			_2(computeCredible,  fastCIComputation);
 
@@ -1101,8 +979,6 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 			_2(computeSeasonAmp,     computeTrendSlope);
 			_4(tallyPosNegSeasonJump, tallyPosNegTrendJump, tallyIncDecTrendJump, tallyPosNegOutliers);
 			_1(useMeanOrRndBeta);
-
-		 
 				 
 		} // if (!IsStruct(S)) : S is a struct
 	} // if (nrhs >= 5)
@@ -1121,7 +997,6 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 	if (m.consoleWidth||o.consoleWidth<=0)  o.consoleWidth= GetConsoleWidth(); 	o.consoleWidth = max(o.consoleWidth, 40);
 	if (m.printProgressBar)      o.printProgressBar	= 1;
 	if (m.printOptions)          o.printOptions		= 1;
-
 
 	if (m.computeCredible)       o.computeCredible		= 0L;
 	if (m.fastCIComputation)     o.fastCIComputation	= 1L;
@@ -1159,6 +1034,7 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	I08 hasSeasonCmpnt   = opt->prior.basisType[0] == SEASONID || opt->prior.basisType[0] == DUMMYID || opt->prior.basisType[0] == SVDID;
 	I08 hasHarmonicCmpnt = opt->prior.basisType[0] == SEASONID ;
 	I08 hasDummyCmpnt    = opt->prior.basisType[0] == DUMMYID;
+	I08 hasSVDCmpnt      = opt->prior.basisType[0] == SVDID;
 	I08 hasOutlierCmpnt  = opt->prior.basisType[opt->prior.numBasis - 1] == OUTLIERID;
 	I08 hasTrendCmpnt    = 1;
 	I08 hasAlways        = 1;
@@ -1189,9 +1065,11 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	if (hasDummyCmpnt) {
 		opt->extra.computeSeasonOrder	    = 0;	
 		opt->extra.computeSeasonAmp         = 0; //TODO: remove this restriction
-		opt->mcmc.seasonResamplingOrderProb = 0;
 		opt->prior.seasonMinOrder           = 0;
 		opt->prior.seasonMaxOrder           = 0;		
+	}
+	if (hasSVDCmpnt) { 
+		opt->extra.computeSeasonAmp = 0; //TODO: remove this restriction 
 	}
 	if (!hasOutlierCmpnt) {
 		opt->extra.computeOutlierChngpt = 0;
@@ -1208,27 +1086,27 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	//if numbasis == 2 and hasOutlier == 1, then the first cmpt must not be fixed
 	if (opt->prior.numBasis == 2 ) {
 		if (hasTrendCmpnt  && hasOutlierCmpnt && isTrendCmpntFixed) {
-			r_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0' will"
+			q_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0' will"
 				     " fix the trend to a global curve.\n");					 
 		}
 		if (hasHarmonicCmpnt && hasOutlierCmpnt && isSeasonCmpntFixed) {
-			r_warning("WARNING: The options 'seasonMaxOrder==seasonMaxOrder && seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
+			q_warning("WARNING: The options 'seasonMaxOrder==seasonMaxOrder && seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
 				    " fix the season component to a global curve.\n");		 
 		}
 		if (hasDummyCmpnt && hasOutlierCmpnt && isSeasonCmpntFixed) {
 			// for the dummy cmpnt, maxOrder and minOrder are both set to zeros.
-			r_warning("WARNING: The options 'seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
+			q_warning("WARNING: The options 'seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
 				    " fix the dummy season component to a global curve.\n");			
 		}
 	}
 	if (hasTrendCmpnt && hasDummyCmpnt & isTrendCmpntFixed && isSeasonCmpntFixed) {		
-		r_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0 && "
+		q_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0 && "
 			    " seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
 			    " fix the model structures of the trend and dummy season components.\n");
  
 	}
 	if (hasTrendCmpnt && hasHarmonicCmpnt & isTrendCmpntFixed && isSeasonCmpntFixed) {
-		r_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0 && "
+		q_warning("WARNING: The options 'trendMaxOrder==trendMaxOrder && trendMaxKnotNum==0 && trendMinKnotNum==0 && "
 			    "seasonMaxOrder==seasonMaxOrder && seasonMaxKnotNum==0 && seasonMinKnotNum==0' will"
 			    " fix the model structures of the trend and harmonic season components.\n"); 
 	}
@@ -1237,8 +1115,8 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	for (I32 i = 0; i < PRIOR->numBasis; i++) {		
 		I08 type = PRIOR->basisType[i];
 		if (type == SEASONID)			KMAX += (PRIOR->seasonMaxOrder*2) * (PRIOR->seasonMaxKnotNum + 1);
-		if (type == DUMMYID)			KMAX += (opt->io.meta.period)    * (PRIOR->seasonMaxKnotNum + 1);
-		if (type == SVDID)			    KMAX += (opt->io.meta.period) * (PRIOR->seasonMaxKnotNum + 1);
+		if (type == DUMMYID)			KMAX += (opt->io.meta.period)     * (PRIOR->seasonMaxKnotNum + 1);
+		if (type == SVDID)			    KMAX += (opt->io.meta.period)     * (PRIOR->seasonMaxKnotNum + 1);
 		if (type == TRENDID)			KMAX += (PRIOR->trendMaxOrder +1) * (PRIOR->trendMaxKnotNum + 1);
 		if (type == OUTLIERID)			KMAX += PRIOR->outlierMaxKnotNum;
 	}
@@ -1283,35 +1161,36 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
     // no need to use componetwise if there is only one componet
 	if (opt->prior.precPriorType == ComponentWise && opt->prior.numBasis == 1) {
 		opt->prior.precPriorType = UniformPrec;
-		r_warning("WARNING: prior$precPriorType is changed from 'componentwise' to 'uniform' because the model specified only has one component.\n");
+		//q_warning("WARNING: prior$precPriorType is changed from 'componentwise' to 'uniform' because the model specified only has a trend component.\n");
 	}
 	return 1;
 }
 
-int BEAST2_GetArgs(VOIDPTR prhs[], int nrhs, A(OPTIONS_PTR) opt)
-{
-	int  failed = !GetArg_1st_MetaData(prhs, nrhs, &opt->io.meta)		 || 
-				  !ParseInputData(&opt->io)								 || 
-			      !GetArg_2nd_Prior__(prhs, nrhs, &opt->prior, &opt->io)   ||
-			      !GetArg_3rd_MCMC___(prhs, nrhs, &opt->mcmc,  opt)     ||
+int BEAST2_GetArgs(VOIDPTR prhs[], int nrhs, A(OPTIONS_PTR) opt) {
+
+  
+
+	int  failed = !GetArg_0th_Data(prhs, nrhs, &opt->io)                 ||
+		          !GetArg_1st_MetaData(prhs, nrhs, &opt->io)		      || 				  
+			      !GetArg_2nd_Prior__(prhs, nrhs, &opt->prior, &opt->io)  ||
+			      !GetArg_3rd_MCMC___(prhs, nrhs, &opt->mcmc,  opt)       ||
 			      !GetArg_4th_EXTRA__(prhs, nrhs, &opt->extra, opt->io.meta.whichDimIsTime,opt->io.ndim) ;
 	int success = !failed;	
 	if (success) 	success=PostCheckArgs(opt); 	
 	if (success) 	BEAST2_print_options(opt);	
+
 	return success;
 }
 
 
 void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR  o) {
 	// Free mems allocated in the "tsAggegrationPrepare" function
-	if (o->T.numPtsPerInterval != NULL) {
-		free(o->T.numPtsPerInterval);
-		o->T.numPtsPerInterval = NULL;
+	if (o->T.out.numPtsPerInterval != NULL) {
+		free(o->T.out.numPtsPerInterval);
+		o->T.out.numPtsPerInterval = NULL;
 	}
-	if (o->T.sortedTimeIdx != NULL) {
-		free(o->T.sortedTimeIdx);
-		o->T.sortedTimeIdx = NULL;
-	}
+	TimeVec_kill(&o->T);
+
 	if (o->pdata != NULL) {
 		free(o->pdata);
 		o->pdata = NULL;
@@ -1324,6 +1203,7 @@ void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR  o) {
 		free(o->out.result);
 		o->out.result = NULL;
 	}
+ 
 }
 
 #include "abc_000_warning.h"

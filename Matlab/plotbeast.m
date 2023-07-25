@@ -61,7 +61,9 @@ end
     ValList   = varargin(2:2:n);
 
     indexDefautValue    = 1;
-    varsDefautValue     = ["st","s","scp","sorder","t","tcp","torder", "slpsgn","o","ocp","error"];
+    %varsDefautValue    = ["st","s","scp","sorder","t","tcp","torder", "slpsgn","o","ocp","error"];  % not working in Octave bcz Ocatve has no string array class.
+	varsDefautValue     = {"st","s","scp","sorder","t","tcp","torder", "slpsgn","o","ocp","error"};
+	varsDefautValue     = cellstr(varsDefautValue);                                                  % in matlab, strcmp({"x"}, 'x') gives false.
     ncpStatDefaultValue = 'median';
     index   = GetValueByKey(KeyList, ValList, 'index',   indexDefautValue);
     vars    = GetValueByKey(KeyList, ValList, 'vars',    varsDefautValue);
@@ -77,55 +79,57 @@ end
     fig  = GetValueByKey(KeyList, ValList, 'fig', []);
 %%
 vars     = lower(vars);
-vars_log = vars=="st"|vars=="s"|vars=="t"|vars=="scp"|vars=="tcp"|vars=="sorder"|vars=="torder"|vars=="error"|vars=="o"|vars=="ocp" ...
-          |vars=="samp"|vars=="tslp"|vars=="slpsgn";
+% Octave has no "==" sign for string arrays.
+% vars_log = vars=="st"|vars=="s"|vars=="t"|vars=="scp"|vars=="tcp"|vars=="sorder"|vars=="torder"|vars=="error"|vars=="o"|vars=="ocp" |vars=="samp"|vars=="tslp"|vars=="slpsgn";
+vars_log  = strcmp(vars,"st") | strcmp(vars,"s") |strcmp(vars,"t")|strcmp(vars,"scp")|strcmp(vars,"tcp")|strcmp(vars,"sorder")|strcmp(vars,"torder") ...
+            | strcmp(vars,"error")|strcmp(vars,"o")|strcmp(vars,"ocp")|strcmp(vars,"samp")|strcmp(vars,"tslp")| strcmp(vars,"slpsgn") ;
 vars     = vars(vars_log);
 
 %%
 ylab     = vars;
-ylab(vars=='st')  ='Y';
-ylab(vars=='s')   ='season';
-ylab(vars=='t')   ='trend';
-ylab(vars=='o')   ='outlier';
-ylab(vars=='scp') ="Pr(scp)";
-ylab(vars=='tcp') ="Pr(tcp)";
-ylab(vars=='ocp') ="Pr(ocp)";
-ylab(vars=='sorder')= "sOrder";
-ylab(vars=='torder')= "tOrder";
-ylab(vars=='samp')  = 'amplitude';
-ylab(vars=='tslp')  = 'slope';
-ylab(vars=='slpsgn') = "slpSign";
-ylab(vars=='error')  = "error";
+ylab(strcmp(vars,'st'))    ={'Y'};
+ylab(strcmp(vars,'s'))     ={'season'};
+ylab(strcmp(vars,'t'))     ={'trend'};
+ylab(strcmp(vars,'o'))     ={'outlier'};
+ylab(strcmp(vars,'scp')')  ={"Pr(scp)"};
+ylab(strcmp(vars,'tcp'))   ={"Pr(tcp)"};
+ylab(strcmp(vars,'ocp'))   ={"Pr(ocp)"};
+ylab(strcmp(vars,'sorder'))={"sOrder"};
+ylab(strcmp(vars,'torder'))={"tOrder"};
+ylab(strcmp(vars,'samp'))  ={'amplitude'};
+ylab(strcmp(vars,'tslp'))  ={'slope'};
+ylab(strcmp(vars,'slpsgn'))={"slpSign"};
+ylab(strcmp(vars,'error')) ={"error"};
 
 col=cell(1,length(vars));
-col(vars=='st')    ={[0.1,0.1,0.1]};
-col(vars=='s')     ={'r'};
-col(vars=='scp')   ={'r'};
-col(vars=='sorder')={'r'};
-col(vars=='samp')  ={'r'};
-col(vars=='t')     ={'g'};
-col(vars=='tcp')   ={'g'};
-col(vars=='torder')={'g'};
-col(vars=='tslp')  ={'g'};
-col(vars=='slpsgn')={'k'} ; %the border only
-col(vars=='o')     ={'b'};
-col(vars=='ocp')   ={'b'};
-col(vars=='error') ={[0.4,0.4,0.4]};
+col(strcmp(vars,'st'))    ={[0.1,0.1,0.1]};
+col(strcmp(vars,'s'))     ={'r'};
+col(strcmp(vars,'scp'))   ={'r'};
+col(strcmp(vars,'sorder'))={'r'};
+col(strcmp(vars,'samp'))  ={'r'};
+col(strcmp(vars,'t'))     ={'g'};
+col(strcmp(vars,'tcp'))   ={'g'};
+col(strcmp(vars,'torder'))={'g'};
+col(strcmp(vars,'tslp'))  ={'g'};
+col(strcmp(vars,'slpsgn'))={'k'} ; %the border only
+col(strcmp(vars,'o'))     ={'b'};
+col(strcmp(vars,'ocp'))   ={'b'};
+col(strcmp(vars,'error')) ={[0.4,0.4,0.4]};
 
 heights=zeros(1,length(vars))+1;
-heights(vars=='st')=.8;
-heights(vars=='s')= .8;
-heights(vars=='t')=.8;
-heights(vars=='o')=.8;
-heights(vars=='scp')=.5;
-heights(vars=='tcp')=.5;
-heights(vars=='ocp')=.5;
-heights(vars=='sorder')=.5;
-heights(vars=='torder')=.5;
-heights(vars=='samp')   =.4;
-heights(vars=='tslp')   =.4;
-heights(vars=='slpsgn') =.4;
-heights(vars=='error')=.4;
+heights(strcmp(vars,'st'))=.8;
+heights(strcmp(vars,'s'))= .8;
+heights(strcmp(vars,'t'))=.8;
+heights(strcmp(vars,'o'))=.8;
+heights(strcmp(vars,'scp'))=.5;
+heights(strcmp(vars,'tcp'))=.5;
+heights(strcmp(vars,'ocp'))=.5;
+heights(strcmp(vars,'sorder'))=.5;
+heights(strcmp(vars,'torder'))=.5;
+heights(strcmp(vars,'samp'))   =.4;
+heights(strcmp(vars,'tslp'))   =.4;
+heights(strcmp(vars,'slpsgn')) =.4;
+heights(strcmp(vars,'error'))=.4;
 %%
 if ( length(o.marg_lik)> 1 )
     %# more than time series is present
@@ -161,13 +165,13 @@ has.hasOutlier=hasOutlier;
 has.hasData=hasData;
 %%
 idx = (1:length(vars)) > 0;
-if(~hasAmp)       idx   = idx & ~(vars=='samp');         end
-if(~hasSlp)       idx   = idx & ~(vars=='tslp'|vars=='slpsgn'); end
-if(~hasSeason)    idx   = idx & ~(vars=='st'|vars=='s'|vars=='sorder'|vars=='scp') ; end
-if(~hasSOrder)    idx   = idx & ~(vars=='sorder') ; end
-if(~hasTOrder)    idx   = idx & ~(vars=='torder') ; end
-if(~hasOutlier)   idx   = idx &~(vars=='o'|vars=='ocp'); end
-if(~hasData)      idx   = idx &~(vars=='error') ;  end
+if(~hasAmp)       idx   = idx & ~( strcmp(vars,'samp')  );         end
+if(~hasSlp)       idx   = idx & ~(strcmp(vars,'tslp')|strcmp(vars,'slpsgn')); end
+if(~hasSeason)    idx   = idx & ~(strcmp(vars,'st')|strcmp(vars,'s')|strcmp(vars,'sorder')|strcmp(vars,'scp')) ; end
+if(~hasSOrder)    idx   = idx & ~(strcmp(vars,'sorder')) ; end
+if(~hasTOrder)    idx   = idx & ~(strcmp(vars,'torder')) ; end
+if(~hasOutlier)   idx   = idx & ~(strcmp(vars,'o')|strcmp(vars,'ocp')); end
+if(~hasData)      idx   = idx & ~(strcmp(vars,'error')) ;  end
 
 col         = col(idx);
 vars        = vars(idx);
@@ -202,7 +206,9 @@ N     = length(t);
 for i =1:length(vars)
     
     ytitle = ylab(i);
-    var    = vars(i);
+    %var    = vars(i);
+    % changed to a cell array to support both Matlab and Octave
+    var    = vars{i}; 
     clr    = col{i};
     
     h = H(i);
@@ -210,79 +216,81 @@ for i =1:length(vars)
     cla(h);         % cla
     hold(h,'on');   % hold on
  
-    if (var=='st')
+    if (strcmp(var,'st'))
         [Yts,YtsSD, Yerr]=  get_Yts(x,hasSeason,hasOutlier, hasData);
         plot_st(h,ytitle, has,clr,x,t,t2t,Yts,YtsSD) ;
     end
-    if (var=='s' )
+	
+    if (strcmp(var,'s') )
         [Y,SD,CI, Amp,AmpSD, Order] = get_S(x,hasAmp,hasSOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_scp(x,ncpStat);
         plot_y(h,ytitle, has,clr,x, t,t2t,Y, CI, ncp, cp) ;
     end
-    if (var=='t' )
+	
+    if ( strcmp(var,'t'))
         [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
         
         plot_y(h,ytitle, has,clr,x, t,t2t,Y, CI, ncp, cp) ;
     end
     
-    if (var=='scp' )
+    if ( strcmp(var,'scp'))
         [Y,SD,CI, Amp,AmpSD, Order] = get_S(x,hasAmp,hasSOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_scp(x,ncpStat);
         plot_prob(h,ytitle,  has, clr,x, t, t2t, Prob1, Prob,ncp,cp );
     end
     
-    if (var=='tcp' )
+    if ( strcmp(var,'tcp'))
         [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
         plot_prob(h,ytitle,  has, clr,x, t, t2t, Prob1, Prob,ncp,cp );
         
     end
 
-    if (var=='sorder' )
+    if (  strcmp(var,'sorder'))
         [Y,SD,CI, Amp,AmpSD, Order] = get_S(x,hasAmp,hasSOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_scp(x,ncpStat);
        plot_order( h,ytitle, has, clr,x, t, t2t,Order, ncp, cp);
         
     end
     
-    if (var=='torder' )
+    if ( strcmp(var,'torder')  )
         [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
        plot_order(h,ytitle, has, clr,x, t, t2t,Order, ncp, cp);
         
     end    
     
-    if (var=='samp' )
+    if (strcmp(var,'samp') )
         [Y,SD,CI, Amp,AmpSD, Order] = get_S(x,hasAmp,hasSOrder);
         plot_amp(h,ytitle,has, clr,x, t, t2t,Amp, AmpSD);
         
     end
     
-    if (var=='tslp' )
+    if (strcmp(var,'tslp') )
         [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         plot_slp( h,ytitle,has, clr,x, t, t2t,Slp,SlpSD)
         
     end
     
-    if (var=='slpsgn' )
+    if (strcmp(var,'slpsgn') )
         [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         plot_slpsgn(h,ytitle, has, clr,x, t, t2t,SlpSignPos,SlpSignZero)
         
     end
    
-    if (var=='o' )
+    if (strcmp(var,'o') )
         [Y,SD,CI ]  = get_O(x );
         plot_o( h,ytitle,has, clr,x, t, t2t,Y,SD);
         
     end
     
-    if (var=='ocp' )
+    if (strcmp(var,'ocp') )
        [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_ocp(x,ncpStat);
        plot_oprob(h,ytitle, has, clr,x, t, t2t, Prob1, Prob,ncp,cp );        
     end
     
-    if (var=='error' )        
+    if (strcmp(var,'error') )        
         [Yts,YtsSD, Yerr ] = get_Yts(x,hasSeason,hasOutlier, hasData);        
         plot_error(h,ytitle, has, clr,x, t, t2t, Yerr);        
     end   
@@ -345,7 +353,7 @@ for i=1:length(winList)
         yup=1-tm-sum(slist);
     end
     
-    set(H(i),'pos',[lm, yup-hLayout(idx)*hgt, 1-rm-lm,hLayout(idx)*hgt ]);
+    set(H(i),'position',[lm, yup-hLayout(idx)*hgt, 1-rm-lm,hLayout(idx)*hgt ]);
     set(H(i),'box','on');
 end
 end

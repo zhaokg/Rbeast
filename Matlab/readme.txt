@@ -1,5 +1,5 @@
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   %       Installation:
+   %       Installation for Matlab or Octave:
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    Method 1: Manually copy all the files in this folder (e.g, beast.m and testdata) to your local folder
              Then, add your local folder to Matlab's search path by running:

@@ -3,84 +3,84 @@
 #include "abc_datatype.h" 
 struct cpu_x86 {
     //  Vendor
-    bool Vendor_AMD;
-    bool Vendor_Intel;
+    Bool Vendor_AMD;
+    Bool Vendor_Intel;
 
     //  OS Features
-    bool OS_x64;
-    bool OS_AVX;
-    bool OS_AVX512;
+    Bool OS_x64;
+    Bool OS_AVX;
+    Bool OS_AVX512;
 
     //  Misc.
-    bool HW_MMX;
-    bool HW_x64;
-    bool HW_ABM;
-    bool HW_RDRAND;
-    bool HW_RDSEED;
-    bool HW_BMI1;
-    bool HW_BMI2;
-    bool HW_ADX;
-    bool HW_MPX;
-    bool HW_PREFETCHW;
-    bool HW_PREFETCHWT1;
-    bool HW_RDPID;
+    Bool HW_MMX;
+    Bool HW_x64;
+    Bool HW_ABM;
+    Bool HW_RDRAND;
+    Bool HW_RDSEED;
+    Bool HW_BMI1;
+    Bool HW_BMI2;
+    Bool HW_ADX;
+    Bool HW_MPX;
+    Bool HW_PREFETCHW;
+    Bool HW_PREFETCHWT1;
+    Bool HW_RDPID;
 
     //  SIMD: 128-bit
-    bool HW_SSE;
-    bool HW_SSE2;
-    bool HW_SSE3;
-    bool HW_SSSE3;
-    bool HW_SSE41;
-    bool HW_SSE42;
-    bool HW_SSE4a;
-    bool HW_AES;
-    bool HW_SHA;
+    Bool HW_SSE;
+    Bool HW_SSE2;
+    Bool HW_SSE3;
+    Bool HW_SSSE3;
+    Bool HW_SSE41;
+    Bool HW_SSE42;
+    Bool HW_SSE4a;
+    Bool HW_AES;
+    Bool HW_SHA;
 
     //  SIMD: 256-bit
-    bool HW_AVX;
-    bool HW_XOP;
-    bool HW_FMA3;
-    bool HW_FMA4;
-    bool HW_AVX2;
+    Bool HW_AVX;
+    Bool HW_XOP;
+    Bool HW_FMA3;
+    Bool HW_FMA4;
+    Bool HW_AVX2;
 
-    //  SIMD: 512-bit
-    bool HW_AVX512_F;
-    bool HW_AVX512_CD;
+    // SIMD: 512-bit
+    Bool HW_AVX512_F;
+    Bool HW_AVX512_CD;
 
     //  Knights Landing
-    bool HW_AVX512_PF;
-    bool HW_AVX512_ER;
+    Bool HW_AVX512_PF;
+    Bool HW_AVX512_ER;
 
     //  Skylake Purley
-    bool HW_AVX512_VL;
-    bool HW_AVX512_BW;
-    bool HW_AVX512_DQ;
+    Bool HW_AVX512_VL;
+    Bool HW_AVX512_BW;
+    Bool HW_AVX512_DQ;
 
     //  Cannon Lake
-    bool HW_AVX512_IFMA;
-    bool HW_AVX512_VBMI;
+    Bool HW_AVX512_IFMA;
+    Bool HW_AVX512_VBMI;
 
     //  Knights Mill
-    bool HW_AVX512_VPOPCNTDQ;
-    bool HW_AVX512_4FMAPS;
-    bool HW_AVX512_4VNNIW;
+    Bool HW_AVX512_VPOPCNTDQ;
+    Bool HW_AVX512_4FMAPS;
+    Bool HW_AVX512_4VNNIW;
 
     //  Cascade Lake
-    bool HW_AVX512_VNNI;
+    Bool HW_AVX512_VNNI;
 
     //  Cooper Lake
-    bool HW_AVX512_BF16;
+    Bool HW_AVX512_BF16;
 
     //  Ice Lake
-    bool HW_AVX512_VBMI2;
-    bool HW_GFNI;
-    bool HW_VAES;
-    bool HW_AVX512_VPCLMUL;
-    bool HW_AVX512_BITALG;
+    Bool HW_AVX512_VBMI2;
+    Bool HW_GFNI;
+    Bool HW_VAES;
+    Bool HW_AVX512_VPCLMUL;
+    Bool HW_AVX512_BITALG;
 };
 
-extern void cpu_print_info();
+extern void detect_print_cpu(void);
 extern void detect_host(struct cpu_x86* cpu);
-extern void i386_cpuid_caches();
+extern void i386_cpuid_caches(Bool quiet);
 
- 
+extern void print_cpuinfo(struct cpu_x86* cpu);
