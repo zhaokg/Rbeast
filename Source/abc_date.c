@@ -1,33 +1,32 @@
 #include<stdio.h>
 #include<inttypes.h>
 #include <stdlib.h> // atof atoi
-#include <string.h> //strchr strrchr strstr str stricmp
-#include <math.h> //floor
+#include <string.h> // strchr strrchr strstr str stricmp
+#include <math.h>   // floor
 
 #include "abc_000_warning.h"
 
 #include "abc_date.h"
 #include "abc_common.h"   //ToUpper
-#include "abc_ide_util.h" //ToUpper
-#include "abc_vec.h"      //ToUpper
-#include "abc_sort.h"     // insert_sort
- 
-
+#include "abc_ide_util.h"  
+#include "abc_vec.h"       
+#include "abc_sort.h"     //insert_sort
 
 // stackoverflow.com/questions/19377396/c-get-day-of-year-from-date
-static const int DAYS_CUMSUM[2][13] = { { 0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
-										{ 0, 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }  };
-static int  DAYS_Per_MONTH[13]      = {      0, 31, 28, 31, 30, 31, 30,	31, 31, 30, 31, 30, 31 };
+static const int DAYS_CUMSUM[2][13] = { 
+	                                    { 0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
+										{ 0, 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }  
+                                      };
+static int  DAYS_Per_MONTH[13]      = {   0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 // overiq.com/c-examples/c-program-to-calculate-the-day-of-year-from-the-date/
-static int IsLeapYear(int year) { return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);}
-static int GetNumDays(int year) { return IsLeapYear(year) ? 366 : 365;          }
-static int DOY_from_Date(int year, int mon, int day)      { return DAYS_CUMSUM[IsLeapYear(year)][mon] + day; }
+static int IsLeapYear(int year)                      { return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);}
+static int GetNumDays(int year)                      { return IsLeapYear(year) ? 366 : 365;          }
+static int YMD_to_intDOY(int year, int mon, int day) { return DAYS_CUMSUM[IsLeapYear(year)][mon] + day; }
 
 
-
-static int DOY_to_Date(int doy, int y, int* M, int *D) {
-   // Borrowed from here howardhinnant.github.io/date_algorithms.html
+static int YMD_from_intDOY_ag1(int doy, int y, int* M, int *D) {
+   // Reference:  howardhinnant.github.io/date_algorithms.html
 	int isleap            = IsLeapYear(y) ;
 	int doy_from_march1st = doy - (59 + isleap) - 1;                  //[-60, 301]
 	doy_from_march1st     = PostiveMod(doy_from_march1st, 365 + isleap ); //[0, 365]
@@ -39,7 +38,7 @@ static int DOY_to_Date(int doy, int y, int* M, int *D) {
 	return 0;
 }
 
-static int DOY_to_Date_ag2(int doy, int y, int* M, int* D) {
+static int YMD_from_intDOY_ag2(int doy, int y, int* M, int* D) {
 
 	DAYS_Per_MONTH[2] = IsLeapYear(y) ? 29 : 28;
 	int mon;
@@ -73,53 +72,80 @@ static int IsDateValid(int year, int mon, int day ) {
 	return day<= DAYS;
 }
 
-#define OneDay 1.0
+#define OneDay  1.0
 #define HalfDay 0.5
-// NOTE: DOY 1 is Jan 1, which strats at the beginning of the day (midnight--the new year).
+
+// NOTE: 
+//      ubtDOY 1 is Jan 1, which strats at the beginning of the day (midnight--the new year).
 // When saying Jan 1, we mean Jan 1, 00:00HR (midnight), wch has a fraction year of 0.0
 // When syaing Dec 31, we mean the start of the last day of the year, which has a fraction year of 364/365
 // 
-//TODO: tricky: when converting integer days or YMD to Fraction year, theoretically, it refers to t
-// the start of the day (mid), here add HalfDay to move it to the moon
+// TODO: Tricky -- when converting integer days or YMD to Fraction year, theoretically, it refers to
+//       the start of the day (mid), here add HalfDay to move it to the moon (in FracYear_from_intYDOY,
+//       and FracYear_from_YMD)
 
-double FracYear_from_YDOY(int year, int doy)          {	
-	return (double)year + ((doy - OneDay) + HalfDay) / (double) GetNumDays(year);
-	 
+
+double FracYear_from_intYDOY(int year, int doy) {
+	return (double)year + ((doy - OneDay) + HalfDay) / (double)GetNumDays(year);
 }
 
-double FracYear_from_YMD(int  year, int mon, int day) {
-	return FracYear_from_YDOY(year, DOY_from_Date(year, mon, day));                 
-}
-
-int FracYear_to_YDOY(double fyear, int *yr ) {
+int FracYear_to_intYDOY(double fyear, int* yr) {
 	int    year     = floor(fyear);
-	double fraction = fyear - year;
-	// TODO: very ticky here, 1.99999 becomes 1 and 2.0 becomes doy 2
-	int doy = (int) floor(fraction * GetNumDays(year)) + OneDay;
-;
+	double fraction = fyear - year;	
+	int    doy      = (int)floor(fraction * GetNumDays(year)) + OneDay; // TODO: very ticky here, 1.99999 becomes 1 and 2.0 becomes doy 2
 	if (yr) yr[0] = year;
 	return doy;
 }
 
+double FracYear_from_YDOY(int year, double doy) {
+	return (double)year + doy / (double)GetNumDays(year);
+
+}
+
+double FracYear_to_YDOY(double fyear, int* yr) {
+	int    year     = floor(fyear);
+	double fraction = fyear - year;	
+	double doy      = fraction * GetNumDays(year); // TODO: very ticky here, 1.99999 becomes 1 and 2.0 becomes doy 2
+
+	if (yr) yr[0] = year;
+	return doy;
+}
+
+double FracYear_from_YMD(int  year, int mon, int day) {
+	return FracYear_from_intYDOY(year, YMD_to_intDOY(year, mon, day));
+}
+
 void  FracYear_to_YMD(double fyear, int *yr, int*mon, int *day) {
-	int doy = FracYear_to_YDOY(fyear, yr);	 
-	DOY_to_Date(doy, yr[0],  mon, day);
+	int doy = FracYear_to_intYDOY(fyear, yr);	 
+	YMD_from_intDOY_ag1(doy, yr[0],  mon, day);
 }
 
-double FractionDay_from_HMS(int h, int m, double sec) {
- 	    return (h + m / 60. + sec / 3600.) / 24.;
+double FracDay_from_HMS(int h, int m, double sec) {
+ 	   return (h + m / 60. + sec / 3600.) / 24.;
 }
 
-void  FractionDay_to_HMS(double fday, float* h, float* m, float *sec) {
-	// return the seceonds
+void  FracDay_to_HMS(double fday, int* h, int* m, double *sec) {
+ 
 	double hr   = fday * 24.;
-	double mn   = (hr - (int)hr) * 60;
+	double mn   = (hr - (int)hr) * 60.;
 	double secs = (mn - (int)mn) * 60;
-	*h = (int) hr;
-	*m = (int) mn;
+	*h  = (int) hr;
+	*m  = (int) mn;
+ 
 	*sec = secs;
-}
+	//r_printf("%d %d %f %f %d\n", *h, *m, secs, secs-60, (secs - 60)>0);
+	/*
+	double secs_all  = fday * (24*3600);
+	int    hr        = (int)(secs_all / 3600);
+	secs_all -= hr * 3600;
+	int    mn = (int)(secs_all / 60);
+	secs_all -= mn * 60;
 
+	*h = hr;
+	*m = mn;
+	*sec = secs_all;
+	*/
+}
 
 // www.timeanddate.com/calendar/julian-gregorian-switch.html#:~:text=Currently%2C%20the%20Julian%20calendar%20is,days%20in%20the%20year%202100.
 // codereview.stackexchange.com/questions/152017/simple-days-between-dates-calculator
@@ -152,7 +178,7 @@ Gregorian -1, etc
 
 astronomical year numbering system also includes Year 0
 
-//https://quasar.as.utexas.edu/BillInfo/JulianDatesG.html
+// https ://quasar.as.utexas.edu/BillInfo/JulianDatesG.html
 JUlian Day Number: The Julian Day Count is a uniform count of days from a remote epoch in the past (-4712 January 1, 12 hours G
 reenwich Mean Time (Julian proleptic Calendar) = 4713 BCE January 1, 12 hours GMT (Julian proleptic Calendar) = 4714 BCE November 24, 12 
 hours GMT (Gregorian proleptic Calendar)). At this instant, the Julian Day Number is 0. It is convenient for astronomers to use since it 
@@ -160,8 +186,8 @@ is not necessary to worry about odd numbers of days in a month, leap years, etc.
 in history, it is easy to calculate time elapsed between it and any other Julian Day Number.
 
 */
-//https:// stackoverflow.com/questions/14218894/number-of-days-between-two-dates-c
-//https:// stackoverflow.com/questions/33712685/c-days-between-given-date-and-today%C2%B4s-date
+// https:// stackoverflow.com/questions/14218894/number-of-days-between-two-dates-c
+// https:// stackoverflow.com/questions/33712685/c-days-between-given-date-and-today%C2%B4s-date
 // Civil calendar is the Gregorian calendar: the one we normally use
 // Returns number of days since civil 1970-01-01.  Negative values indicate days prior to 1970-01-01.
 // Preconditions:  y-m-d represents a date in the civil (Gregorian) calendar
@@ -171,7 +197,7 @@ in history, it is easy to calculate time elapsed between it and any other Julian
 //                   [numeric_limits<Int>::min()/366, numeric_limits<Int>::max()/366]
 //                 Exact range of validity is:
 //                 [civil_from_days(numeric_limits<Int>::min()),
-//                  civil_from_days(numeric_limits<Int>::max()-719468)]
+//                 civil_from_days(numeric_limits<Int>::max()-719468)]
 
 int JulianDayNum_from_civil_ag1(int y, int m, int d) {
 	// http:// howardhinnant.github.io/date_algorithms.html
@@ -220,6 +246,7 @@ int JulianDayNum_from_julian_ag1(int y, int m, int d) {
 	const unsigned doe = yoe * 365 +  doy;         // [0, 146096]
 	return era * 1461 + doe - 719470 + 2440588; // 2440588 is the JDN of 1970-1-1
 }
+
 int JulianDayNum_from_julian_ag2(int y, int m, int d) {
 	// https:// web.archive.org/web/20140902005638/http://mysite.verizon.net/aesir_research/date/jdimp.htm
 	y -= m <= 2;
@@ -228,6 +255,7 @@ int JulianDayNum_from_julian_ag2(int y, int m, int d) {
 	return JDN;
 
 }
+
 int JulianDayNum_from_julian_ag3(int y, int m, int d) {
  // https:// archive.org/details/131123ExplanatorySupplementAstronomicalAlmanac/page/n317/mode/2up
  // Note that this is Valid only if Y>=-4712 or JDN>=0
@@ -301,10 +329,8 @@ int JulianDayNum_to_Civil_ag3(int JDN, int* yr, int* mn, int* day) {
 }
 
 int JulianDayNum_to_julian_ag1(int JDN, int* yr, int* mn, int* day) {
-   //https:// howardhinnant.github.io/date_algorithms.html
-   // 
-
-	//static_assert(std::numeric_limits<Int>::digits >= 20,"This algorithm has not been ported to a 16 bit signed integer");
+   // howardhinnant.github.io/date_algorithms.html
+   // static_assert(std::numeric_limits<Int>::digits >= 20,"This algorithm has not been ported to a 16 bit signed integer");
 	int z = JDN - 2440588;
 	z += 719470;
 	int era = (z >= 0 ? z : z - 1460) / 1461;
@@ -323,6 +349,7 @@ int JulianDayNum_to_julian_ag1(int JDN, int* yr, int* mn, int* day) {
 	return 0;
 
 }
+
 int JulianDayNum_to_julian_ag2(int JDN, int* yr, int* mn, int* day) {
 	//https:// archive.org/details/131123ExplanatorySupplementAstronomicalAlmanac/page/n315/mode/2up
 	// Note that this alg is invliad for large negative years (e.g., -5999)
@@ -348,29 +375,32 @@ int JulianDayNum_to_julian_ag2(int JDN, int* yr, int* mn, int* day) {
 
 // Midnight: the start of a DAY, 00:00
 
-//R's Origin:     2440588 : 1970, 1,1
-//Mat's origin:   1721059 :  0,1,0
-//Python's origin: 1721425:  1,1,0
-//In R,       dates are represented as the number of days since 1970-01-01
-//In Matlab , dates are represented as the number of days since Jan-0,Year 0 AD[not Jan 1 but Jan 0].
-//In Python , dates are represented as the number of days since Jan-0,Year 1 (need to double check)
-//Unix time:  date and time representation widely used in computing.It measures time by the number of seconds that have elapsed since 00:00 : 00 UTC on 1 January 1970,
-//Pandas:    the default origin is   set to 1970-01-01. https://pandas.pydata.org/pandas-docs/version/0.20/generated/pandas.to_datetime.html
+// Datebum Origin:     
+//      R       --   2440588 : 1970, 1,1
+//      Matlab  --   1721059 : 0,    1,0
+//      Python  --   1721425:  1,    1,0
+//In R,            dates are represented as the number of days since 1970-01-01
+//In Matlab ,      dates are represented as the number of days since Jan-0,Year 0 AD[not Jan 1 but Jan 0].
+//In Python ,      dates are represented as the number of days since Jan-0,Year 1 (need to double check)
+//Unix time:       date and time representation widely used in computing.It measures time by the number of seconds that have elapsed since 00:00 : 00 UTC on 1 January 1970,
+//Python Pandas:   the default origin is  set to 1970-01-01. https://pandas.pydata.org/pandas-docs/version/0.20/generated/pandas.to_datetime.html
 //Python'sfromordinal:  Return the date corresponding to the proleptic Gregorian ordinal, where January 1 of year 1 has ordinal 1
 
 /*
 void  DateNum_to_Civil_UserOrigin(double datenum, DateType* date, int origin) {
 	IntDatenum_to_Civil_UserOrigin(floor(datenum), &date->y, &date->m, &date->d, origin);
-	FractionDay_to_HMS(datenum - floor(datenum), &date->hr, &date->min, &date->sec);
+	FracDay_to_HMS(datenum - floor(datenum), &date->hr, &date->min, &date->sec);
 }
 double DateNum_from_Civil_UserOrigin(DateType* date, int origin) {
 	int    datenum = IntDatenum_from_Civil_UserOrigin(date->y, date->m, date->d, origin);
-	return  datenum + FractionDay_from_HMS(date->hr, date->min, date->sec);
+	return  datenum + FracDay_from_HMS(date->hr, date->min, date->sec);
 }
 */
 
-
-//FracYear all refers to the Civigl Calendar (Gregorigian Calendar)
+// Datanum: defined relative to the start of the JDN 0 (the midnight of JDN 0 not the moon)
+// JDN is defined relative to the noon
+// 
+// FracYear all refers to the Civil Calendar (Gregorigian Calendar)
 double  FracYear_to_DateNum(double fyear) {
 
 	int    year_int     = floor(fyear);
@@ -378,10 +408,10 @@ double  FracYear_to_DateNum(double fyear) {
 	int    days_in_year = GetNumDays(year_int);
 	double doy          = year_frac * days_in_year;
 	int    doy_int      = floor(doy) + OneDay;
-	double  doy_frac    = doy - floor(doy);
+	double doy_frac    = doy - floor(doy);
 	 
 	int mon, day;
-	DOY_to_Date(doy_int, year_int, &mon, &day);
+	YMD_from_intDOY_ag1(doy_int, year_int, &mon, &day);
 	double out = JulianDayNum_from_civil_ag1(year_int, mon, day);
 	return out + doy_frac - NULL_DATE_ORIGIN;
 }
@@ -391,21 +421,36 @@ double FracYear_from_DateNum(double datenum) {
 	double datenum_frac = datenum- datenum_int;
 	int    yr_int, mon, day;
 	JulianDayNum_to_Civil_ag1(datenum + NULL_DATE_ORIGIN, &yr_int, &mon, &day);
-	int  doy_int = DOY_from_Date(yr_int, mon, day);
+	int  doy_int = YMD_to_intDOY(yr_int, mon, day);
 	  
 	double out=(double)yr_int + ((doy_int - OneDay) + datenum_frac) / (double)GetNumDays(yr_int);
 	return out;
 }
 
-double FracYear_from_DateType(DateType * date) {
+double  FracYear_to_JDate(double fyear) {
+	return FracYear_to_DateNum(fyear) - 0.5;
+}
+
+double FracYearfrom_JDate(double jdn) {
+	return FracYear_to_DateNum(jdn + 0.5);
+}
+
+int WeekDay(int y, int m, int d) {
+	int jdn = JulianDayNum_from_civil_ag1(y, m, d);
+	// https://simple.wikipedia.org/wiki/Julian_day
+	int dow = jdn % 7;
+	dow = dow < 0 ? dow + 7 : dow; // TODO: Need to double check for the negative result
+	return dow;
+}
+double FracYear_from_YMDHMS(YmdHms * date) {
 	//return (double)year + ((doy - OneDay) + HalfDay) / (double) GetNumDays(year);
 	int days_in_year = GetNumDays(date->y);
-	int doy1_int      = DOY_from_Date(date->y,date->m, date->d);	
-	 double fracday = FractionDay_from_HMS(date->hr, date->min, date->sec); 	 
+	int doy1_int     = YMD_to_intDOY(date->y,date->m, date->d);
+	 double fracday  = FracDay_from_HMS(date->hr, date->min, date->sec);
 	 return (double)date->y + (doy1_int-OneDay+fracday) / (double)days_in_year;
 }
 
-void  FracYear_to_DateType(double fyear, DateType* date) {
+void  FracYear_to_YMDHMS(double fyear, YmdHms* date) {
 	
 	int    yr_int     = floor(fyear);
 	double yr_fract   = fyear - yr_int;
@@ -415,30 +460,31 @@ void  FracYear_to_DateType(double fyear, DateType* date) {
 	double doy_frac   = doy -floor(doy);
 	
 	int mon, day;  
-	DOY_to_Date(doy1_int, yr_int, &mon, &day);
+	YMD_from_intDOY_ag1(doy1_int, yr_int, &mon, &day);
  
-	float hr, min, sec;	
-	FractionDay_to_HMS(doy_frac, &hr, &min, &sec);
+	int   hr, minute;
+	double sec;
+	FracDay_to_HMS(doy_frac, &hr, &minute, &sec);
 
 	date->y  = yr_int;
 	date->m  = mon;
 	date->d  = day;
 	date->hr = hr;
-	date->min = min;
+	date->min = minute;
 	date->sec = sec;
 }
 
 
-void print_date(DateType* date) {
+void print_date(YmdHms* date) {
 	r_printf("%4d-%2d-%2d |%2d:%2d:%g", date->y, date->m, date->d, (int)date->hr, (int)date->min, date->sec);
 }
 
-void Julian_to_Civil(int y, int m, int d, DateType* date) {
+void Julian_to_Civil(int y, int m, int d, YmdHms* date) {
 	int datenum = JulianDayNum_from_julian_ag1(y, m,d);
 	JulianDayNum_to_Civil_ag1(datenum,&date->y, &date->m, &date->d);	
 }
 
-void Civil_to_Julian(int y, int m, int d, DateType* date) {
+void Civil_to_Julian(int y, int m, int d, YmdHms* date) {
 	int datenum = JulianDayNum_from_civil_ag1(y, m, d);
 	JulianDayNum_to_julian_ag1(datenum, &date->y, &date->m, &date->d);
 }
@@ -450,8 +496,7 @@ void CivilDatee_Jump(int y, int m, int d, int jumpDays, int* y1, int* m1, int* d
 }
 
 
-
-void  JulianDate_to_civil(double datenum, DateType* date) {
+void  JulianDate_to_civil(double datenum, YmdHms* date) {
 
 	// Julian Date is the fractional JDN
 	// JND/Julian date is the lapsed time from the NOON
@@ -461,14 +506,13 @@ void  JulianDate_to_civil(double datenum, DateType* date) {
 	int    datenum_int = round(datenum);
 	double datenum_frac = datenum - datenum_int + 0.5;
 	JulianDayNum_to_Civil_ag1(datenum_int, &date->y, &date->m, &date->d);
-	FractionDay_to_HMS(datenum_frac, &date->hr, &date->min, &date->sec);
+	FracDay_to_HMS(datenum_frac, &date->hr, &date->min, &date->sec);
 }
-double JulianDate_from_civil(DateType* date) {
+
+double JulianDate_from_civil(YmdHms* date) {
 	int datenum = JulianDayNum_from_civil_ag1(date->y, date->m, date->d);
-	return  datenum + FractionDay_from_HMS(date->hr, date->min, date->sec) - 0.5;
+	return  datenum + FracDay_from_HMS(date->hr, date->min, date->sec) - 0.5;
 }
-
-
 
 static int __FindTokenStart__( char *str, char * token) {
 	char * pchar = strstr(str, token);
@@ -531,7 +575,7 @@ double  Str2F32time_fmt2(char* datestr, DateFmtPattern2* pattern) {
 	memcpy(s, datestr + pattern->doyIdx, 3); 	s[3] = 0;	int doy = atoi(s);	
 	if (doy < 0 || doy > 366) { return -1e10; }	 
 
-	return FracYear_from_YDOY(year, doy);
+	return FracYear_from_intYDOY(year, doy);
 }
 
  
@@ -617,16 +661,16 @@ double  Str2F32time_fmt3(char* datestr, DateFmtPattern3* pattern) {
 INLINE static int  is_dot(char c)          { return c == '.'; }
 INLINE static int  is_slash(char c)        { return c == '/'; }
 INLINE static int  is_star(char c)         { return c == '*'; }
-INLINE static int  is_digit(char c)        {  return c >= '0' && c <= '9';}
-INLINE static int  is_letter(char c)       {  return (c >= 'a' && c <= 'z' ) || (c >= 'A' && c <= 'Z');}
-INLINE static int  is_alphanumeric(char c) {  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+INLINE static int  is_digit(char c)        { return c >= '0' && c <= '9';}
+INLINE static int  is_letter(char c)       { return (c >= 'a' && c <= 'z' ) || (c >= 'A' && c <= 'Z');}
+INLINE static int  is_alphanumeric(char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 INLINE static char char_toupper(char s)    { return s >= 'a' && s <= 'z' ? s - 32 : s; }
 
 int get_word_size(char* s)         { int i = 0;	while (is_letter(s[i++])){};  	     return --i; }
 int get_alphanumeric_size(char* s) { int i = 0;	while (is_alphanumeric(s[i++])) {};  return --i;}
 int get_intger_size(char* s)       { int i = 0; while (is_digit(s[i++])) {};	 	 return --i; }
 int get_slash_size(char* s)        { int i = 0; while (is_slash(s[i++])) {};	 	 return --i; }
-int get_star_size(char* s)         { int i = 0; while (is_star(s[i++])) {};	 	 return --i; }
+int get_star_size(char* s)         { int i = 0; while (is_star(s[i++])) {};	 	     return --i; }
 int get_number_size(char* s, int * ndots) {
 	int i = *ndots=0;
 	while (is_digit(s[i]) || is_dot(s[i])) {
@@ -694,8 +738,6 @@ static int split_numstr(char* s, int nPartMax, int* startidx, int* nchar, char* 
 	}
 	return nPart;
 }
-
-
 
 double extract_timeinterval_from_str(char* s, float *value, char *unit) {
 
@@ -1257,7 +1299,7 @@ int  FracYear_from_Strings(F64PTR out, char *s, int * strstart, int n) {
 		} else if (DONE == 2)	 {
 			r_printf("INFO: '%s' interpreted as %04d-%03d (Year-DOY)\n", s, year[0], day[0]);
 			for (int i = 0; i < n; i++) {
-				out[i] = FracYear_from_YDOY(year[i],  day[i]);
+				out[i] = FracYear_from_intYDOY(year[i],  day[i]);
 				//r_printf("%d %d  \n", year[i],  day[i]);
 			}
 		}

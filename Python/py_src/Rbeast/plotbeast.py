@@ -46,7 +46,57 @@ def plot(o, index=0,\
          ylabels    = [],\
          xlabel     = 'time'\
          ):
-         
+
+    """    
+           
+   *Input arguments*:
+    --------------------------------------------------------------------------------------------------
+   
+    o:    the time series analysis output from  beast123; o
+           should contain results for mulltiple time series
+
+    index: if o contains results for more than 1 time series, index specifies 
+           for which time series the result is printed.  If o is the result for 
+           a 3D stacked cube, index will be a vector of 2  integer to specify the 
+           row and col of the desired pixel. If o contains  only one time series, 
+           index will be ignored
+ 
+    vars:  a vector of strings indicating the elements or variables 
+          of o to plot. Possible vars strings include 'st' (season plus trend), 's' (season component),
+          't' (trend component), 'o' (outliers), 'scp', 'tcp', 'ocp'  (occurrence probability
+          of seasonal/trend/outlier changepoint), 'sorder' (seasonal harmonic order), 
+          'torder' (trend polynomial order), 'samp' (amplitude of seasonality), 'tslp' (slope of trend),
+          'slpsgn' (probabilities of the slope being positive, zero, and negative) and 'error' (remainder).
+   
+    ncpStat: A string to specify which statistic is used for 
+           the Number of ChangePoint (ncp). Five values are possible: 'mean', 'mode', 'median',
+           'pct90', and 'max'; the default is 'median'. Individual models sampled by BEAST has
+           a varying dimension (e.g., number of changepoints or knots). For example, 
+           if mcmc$samples=10, the numbers of changepoints for the 10 sampled models are assumed
+           to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp will be 3.1 (rounded to 3), 
+           the median is 2.5 (2), the mode is 1, and the maximum is 7.  The 'max' option plots 
+           all the changepoints recorded in out$trend$cp, out$season$cp, or out$outlier$cp; many of 
+           these changepoints are bound to be false positives, so do not blindly treat all of them 
+           as actual changepoints.
+ 
+    Examples:
+    --------------------------------------------------------------------------------------------------
+    # in the slpsgn plot, the upper red envelope refers to probability of trend slope being positive,
+    # the middle green to probability of trend slope being zero, the blue to probability of slope
+    # of being negative
+
+    import Rbeast as rb
+    Nile, time = rb.load_example('nile')
+    o          = rb.beast(Nile, season='none')
+    rb.plot( o , vars = ["st", "t", "tcp" ,"slpsgn"], ncpStat='mean' )
+  
+    rb.plot(o, index = 3)
+    rb.plot(o, index = [3,5])
+ 
+    Contact info: To report bug or get help, do not hesitate to contact Kaiguang Zhao
+    at zhao.1423@osu.edu.
+    """         
+
 #    index = 0;
 #    vars = ["st", "s", "scp", "sorder", "t", "tcp", "torder", "slpsgn", "o", "ocp", "error"]
 #    relheights = []
@@ -246,7 +296,7 @@ def plot(o, index=0,\
     return fig, H
 
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                    %
 def axeslayout(opt, hLayout, fig):
     lm = opt.leftmargin;
     rm = opt.rightmargin;
@@ -277,7 +327,7 @@ def axeslayout(opt, hLayout, fig):
         # set(H(i), 'box', 'on');
     return ax
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                    %
 def get_Yts(x, hasSeason, hasOutlier, hasData):
     Yts = x.trend.Y;
     SD2 = x.trend.SD ** 2 + x.sig2[0]
@@ -294,7 +344,7 @@ def get_Yts(x, hasSeason, hasOutlier, hasData):
         Yerr = [];
     return ((Yts, YtsSD, Yerr))
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                    %
 def get_T(x, hasSlp, hasTOrder):
     Y = x.trend.Y;
     tmp = Y + x.trend.SD;
@@ -322,7 +372,7 @@ def get_T(x, hasSlp, hasTOrder):
         Order = [];
     return (Y, SD, CI, Slp, SlpSD, SlpSignPos, SlpSignZero, Order)
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                    %
 def get_tcp(x, ncpStat):
     cmpnt, cp, cpCI = (x.trend, x.trend.cp,x.trend.cpCI)
 
@@ -345,7 +395,7 @@ def get_tcp(x, ncpStat):
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,cmpnt.cpAbruptChange, cmpnt.cpOccPr)
     Prob1 = c( [Prob,Prob - Prob])
 
-    #% %  ###########################################################
+    #     ###########################################################
     return (cp, cpCI, ncp, ncpPr, cpPr, cpChange, Prob, Prob1)
 
 
@@ -374,7 +424,7 @@ def get_S(x, hasAmp, hasSOrder):
         Order = [];
     return (Y, SD, CI, Amp, AmpSD, Order)
 
-#% %  ###########################################################
+#     ###########################################################
 def get_O(x):
     Y   = x.outlier.Y
     SD = c( [Y - x.outlier.SD,  flip(Y + x.outlier.SD) ])
@@ -385,7 +435,7 @@ def get_O(x):
         CI = SD
     return (Y, SD, CI)
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                    %
 def get_scp(x, ncpStat):
     cmpnt, cp, cpCI = (x.season, x.season.cp,x.season.cpCI)
 
@@ -407,7 +457,7 @@ def get_scp(x, ncpStat):
     ncp  = int( round(ncp) );
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,cmpnt.cpAbruptChange, cmpnt.cpOccPr)
     Prob1 = c( [Prob, Prob - Prob])
-    #% %  ###########################################################
+    #     ###########################################################
     return (cp, cpCI, ncp, ncpPr, cpPr, cpChange, Prob, Prob1)
 
 def  get_ocp(x, ncpStat):
@@ -431,11 +481,11 @@ def  get_ocp(x, ncpStat):
     ncp  = int( round(ncp) );
     ncpPr, cpPr,cpChange, Prob = (cmpnt.ncpPr, cmpnt.cpPr ,[], cmpnt.cpOccPr)
     Prob1 = c( [Prob, Prob - Prob])
-    #% %  ###########################################################
+    #     ###########################################################
     return (cp, cpCI, ncp, ncpPr, cpPr, cpChange, Prob, Prob1)
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
+#                                                                                                                                                              %
 def getylim(y):
     ymin,ymax = (min(y), max(y) )
     yext = ymax -ymin
@@ -449,7 +499,7 @@ def plot_st(h, ytitle, has, clr, x, t, t2t, Yts, YtsSD):
     h.plot(t, Yts, color=clr,linestyle='solid',marker='None')
     h.set_ylim( getylim(YtsSD))
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_y(h, ytitle, has, clr, x, t, t2t, Y, CI, ncp, cp):
     alpha = 0.2;
     if (has.hasData  and not has.hasSeason):
@@ -461,7 +511,7 @@ def plot_y(h, ytitle, has, clr, x, t, t2t, Y, CI, ncp, cp):
         h.plot([cp[i], cp[i]], ylim, color='k');
     h.set_ylim(ylim)
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_prob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
     alpha = 0.2;
     h.fill( t2t, Prob1, color=clr, linestyle='None', alpha=alpha);
@@ -473,7 +523,7 @@ def plot_prob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
     for i in range(ncp):
         h.plot([cp[i], cp[i] ], h.get_ylim(), color='k')
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_order(h, ytitle, has, clr, x, t, t2t, Order, ncp, cp):
     h.plot(t, Order, color=clr);
     maxp = max([ max(Order), 1.05]);
@@ -482,19 +532,19 @@ def plot_order(h, ytitle, has, clr, x, t, t2t, Order, ncp, cp):
     for i in range(ncp):
         h.plot([cp[i], cp[i]], h.get_ylim(), color='k')
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_amp(h, ytitle, has, clr, x, t, t2t, Amp, AmpSD):
     alpha = 0.5;
-    #% $fill(t2t, AmpSD, col=rgb(col[1], col[2], col[3], alpha), border=NA);
+    #  $fill(t2t, AmpSD, col=rgb(col[1], col[2], col[3], alpha), border=NA);
     h.plot(t, Amp, color=clr);
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_slp(h, ytitle, has, clr, x, t, t2t, Slp, SlpSD):
     alpha = 0.5;
     h.fill(t2t, SlpSD, color=clr, Linestyle='None', alpha=alpha)
     h.plot(t, Slp, color=clr)
 
-#% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#                                                                                                                                                              %
 def plot_slpsgn(h, ytitle, has, clr, x, t, t2t, SlpSignPos, SlpSignZero):
     alpha      = 0.5;
     SlpSignNeg = 1 - SlpSignPos - SlpSignZero;
@@ -521,8 +571,8 @@ def plot_o(h, ytitle, has, clr, x, t, t2t, Y, CI, ncp, cp):
 def plot_oprob(h, ytitle, has, clr, x, t, t2t, Prob1, Prob, ncp, cp):
     alpha = 0.2
     #% plot(c(t2t[1], t2t), c(0.22, Prob1), type='n', ann=FALSE, xaxt='n', yaxt='n');
-   #%  # polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
-   # %  # points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
+   #   # polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+   #    # points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
     if version >= '3.3':
          h.stem(t, Prob,  linefmt='-', markerfmt=None,use_line_collection=True)
     else: 

@@ -4,7 +4,7 @@
 #if defined(WIN64_OS) 
 
 #include "abc_win32_demo.h"
-void BEAST2_InitGlobalData() {
+void BEAST2_InitGlobalData(void) {
 	style = (Style) {
 			.hMargin		= 3.f,
 			.rEdit			= 0.1f,
@@ -38,7 +38,7 @@ void BEAST2_InitGlobalData() {
 	gData.status	= RUN;
 	gData.optStatus = NotAssigned;
 }
-void BEAST2_AllocatePlotData()
+void BEAST2_AllocatePlotData(void)
 {
 	gData.plotData[0][0] = malloc(sizeof(int)*gData.N * 2); //Yfit_mean
 	gData.plotData[0][1] = malloc(sizeof(int)*gData.N * 2); //Yfit_cur
@@ -62,7 +62,7 @@ void BEAST2_AllocatePlotData()
 	gData.plotData[4][0] = malloc(sizeof(int)*gData.N * 2); //T_Pprob
  
 }
-void BEAST2_GeneratePlotData()
+void BEAST2_GeneratePlotData(void)
 {
 	int N      = gData.N;
 	int sample = gData.sample;
@@ -94,7 +94,7 @@ void BEAST2_GeneratePlotData()
 		// the current fitted curve
 		data = gData.plotData[0][1];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.curs[i] + gData.ct[i]);
+		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.curs[i] + gData.curt[i]);
 	}
 	else { // Trend-only 
 		// The average fitted curve
@@ -105,7 +105,7 @@ void BEAST2_GeneratePlotData()
 		// the current fitted curve
 		data = gData.plotData[0][1];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.ct[i]);
+		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.curt[i] );
 
 
 	}
@@ -196,7 +196,7 @@ void BEAST2_GeneratePlotData()
 	// the current trend
 	data = gData.plotData[3][1];
 	a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) ; 	x = 0;
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.ct[i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.curt[i];
 
 	
 	// Trend breakpoints		

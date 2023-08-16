@@ -291,13 +291,16 @@ void *CreateNumVar(DATA_TYPE dtype, int *dims, int ndims, VOIDPTR * data_ptr) {
 void *CreateStructVar(FIELD_ITEM *fieldList, int nfields) { 	
 
 	// Find the sentinal element to update nfields
-	int nfields_new = 0;
+	int nfields_actual = 0;
 	for (int i = 0; i < nfields; ++i) {
-		nfields_new++;
-		if (fieldList[i].name[0] == 0) 	break;
+		nfields_actual++;
+		if (fieldList[i].name[0] == 0) {
+			nfields_actual--;
+			break;
+		}
 	}
-	nfields = nfields_new;
-
+	nfields = nfields_actual;
+ 
 // www.mathworks.com/help/matlab/apiref/mxsetfieldbynumber.html	
 	
 ///https://github.com/kalibera/rchk/issues/21

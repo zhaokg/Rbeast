@@ -13,6 +13,7 @@
 #if defined(PI)
 	#undef PI	
 #endif
+
 #define PI   (3.141592653589793)
 
 void preCalc_terms_season(F32PTR SEASON_TERMS, F32PTR SEASON_SQR_CSUM, F32PTR SCALE_FACTOR, int N, F32 PERIOD, int maxSeasonOrder)
@@ -107,7 +108,7 @@ void preCalc_XmarsTerms_extra(F32PTR COEFF_A, F32PTR COEFF_B, I32 N)
 
 	if (COEFF_A != NULL &&  COEFF_B != NULL) {
 		COEFF_B[1 - 1] = 0;
-		COEFF_A[1 - 1] = fastsqrt(N);
+		COEFF_A[1 - 1] = fastsqrt((float) N);
 
 		for (I32 n = 2; n <= N; n++) {
 			F32 sum   = (1L + n) / 2.f;
@@ -175,8 +176,7 @@ void preCalc_scale_factor(F32PTR sclFactor, I32 N, I32 maxKnotNum, I32 minSepDis
 }
 
 
-void cvt_knotList_to_bincode(U08PTR  good, I32 N, U16 minSepDist, U16PTR knotList, I64 knotNum)
-{
+void KnotList_to_Bincode(U08PTR  good, I32 N, U16 minSepDist, U16PTR knotList, I64 knotNum) {
 	r_ippsSet_8u(1, good, N);	
 	for (int i = 1; i <= knotNum; i++)	{		
 		r_ippsSet_8u(0L, good + (knotList[i-1] - minSepDist) - 1, 2*minSepDist+1);			
@@ -185,8 +185,7 @@ void cvt_knotList_to_bincode(U08PTR  good, I32 N, U16 minSepDist, U16PTR knotLis
 	r_ippsSet_8u(0, good+ (N-minSepDist+1) - 1, minSepDist);	 
 }
 
-I32 tsAggegrationPrepare(F32PTR oldTime, I32 Nold, F32 dT, I32PTR *SortedTimeIdx, I32PTR *NumPtsPerInterval,
-					   I32 *startIdxOfFirsInterval, F32 *startTime)
+I32  tsAggegrationPrepare_Old(F32PTR oldTime, I32 Nold, F32 dT, I32PTR *SortedTimeIdx, I32PTR *NumPtsPerInterval,  I32 *startIdxOfFirsInterval, F32 *startTime)
 {	 
 	//Return the number of newly aggregrated ts
 	/************************************************/
@@ -236,6 +235,90 @@ I32 tsAggegrationPrepare(F32PTR oldTime, I32 Nold, F32 dT, I32PTR *SortedTimeIdx
 	return Nnew;
 }
 
+
+I32  tsAggegrationPrepare(TimeVecInfo* tvec) {
+
+	// if the initial values of info->dT and info->start are NANs, then new values will be determined
+	// Return the number of newly aggregrated ts
+
+	// Sanity check: 
+   if (tvec->isStartDeltaOnly==1 && tvec->isConvertedFromStartDeltaOnly==1) {
+		r_printf("Error: there must be someting wrong in TsAggegrationPrepare\n ");
+		return 0;
+	}
+
+	F32 dT = tvec->out.dT;
+	int Ngood = tvec->N - tvec->Nbad;
+	if (tvec->isStartDeltaOnly ||
+		(   tvec->isRegular && tvec->IsOrdered &&  tvec->Nbad==0 &&
+			fabs(tvec->data_start - tvec->out.start)    < dT*1e-2 &&
+			fabs(tvec->data_dt - tvec->out.dT)  < dT*1e-3 	)
+		) 
+	{
+		tvec->out.needAggregate = 0;
+		tvec->out.needReOrder  = 0;
+		return Ngood;
+	}
+
+	
+	if ( tvec->isRegular && 
+		   	fabs(tvec->data_start - tvec->out.start)    < dT*1e-2 &&
+			fabs(tvec->data_dt - tvec->out.dT)  < dT*1e-3 	)
+	{
+		tvec->out.needAggregate = 0;
+		tvec->out.needReOrder  = 1;
+
+		I32PTR NUM_PER_INTERVAL = malloc(sizeof(I32) * Ngood);
+		for (int i = 0; i < Ngood; ++i) NUM_PER_INTERVAL[i] = 1;
+		tvec->out.numPtsPerInterval      = NUM_PER_INTERVAL;
+		tvec->out.startIdxOfFirsInterval = 0;
+		return Ngood;
+ 
+	}
+
+	/************************************************/
+	// Determinte a good start value if start is missing (i.e, start==NAN)
+	/************************************************/
+	F32 start           = tvec->out.start;
+	F64PTR  SortedTimes = tvec->f64time;
+	F32 T0   = start,            T1 = SortedTimes[Ngood-1];
+	I32 i0   = round(T0 / dT),	 i1 = round(T1 / dT);
+	//F32 i0 = floor(T0/period);
+	//T0     = i0*period + floor( (T0-i0)/dT )*dT;		
+	I32 Nnew = ((i1 - i0) + 1);	
+	//F32 start_estiamte = i0*dT;   // the midpoint of the first internval
+	
+
+	/************************************/
+	I32PTR NUM_PER_INTERVAL = malloc(sizeof(I32)*Nnew);
+	memset(NUM_PER_INTERVAL, 0L, sizeof(F32)*Nnew);
+	tvec->out.numPtsPerInterval = NUM_PER_INTERVAL;
+	/************************************/
+
+	/************************************/
+	I32 idxTime          = 0;	
+	F32 UpperEndInterval = i0*dT+0.5*dT;
+	while (SortedTimes[idxTime] < (UpperEndInterval - dT) && idxTime < Ngood) {
+		idxTime++;
+	}	
+	tvec->out.startIdxOfFirsInterval = idxTime;
+	/************************************/
+	
+	for (I32 i = 0; i < Nnew; i++) {		 
+		I32 nptsPerInterval  = 0;
+		F32 time = SortedTimes[idxTime];
+		while (time <= UpperEndInterval && idxTime < Ngood) {
+			++nptsPerInterval;
+			time = SortedTimes[++idxTime];
+		}
+		NUM_PER_INTERVAL[i] = nptsPerInterval;
+		UpperEndInterval   += dT;
+	}
+	tvec->out.needAggregate = 1;
+	tvec->out.needReOrder = 0;
+	return Nnew;
+}
+
 void tsAggegrationPerform(F32PTR RegularTS, I32 Nnew, F32PTR IrregularTS, I32 Nold, I32PTR NumPerSeg,I32PTR SorteTimeIdx){
 	
 	F32 nan = getNaN();	
@@ -247,13 +330,16 @@ void tsAggegrationPerform(F32PTR RegularTS, I32 Nnew, F32PTR IrregularTS, I32 No
 		for (I32 j = 0; j < nPts; j++) {
 			I32 id = SorteTimeIdx[idx++];
 			F32 Y  = IrregularTS[id];
-			if (Y == Y)	{sum += Y; num++;}
+			//if (Y == Y)	{sum += Y; num++;}
+			// Avoid the branch:
+			sum += Y == Y ? Y : 0.f;
+			num += Y == Y;
 		}
 		RegularTS[i] = num == 0 ? nan : sum / num;
 	}
 }
 
-
+ 
 void tsRemoveNaNs(F32PTR x, int N) {
 
 	I32 preGoodIdx  = -1;

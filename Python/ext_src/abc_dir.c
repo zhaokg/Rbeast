@@ -32,10 +32,9 @@ void listFiles(const char *path, const char * ext)
 
 		// stackoverflow.com/questions/22886290/c-get-all-files-with-certain-extension
 		if (dp->d_type == DT_REG /*DT_DIR*/) {
-			char * const ext = strrchr(dp->d_name, '.');
-			if (ext != NULL && ext != dp->d_name)
-			{
-				if (strcmp(ext, ".tif") == 0){
+			char * const pext = strrchr(dp->d_name, '.');
+			if (pext != NULL && pext != dp->d_name)		{
+				if (strcmp(pext, ".tif") == 0){
 					r_printf("%s\n", dp->d_name);
 				}				
 			}
@@ -73,7 +72,7 @@ FILELIST_PTR GetFlist(const char *path, const char * ext)
 			{
 				if (stricmp(pEXT+1, ext) == 0){
 					fNum++;
-					memSize += strlen(dp->d_name)+ 1L;
+					memSize += (int)strlen(dp->d_name)+ 1L;
 				}
 			}
 		}
@@ -110,7 +109,7 @@ FILELIST_PTR GetFlist(const char *path, const char * ext)
 			if (pEXT != NULL && pEXT != dp->d_name)
 			{
 				if (stricmp(pEXT+1, ext) == 0){
-					int size = strlen(dp->d_name);
+					int size = (int)strlen(dp->d_name);
 					flist->offset[fNum] =  ptr; //-Wint-conversion
 					memcpy(ptr, dp->d_name, size);
 					ptr[size] = 0;

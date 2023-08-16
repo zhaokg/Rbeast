@@ -265,7 +265,7 @@ int CopyNumericObjToF32Arr(F32PTR outmem, VOID_PTR infield, int N) {
 	return 1L;
 }
 
-int CopyNumericObjToF64Arr(F32PTR outmem, VOID_PTR infield, int N) {
+int CopyNumericObjToF64Arr(F64PTR outmem, VOID_PTR infield, int N) {
 
 	VOID_PTR data = GetData(infield);
 
@@ -624,7 +624,7 @@ int  GetNumElemTimeObject(  VOID_PTR timeObj ) {
 		 tv.isDate  = UnknownStatus;
 
 		 int N=TimeVec_from_TimeObject(obj, &tv);
-
+		 
 		 if (N>0) {
 			 tint->fyear = tint->value = tv.f64time[0];
 			 tint->unit  = tv.isDate == 1? 'Y': 'U';			 			 
@@ -637,9 +637,8 @@ int  GetNumElemTimeObject(  VOID_PTR timeObj ) {
 		 return tint->value;
 	 }
 
-	 tint->value = getNaN();
-	 tint->fyear = tint->value;
-	 tint->unit = 'U';
+	 tint->fyear = tint->value = getNaN();	 
+	 tint->unit  = 'U';
 	 return 	tint->value;
  }
 
@@ -887,7 +886,7 @@ int TimeVec_from_TimeObject(VOID_PTR timeObj, TimeVecInfo * tv ) {
 		}
  
 		for (int i = 0; i < Ntime; ++i) {
-			yr64[i] = FracYear_from_YDOY( round(yr64[i]), round( doy32[i] ) );
+			yr64[i] = FracYear_from_intYDOY( round(yr64[i]), round( doy32[i] ) );
 			if (yr64[i] < -1e9) {
 				q_warning("WARNING: The (%d)-ith date ( time$year=%d,and  time$doy=%d) is not valid.\n", i + 1, (int)yr64[i], (int)doy32[i] );
 				goto __ENTRY_DATESTR_LOC;

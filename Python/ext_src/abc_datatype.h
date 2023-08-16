@@ -5,8 +5,8 @@
 #include <float.h>
 #include "abc_000_macro.h"
 
-#define FLOAT_TYPE 4   //FLOAT is double
-//#define FLOAT_TYPE 4 //FLOAT is F32
+//#define FLOAT_TYPE 8  //FLOAT is double
+#define FLOAT_TYPE 4    //FLOAT is F32
 
 #ifdef FLOAT
 #undef FLOAT
@@ -32,18 +32,18 @@
 #endif
 #define IsNaN(x)  (  (x) != (x))
 
+
+
 #if defined(IsInf)
     #undef IsInf	
 #endif
-#define IsInf(f)  (  (f) >FLOAT_MAX || (f)< FLOAT_MIN)
-
+#define IsInf(f)  (  ((float)f) >FLOAT_MAX || ((float)f)< FLOAT_MIN)
 
 /*------------------------------------------------------------*/
 
- 
 #ifdef __cplusplus
-extern "C" {
-#endif
+	extern "C" {
+#endif 
 
 	typedef float     F32;
 	typedef double    F64;
@@ -111,32 +111,53 @@ extern "C" {
 	} DATA_TYPE;
 
 
+
+// In C++, true and false are keywords and you can't have variables with that name. 
+// C doesn't have Bool but C99 has _Bool.
+// In C23,, Bool, true, and false become keywords:: https://groups.google.com/g/comp.lang.c/c/uTlZY_qKQmE
+
+enum { _False_ = 0, _True_ = 1 };
+
+
+//static INLINE F32 getNaN(void) { F32 nan = 1e38f;	nan = nan * nan * 0.f;	return nan;}
+#if defined (MSVC_COMPILER)
+	static INLINE float  getNaN(void) { return (float)1e38f * (float)1e38f * (float)0.f; }
+#else
+	static INLINE float  getNaN(void) { return (float)(0.0 / 0.0); }
+#endif
+
+
+#include <string.h>   // memset and memcpy
+
+#define  free0(p)     if(p){ free(p);p=NULL;}
+#define  malloc0(n)   calloc(1L, n)
+
+
+
 #ifdef __cplusplus
 }
 #endif
 
+#define max(a,b)			(((a) > (b)) ? (a) : (b))
+#define min(a,b)			(((a) < (b)) ? (a) : (b))
+// The outermost parentheses are DEFINITELY needed. If not, subtile errors
+// can creep. Here is a failing example from beastv2_func.c
+// min(Kbase + b->ke[j], Klastcol) - (Kbase + b->ks[j]) + 1
 
-// bool is defined in matlab's tmwtypes.h
-#if R_INTERFACE == 1  || P_INTERFACE == 1 
-	#ifndef bool
-	//typedef uint8_t bool;
-	#define  bool  unsigned char
-	#endif
-	// In C++, true and false are keywords and you can't have variables with that name. 
-	// C doesn't have bool but C99 has _Bool.
+#define max3(a,b,c)         max( max(a,b), c)
+#define max4(a,b,c,d)       max( max3(a,b,c),d)
+#define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-3 )
 
-	enum { false = 0, true = 1 };
-#endif
+#define RoundTo64(N)       ((N+63)/64*64)
+#define RoundTo8(N)        ((N+7)/8*8)
+ 
 
 
-#ifdef CLANG_COMPILER
-	#undef sign   //aslo defined in R
-	#undef warning //warning is also defined in R
-#endif
-
-//static INLINE F32 getNaN() { F32 nan = 1e38f;	nan = nan * nan * 0.f;	return nan;}
-#if defined (MSVC_COMPILER)
-	static INLINE F32  getNaN() { return (F32)1e38f * (F32)1e38f * (F32)0.f; }
-#else
-	static INLINE F32  getNaN() { return (F32) (0.0/0.0); }
-#endif
+#define PostiveMod(i, n)  (  i%(n) + (i<0)*(n)  )
+ 
+// A/B is a fix division: the rseult goes toward zero
+// #define FLOORdiv(a,b) (int)floor((float)(a)/(b))
+#define FLOORdiv(y,N) ((y >= 0 ? y : y - (N-1)) /N) 
+#define  UnknownStatus 99
+	
+	

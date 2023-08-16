@@ -129,11 +129,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 	}
 	else if (__IS_STRING_EQUAL(algorithm, beastv4))
 	{
-		#if P_INTERFACE ==1
-		// Covert the second arg into a Numpy Array. the pointer returend
-		// is a new ref that MUST be dec-refed at the end
-			prhs[1] = CvtToPyArray_NewRef(prhs[1]);
-		#endif
+
 		/*
 		// Initialize mutex and condition variable objects
 		pthread_mutex_init(&MUTEX_WRITE, NULL);
@@ -152,6 +148,12 @@ void * mainFunction(void *prhs[], int nrhs) {
 		//BEAST2_OPTIONS      option = {0,};		
 		BEAST2_OPTIONS      option = { {{0,},}, }; //Warning from MacOS: suggest braces around initialization of subobject [-Wmissing-braces]
 	
+		#if P_INTERFACE ==1
+			// Covert the second arg into a Numpy Array. the pointer returend
+			// is a new ref that MUST be dec-refed at the end
+			prhs[1] = CvtToPyArray_NewRef(prhs[1]);
+		#endif
+
 		if (BEAST2_GetArgs(prhs, nrhs, &option) == 0) {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 		    #if P_INTERFACE ==1
@@ -317,7 +319,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 		}
 		
-	     #if P_INTERFACE ==1
+	     #if P_INTERFACE == 1
 				Py_XDECREF(prhs[1]);
 		 #endif
  
@@ -430,10 +432,21 @@ void * mainFunction(void *prhs[], int nrhs) {
 		r_printf("datenum: %d", dnum);		
 	}
 	else if (__IS_STRING_EQUAL(algorithm, cpu)) {
+	   ANS = NULL;
        #if defined(WIN64_OS) || defined(WIN32_OS)
 		  int GetCPUInfo();
 		  GetCPUInfo();
         #endif
+
+	}
+	else if (__IS_STRING_EQUAL(algorithm, tofyear)) {
+		void* to_fyear(void* TIMEobj);
+		void* from_fyear(void* FYEARobj);
+		ANS = to_fyear(prhs[1]);
+	}
+	else if (__IS_STRING_EQUAL(algorithm, fromfyear)) {	 
+		void* from_fyear(void* FYEARobj);
+		ANS = from_fyear(prhs[1]);
 	}
 	/*
 		// Initialize mutex and condition variable objects
@@ -816,7 +829,9 @@ DllExport PyObject* pexFunction(PyObject* self, PyObject* args, PyObject* kwds) 
 		prhs[i] = PyTuple_GetItem(args, i);
 	}
 
-	VOID_PTR ans= mainFunction(prhs, nrhs);
+	// No need to increase the ref count again,  bcz as of now, it should have
+	// a ref count of 1; when returned, it will be assigned to the outout variable
+	VOID_PTR ans = mainFunction(prhs, nrhs);
 
 	return ans != NULL ? ans : IDE_NULL;
 }

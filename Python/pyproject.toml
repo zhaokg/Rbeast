@@ -1,6 +1,17 @@
 [build-system]
-#numpy is needed before running setuptools bcz
-# it is the first modudle to import in setup.py
 
-requires      = ["setuptools","wheel", "numpy"]
+# numpy is needed before running setuptools bcz it is the 
+# first module to be imported in setup.py
+
+# this is the required pacakges for building only, not for running beast.
+requires      = ["setuptools >=61","wheel", "numpy>=1.18"]   # for src distribution
+#requires      = ["setuptools >=61","wheel", "numpy==1.18"] # for python 3.7 to 3.9 as numpy wheel is available
+#requires      = ["setuptools >=61","wheel", "numpy==1.21.3"] # For Py310, numpy wheel is available since numpy 1.21.3
+#requires      = ["setuptools >=61","wheel", "numpy==1.23.2"] # For Py311, numpy wheel is available since numpy 1.21.3
+
 build-backend = "setuptools.build_meta"
+
+
+#[project]
+#name = "Rbeast"
+#version = "0.0.1"

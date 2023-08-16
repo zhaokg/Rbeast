@@ -1,7 +1,7 @@
 from numpy import ndarray, squeeze, array as nparray
 from array import array as arrtype
 
-IsTpye=isinstance
+IsTpye = isinstance
 
 def force_convert_to_numpy(x): 
       if  IsTpye(x, list) or IsTpye(x, tuple) or IsTpye(x, arrtype):

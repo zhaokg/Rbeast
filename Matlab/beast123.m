@@ -166,48 +166,46 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %           
 %   <strong>Examples</strong> :   
 %
-%       load('Nile')   % Nile river annual streamflow: trend-only data
-%       metadata=[];
-%       metadata.season     = 'none'  % trend-only
+%       load('Nile')                % Nile river annual streamflow: trend-only data
+%       metadata           = [];    % an emepty object to stuff new attribute fields 
+%       metadata.season    = 'none' % trend-only
 %       metadata.startTime = 1871;
-%       metadata.deltaTime = 1;
-%       % Default values will be used if parameters are missing
-%       o=beast123(Nile,metadata) 
+%       metadata.deltaTime = 1;%       
+%       o = beast123(Nile,metadata) % Default values will be used if parameters are missing 
 %       printbeast(o)
 %       plotbeast(o)
 %
 %
-%       load('ohioNDVI')   % irregular Landsat NDVI time series
-%       metadata=[];
-%       metadata.season     =  'harmonic'  % seasonality is present
+%       load('ohioNDVI')     % irregular Landsat NDVI time series
+%       metadata            = [];          % an emepty object to stuff new attribute fields
+%       metadata.season     = 'harmonic';  % seasonality is present
 %       metadata.time       =  ohio.time;
-%       metadata.deltaTime  = 1/12;   % aggregate into a monthly ts
-%       metadata.period     = 1.0;    % period= 1/12 x 12 (freq)
-%       % Default values will be used if parameters are missing
-%       o=beast123(ohio.ndvi,metadata) 
+%       metadata.deltaTime  = 1/12;        % aggregate into a monthly ts
+%       metadata.period     = 1.0;         % period= 1/12 x 12 (freq)%     
+%       o=beast123(ohio.ndvi,metadata)     % Default values will be used if parameters are missing
 %       printbeast(o)
 %       plotbeast(o, 'ncpStat','median')       
 %       
-%       load('ohioNDVI')   % irregular Landsat NDVI time series
-%       ohio.datestr1      % strings of times for ohio.ndvi
-%       metadata=[];
-%       metadata.time       =  [];
-%       metadata.time.dateStr =ohio.datestr1;
-%       metadata.time.strFmt  ='????yyyy?mm?dd';
-%       metadata.deltaTime  = 1/12;   % aggregate into a monthly ts
-%       metadata.period     = 1.0;    % period= 1/12 x 12 (freq)
+%       load('ohioNDVI')     % irregular Landsat NDVI time series
+%       ohio.datestr1        % strings of times for ohio.ndvi
+%       metadata=[];          % an emepty object to stuff new attribute fields
+%       metadata.time         =  [];
+%       metadata.time.dateStr = ohio.datestr1;
+%       metadata.time.strFmt  = '????yyyy?mm?dd';
+%       metadata.deltaTime    = 1/12;   % aggregate into a monthly ts
+%       metadata.period       = 1.0;    % period= 1/12 x 12 (freq)
 %       % Default values will be used if parameters are missing
-%       o=beast123(ohio.ndvi,metadata,[],[], struct('dumpInputData', true)) 
+%       o = beast123(ohio.ndvi,metadata,[],[], struct('dumpInputData', true)) 
 %       plotbeast(o, 'ncpStat','median')   
 %
 %       ohio.datestr2      % strings of times for ohio.ndvi
-%       metadata=[];
-%       metadata.time       =  [];
-%       metadata.time.dateStr =ohio.datestr2;
-%       metadata.time.strFmt  ='LC8-yyyydoyxdvi';
-%       metadata.deltaTime  = 1/12;   % aggregate into a monthly ts
-%       metadata.period     = 1.0;    % period= 1/12 x 12 (freq)
-%       o=beast123(ohio.ndvi,metadata) 
+%       metadata              =[];
+%       metadata.time         = [];
+%       metadata.time.dateStr = ohio.datestr2;
+%       metadata.time.strFmt  = 'LC8-yyyydoyxdvi';
+%       metadata.deltaTime    = 1/12;   % aggregate into a monthly ts
+%       metadata.period       = 1.0;    % period= 1/12 x 12 (freq)
+%       o = beast123(ohio.ndvi,metadata) 
 %       plotbeast(o, 'ncpStat','median')  
 %       %See https://rdrr.io/cran/Rbeast/man/beast123.html for more details
 %       %about the accepted formats of date strings
@@ -217,41 +215,49 @@ function out = beast123(Y, metadata, prior, mcmc, extra)
 %       % time series are essentially the same. We just assume they are
 %       % different for illustring the use of beast123 to handle 2d matrix      
 %       simData.Y % a 774×3 matrix: 774 is the time dimesnion      
-%       metadata=[];      
-%       metadata.whichDimIsTime =1 % 774 is the ts length 
-%       o=beast123(simData.Y ,metadata) 
-%       printbeast(o,  1)         %print the result for the first ts
-%       plotbeast(o, 'index', 1)  %plot the result for the first ts
-%       printbeast(o,  2)         %print the result for the 2nd ts
-%       plotbeast(o, 'index', 2)  %plot the result for the 2nd ts      
+%       metadata                = [];      
+%       metadata.whichDimIsTime = 1;      % 774 is the ts length 
+%       o = beast123(simData.Y ,metadata) % default values used for missing parameters
+%       printbeast(o,  1)                 % print the result for the first ts
+%       plotbeast(o, 'index', 1)          % plot the result for the first ts
+%       printbeast(o,  2)                 % print the result for the 2nd ts
+%       plotbeast(o, 'index', 2)          % plot the result for the 2nd ts      
 %
 %      
-%       Ytran   =simData.Y' % a 3x774 matrix: 774 is the time dimesnion      
-%       metadata=[];      
-%       metadata.whichDimIsTime = 2 % 774 is the ts length 
-%       o=beast123(Ytran ,metadata) 
-%       printbeast(o,  2)         %print the result for the 2nd ts
-%       plotbeast(o, 'index', 2)  %plot the result for the 2nd ts   
+%       Ytran   = simData.Y' % a 3x774 matrix: 774 is the time dimesnion      
+%       metadata                = [];      
+%       metadata.whichDimIsTime = 2 ; % 774 is the ts length 
+%       o = beast123(Ytran,metadata)  % default values used for missing parameters
+%       printbeast(o,  2)             % print the result for the 2nd ts
+%       plotbeast(o, 'index', 2)      % plot the result for the 2nd ts   
 %
 %      load('imageStack.mat') 
 %       % A toy example of stacked time series images: unevely-spaced in time
-%      NDVI3D=imageStack.ndvi    % a 12x9x1066 3D cube
-%      TIME  =imageStack.datestr % 1066 is the time series length%
-%      metadata=[];      
-%      metadata.time=[];
-%      metadata.time.dateStr=TIME
-%      metadata.time.strFmt='LT05_018032_20110726.yyyy-mm-dd';
-%      metadata.deltaTime  =1/12; % aggregated at a monthly interval
-%      metadata.period     =1.0;  % the period is 1.0 (year)
-%      extra=[];
-%      extra.dumpInputData   =true % get a copy of the aggregated input
-%      extra.numThreadsPerCPU = 2; % 2 threads per CPU core
-%      o=beast123(NDVI3D,metadata,[],[], extra) 
+%      NDVI3D       = imageStack.ndvi    % a 12x9x1066 3D cube
+%      NDVIdatestr  = imageStack.datestr % 1066 is the time series length%
+%      metadata                =[];      
+%      metadata.time           =[];
+%      metadata.time.dateStr   = NDVIdatestr
+%      metadata.time.strFmt    = 'LT05_018032_20110726.yyyy-mm-dd';
+%      metadata.deltaTime      =  1/12;  % aggregated at a monthly interval
+%      metadata.period         = 1.0;    % the period is 1.0 (year)
+%      extra                   =  [];
+%      extra.dumpInputData     = true;   % get a copy of the aggregated input
+%      extra.numThreadsPerCPU   = 2;     % 2 threads per CPU core
+%      o = beast123(NDVI3D,metadata,[],[], extra) 
 %      imagesc(o.sig2)
 %      imagesc(o.trend.ncpPr(:,:,1:3))
 %      printbeast(o,[2,4]) %print the result at row 2 and col 4     
 %      plotbeast(o,'index',[2,4]) %plot the result at row 2 and col 4     
 %
+%      NDVI_fyear  = imageStack.fyear  % the time in the unit of fractional year
+%      metadata                =[];      
+%      metadata.time           = NDVI_fyear
+%      metadata.deltaTime      = 1/12;  % aggregated at a monthly interval
+%      metadata.period         = 1.0;    % the period is 1.0 (year)
+%      extra                   =  [];
+%      extra.numThreadsPerCPU   = 2;     % 2 threads per CPU core
+%      o = beast123(NDVI3D,metadata,[],[], extra) 
 %
 %   <strong>Contact info</strong>: To report bug or get help, do not hesitate to contact Kaiguang Zhao
 %   at <strong>zhao.1423@osu.edu</strong>.

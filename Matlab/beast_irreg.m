@@ -152,25 +152,25 @@ function out = beast_irreg(y, varargin)
 %       time = ohio.time
 %       plot(time,y,'o')
 %       % time is in the unit of fractional/decimal year
-%       o=beast_irreg(y, 'time',time,'deltat', 1/12, 'period',1.0)
+%       o    = beast_irreg(y, 'time',time,'deltat', 1/12, 'period',1.0)
 %       printbeast(o)
 %       plotbeast(o)
 %
 %       
-%       o=beast_irreg(y, 'time',ohio.datestr1) %parse date strings automatically
-%       o=beast_irreg(y, 'time',ohio.datestr2) %parse date strings automatically
-%       o=beast_irreg(y, 'time',ohio.datestr3) %parse date strings automatically
-%       o=beast_irreg(y, 'time',ohio.datestr4) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr1) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr2) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr3) %parse date strings automatically
+%       o = beast_irreg(y, 'time',ohio.datestr4) %parse date strings automatically
 % 
-%       time=[]
-%       time.year=ohio.Y
-%       time.month=ohio.M
-%       time.day =ohio.D
-%       o=beast_irreg(y, 'time', time) % provide numeric vectors of year, month, and days
+%       time        = []                % an emepty object to stuff new attribute fields
+%       time.year   = ohio.Y
+%       time.month  = ohio.M
+%       time.day    = ohio.D
+%       o = beast_irreg(y, 'time', time) % provide numeric vectors of year, month, and days
 %
-%       time=[]
-%       time.datestr=ohio.datestr1
-%       time.strfmt= '????yyyy?mm?dd'
+%       time          = []             % an emepty object to stuff new attribute fields
+%       time.datestr  = ohio.datestr1
+%       time.strfmt   = '????yyyy?mm?dd'
 %       o=beast_irreg(y, 'time', time) % specify the pattern of data strings
 %       
 %

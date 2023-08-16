@@ -12,53 +12,41 @@
 #include "beastv2_io.h"
  
 
-static void GetOutputOffsetStride_V2(int ROW, int COL, int whichDimIsTime, I64 idx, I64 Nvec, I64* pStride, I64* pOffset)
-{
-	//index should be 1-based.
-	I64 stride, offset;
-	if (ROW*COL==1)  
-	// A 1d vcetor: io->ndim == 1
-		stride = 1L, offset = (idx - 1) * Nvec;
-	else if (ROW==1 || COL==1) {
-	// A 2 D mat input:io->ndim == 2L
-	//TODO: buggy: a edge case may be  a 3D input of 1x1 in dimension
 
-		I32 nPixel = ROW * COL;
-		if(whichDimIsTime ==1)
-			stride = 1L, offset = (idx - 1) * Nvec;
-		else {
-			stride = nPixel;
-			offset = (idx - 1);
-		}
-	} else  { 
-	// A 3D stack input: io->ndim == 3L
+static void __convert_index_to_datasubs3(int rows, int cols, int timedim, int index, int dims[], int subs3[]) {
 
-		switch (whichDimIsTime) {
-		case 1:
-			stride = 1L;
-			offset = (idx - 1) * Nvec;
-			break;
-		case 2: {
-			int c = (idx - 1) / ROW;
-			int r = idx - c * ROW;
-			c = c + 1;
-			stride = ROW;
-			offset = (c - 1) * (Nvec * ROW) + r - 1;
-			break;	}
-		case 3: {
-			int c = (idx - 1) / ROW;
-			int r = idx - c * ROW;
-			c = c + 1;
-			stride = ROW * COL;
-			offset = (c - 1) * ROW + r - 1;
-			break;	}
-		} // switch ( io->whichDimIsTime)	 
+	int subs2[2];
+	int imgdims[] = { rows, cols };
+	ind2sub(imgdims, 2L, index, subs2);
 
-	} // (io->ndim == 3L)
 
-	*pStride = stride;
-	*pOffset = offset;
+	if (timedim == 1) {
+		subs3[0] = 1;  // can fill any value
+		subs3[1] = subs2[0]; 
+		subs3[2] = subs2[1]; 
+		
+		dims[1] = rows;
+		dims[2] = cols;
+	}
+	else if (timedim == 2) {
+		subs3[1] = 1;  // can fill any value
+		subs3[0] = subs2[0]; 
+		subs3[2] = subs2[1]; 
+
+		dims[0] = rows;
+		dims[2] = cols;
+	}
+	else if (timedim == 3) {
+		subs3[2] = 1;  // can fill any value
+		subs3[0] = subs2[0];
+		subs3[1] = subs2[1];
+
+		dims[0] = rows;
+		dims[1] = cols;
+	}
+
 }
+
 
 void* BEAST2_TsExtract(void *o, void * pindex ) {
  
@@ -309,6 +297,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 	/************************************************/
 	// Copy elements to the newly created array
 	/************************************************/
+	int subs3[3];
+	int dims[3];
+	__convert_index_to_datasubs3(ROW, COL, whichDimTim, index, dims, subs3);
+
+
 	I64 stride, offset;
 
 	if (hasTrendCmpnt) {
@@ -320,12 +313,12 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 			if (fieldList[i].ptr == NULL) {
 				continue;
 			}			
-			int Nvec = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];			
-			GetOutputOffsetStride_V2(ROW, COL, whichDimTim,  index, Nvec, &stride, &offset);
+			dims[whichDimTim - 1] = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];			 
+			int Nvec = ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
 
 			VOID_PTR newData = GetData(  GetField(trend, fieldList[i].name) );
 			VOID_PTR oldData = GetData(  GetField(cmpnt, fieldList[i].name));
-			WriteStrideMEMToArrMEM(newData, oldData, Nvec, stride, offset, dtype);	
+			arr_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		}
 	
 	}
@@ -338,12 +331,12 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 			if (fieldList[i].ptr == NULL) {
 				continue;
 			}			
-			int Nvec = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];			
-			GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			dims[whichDimTim - 1] = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];
+			int Nvec = ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
 
 			VOID_PTR newData = GetData(  GetField(season, fieldList[i].name) );
 			VOID_PTR oldData = GetData(  GetField(cmpnt, fieldList[i].name));
-			WriteStrideMEMToArrMEM(newData, oldData, Nvec, stride, offset, dtype);
+			arr_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		}
 	}
 	if (hasOutlierCmpnt) {
@@ -355,12 +348,12 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 			if (fieldList[i].ptr == NULL) {
 				continue;
 			}			
-			int Nvec = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];			
-			GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			dims[whichDimTim - 1] = fieldList[i].ndim == 1 ? fieldList[i].dims[0] : fieldList[i].dims[0] * fieldList[i].dims[1];
+			int Nvec = ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
 
 			VOID_PTR newData = GetData(  GetField(outlier, fieldList[i].name) );
 			VOID_PTR oldData = GetData(  GetField(cmpnt, fieldList[i].name));
-			WriteStrideMEMToArrMEM(newData, oldData, Nvec, stride, offset, dtype);
+			arr_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		}
 	}
 
@@ -368,7 +361,7 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 	{
 		VOID_PTR newData = GetData(GetField(out, fieldListBEAST[0].name));
 		VOID_PTR oldData = GetData(GetField(o, fieldListBEAST[0].name));
-		WriteStrideMEMToArrMEM(newData, oldData, N, 1, 0, dtype);
+		arr_from_strided_mem(newData, oldData, N, 1, 0, dtype);
 
 		for (int i = 1; i < 6; i++) {
 
@@ -376,12 +369,12 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 				continue;
 			}
 
-			int Nvec = fieldListBEAST[i].ndim == 1 ? fieldListBEAST[i].dims[0] : fieldListBEAST[i].dims[0] * fieldListBEAST[i].dims[1];
-			GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+			dims[whichDimTim - 1] = fieldListBEAST[i].ndim == 1 ? fieldListBEAST[i].dims[0] : fieldListBEAST[i].dims[0] * fieldListBEAST[i].dims[1];
+			int Nvec = ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
 
 			VOID_PTR newData = GetData(GetField(out, fieldListBEAST[i].name));
 			VOID_PTR oldData = GetData(GetField(o, fieldListBEAST[i].name));
-			WriteStrideMEMToArrMEM(newData, oldData, Nvec, stride, offset, dtype);
+			arr_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		}
 
 	}
@@ -503,9 +496,9 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		isallocated = 1;
 	}
 
-	I64  stride, offset;
+
 	char s1[] = "                                                ";
-	int  nChar = strlen(s1);
+	int  nChar = (int) strlen(s1);
 
 	#define cat r_printf
 
@@ -520,6 +513,12 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
     #define boldEnd   "</strong>" 
 #endif
 
+
+	int subs3[3];
+	int dims[3];
+	__convert_index_to_datasubs3(ROW, COL, whichDimTim, index, dims, subs3);
+
+	I64  stride, offset;
 
 	cat(boldStart);
 	cat("#####################################################################\n");
@@ -537,10 +536,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		VOID_PTR cmpnt      = GetField(o, "season");
 
 	
-		int      Nvec       = maxKnotNum +1L;
-		GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+		int      Nvec       = dims[whichDimTim-1]= maxKnotNum +1L;
+		ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+
 		VOID_PTR oldData  = GetData(GetField(cmpnt, "ncpPr"));
-		CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 maxPr;
 		I32 maxIx = f32_maxidx(newData, Nvec, &maxPr);
 		Nvec = min(Nvec, 99);
@@ -556,17 +556,17 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		    cat("|Pr(ncp = %-2d)=%.3f|%s|\n", i, newData[i], s1);
 		}
 
-		Nvec    = 1;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "ncp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		Nvec    = dims[whichDimTim - 1]=1;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+		oldData = GetData(GetField(cmpnt, "ncp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_median")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_median")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_median = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct90 = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct10 = newData[0];
 
 		cat(".-------------------------------------------------------------------.\n"); 
@@ -590,11 +590,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		F32 cp[200];
 		F32 cpPr[200];
 		if (GetData(GetField(cmpnt, "cp"))) {
-			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			Nvec = dims[whichDimTim - 1] = maxKnotNum;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);		
 			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
 			Nvec = min(200L, Nvec);
@@ -624,10 +624,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		int      maxKnotNum = maxKnotNumT;
 		VOID_PTR cmpnt      = GetField(o, "trend");
 
-		int      Nvec       = maxKnotNum +1L;
-		GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+		int      Nvec;
+		Nvec = dims[whichDimTim - 1] = maxKnotNum + 1L;	
+		ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
 		VOID_PTR oldData  = GetData(GetField(cmpnt, "ncpPr"));
-		CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 maxPr;
 		I32 maxIx = f32_maxidx(newData, Nvec, &maxPr);
 		Nvec = min(Nvec, 99);
@@ -643,17 +644,17 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		    cat("|Pr(ncp = %-2d)=%.3f|%s|\n", i, newData[i], s1);
 		}
 
-		Nvec    = 1;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "ncp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+ 		Nvec = dims[whichDimTim - 1] = 1L;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+		oldData = GetData(GetField(cmpnt, "ncp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_median")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_median")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_median = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct90 = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct10 = newData[0];
 
 		cat(".-------------------------------------------------------------------.\n");
@@ -678,11 +679,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		F32 cpPr[200];
 
 		if (GetData(GetField(cmpnt, "cp"))) {
-			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			Nvec = dims[whichDimTim - 1] = maxKnotNum;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);		
 			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
 			Nvec = min(200L, Nvec);
@@ -710,10 +711,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		VOID_PTR cmpnt      = GetField(o, "outlier");
 
 
-		int      Nvec       = maxKnotNum +1L;
-		GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
+		int     Nvec   ;
+		Nvec = dims[whichDimTim - 1] = maxKnotNum + 1L;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+
 		VOID_PTR oldData = GetData(GetField(cmpnt, "ncpPr"));
-		CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 maxPr;
 		I32 maxIx = f32_maxidx(newData, Nvec, &maxPr);
 		Nvec = min(Nvec, 99);
@@ -729,17 +731,17 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		    cat("|Pr(ncp = %-2d)=%.3f|%s|\n", i, newData[i], s1);
 		}
 
-		Nvec    = 1;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-		oldData = GetData(GetField(cmpnt, "ncp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		Nvec = dims[whichDimTim - 1] = 1L;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+		oldData = GetData(GetField(cmpnt, "ncp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_median")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_median")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_median = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct90")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct90 = newData[0];
 
-		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+		oldData = GetData(GetField(cmpnt, "ncp_pct10")); 	f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 		F32 ncp_pct10 = newData[0];
 
 		cat(".-------------------------------------------------------------------.\n");
@@ -765,11 +767,11 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 		F32 cpPr[200];
 
 		if (GetData(GetField(cmpnt, "cp"))) {
-			Nvec    = maxKnotNum;	GetOutputOffsetStride_V2(ROW, COL, whichDimTim, index, Nvec, &stride, &offset);
-			oldData = GetData(GetField(cmpnt, "cp"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);		
+			Nvec = dims[whichDimTim - 1] = maxKnotNum;	ndarray_get1d_stride_offset(dims, 3L, subs3, whichDimTim, &stride, &offset);
+			oldData = GetData(GetField(cmpnt, "cp"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);		
 			memcpy(cp, newData, sizeof(F32)* min(200, Nvec));
 
-			oldData = GetData(GetField(cmpnt, "cpPr"));		  CopyStrideMEMToF32Arr(newData, oldData, Nvec, stride, offset, dtype);
+			oldData = GetData(GetField(cmpnt, "cpPr"));		  f32_from_strided_mem(newData, oldData, Nvec, stride, offset, dtype);
 			memcpy(cpPr, newData, sizeof(F32) * min(200, Nvec));
 
 			Nvec = min(200L, Nvec);

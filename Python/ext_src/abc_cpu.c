@@ -1,21 +1,22 @@
 #include <stdio.h>
 #include <string.h>
-#include "abc_000_warning.h"
 
+#include "abc_000_warning.h"
 
 #include "abc_common.h"
 #include "abc_ide_util.h" // r_printf
 #include "abc_cpu.h"
 
 
-//https://github.com/Mysticial/FeatureDetector
-//https://stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set/22521619#22521619
+//https:// github.com/Mysticial/FeatureDetector
+//https:// stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set/22521619#22521619
 /*
 Mysticial's answer is a bit dangerous -- it explains how to detect CPU support but not OS support. You need to use _xgetbv to check
 whether the OS has enabled the required CPU extended state. See here for another source. Even gcc
 has made the same mistake. The meat of the code is:
 */
-//https://insufficientlycomplicated.wordpress.com/2011/11/07/detecting-intel-advanced-vector-extensions-avx-in-visual-studio/
+
+//https:// insufficientlycomplicated.wordpress.com/2011/11/07/detecting-intel-advanced-vector-extensions-avx-in-visual-studio/
 /*
     // Checking for AVX requires 3 things:
     // 1) CPUID indicates that the OS uses XSAVE and XRSTORE
@@ -28,39 +29,35 @@ has made the same mistake. The meat of the code is:
     // Note that XGETBV is only available on 686 or later CPUs, so
     // the instruction needs to be conditionally run.
 */
+
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
     //#if _WIN32 
+
+    /*********************************************/
+    //        WINDOWS
+     /*********************************************/
     #if defined(MSVC_COMPILER) 
 
-        /*********************************************/
-        //        WINDOWS
-        /*********************************************/
+
         #define WIN32_LEAN_AND_MEAN
         #include <Windows.h>
         #include <intrin.h>
 
         #define _XCR_XFEATURE_ENABLED_MASK  0 //t should be already defined in intrinh, but Rtootls stsill compains
 
-        void    cpuid(int32_t out[4], int32_t eax, int32_t ecx) {
-            __cpuidex(out, eax, ecx); 
-        }
-        __int64 xgetbv(unsigned int x)     {
-            return _xgetbv(x);  
-        }
+        void     cpuid(int32_t out[4], int32_t eax, int32_t ecx) {   __cpuidex(out, eax, ecx);      }
+        uint64_t xgetbv(unsigned int x)                          {   return _xgetbv(x);             }
  
         //  Detect 64-bit - Note that this snippet of code for detecting 64-bit has been copied from MSDN.
         typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-        BOOL IsWow64()  
-        {
-            BOOL bIsWow64 = FALSE;
+        BOOL IsWow64(void)           {
 
+            BOOL                bIsWow64         = FALSE;
             LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(
                 GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
 
-            if (NULL != fnIsWow64Process)
-            {
-                if (!fnIsWow64Process(GetCurrentProcess(), &bIsWow64))
-                {
+            if (NULL != fnIsWow64Process)       {
+                if (!fnIsWow64Process(GetCurrentProcess(), &bIsWow64))     {
                     r_printf("Error Detecting Operating System.\n");
                     r_printf("Defaulting to 32-bit OS.\n\n");
                     bIsWow64 = FALSE;
@@ -69,7 +66,7 @@ has made the same mistake. The meat of the code is:
             return bIsWow64;
         }
 
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             #ifdef _M_X64
                     return 1;
             #else
@@ -77,11 +74,11 @@ has made the same mistake. The meat of the code is:
             #endif
         }
  
+    /*********************************************/
+    //        LINUX
+    /*********************************************/
     #elif defined(__GNUC__) || defined(__clang__)
-    
-        /*********************************************/
-        //        LINUX
-        /*********************************************/
+
         #include <cpuid.h>
         void cpuid(int32_t out[4], int32_t eax, int32_t ecx) {
             __cpuid_count(eax, ecx, out[0], out[1], out[2], out[3]);
@@ -92,17 +89,17 @@ has made the same mistake. The meat of the code is:
             return ((uint64_t)edx << 32) | eax;
         }
         #define _XCR_XFEATURE_ENABLED_MASK  0
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             //  We only support x64 on Linux.
             return 1;
         }
 
     #elif defined (SOLARIS_OS)
     
-    // cpuid:  https://docs.oracle.com/cd/E23824_01/html/821-1475/cpuid-7d.html
+    // cpuid:  https:// docs.oracle.com/cd/E23824_01/html/821-1475/cpuid-7d.html
 
     // __asm and __asm__ are synonoous for Solaris CC
-    // https://docs.oracle.com/cd/E26502_01/html/E28387/gmacx.html#scrolltoc
+    // https:// docs.oracle.com/cd/E26502_01/html/E28387/gmacx.html#scrolltoc
     // Oracle® Solaris Studio 12.4: C User'sGuide
 
    //
@@ -124,7 +121,7 @@ has made the same mistake. The meat of the code is:
             return ((uint64_t)edx << 32) | eax;
         }
 
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             //  We only support x64 on Linux.
             return 1;
         }
@@ -138,14 +135,14 @@ has made the same mistake. The meat of the code is:
         uint64_t xgetbv(unsigned int index) {            
             return 0;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             //  We only support x64 on Linux.
             return 1;
         }
         //#error  "No cpuid intrinsic defined for compiler."
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(ARM64_OS)
+#elif defined(ARM64_OS) || defined (POWERPC_OS)
         //https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
         //https://stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
         #define _XCR_XFEATURE_ENABLED_MASK  0
@@ -156,11 +153,14 @@ has made the same mistake. The meat of the code is:
         uint64_t xgetbv(unsigned int index) {
             return 0;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             //  We only support x64 on Linux.
             return 1;
         }
        // #warning "No cpuid intrinsic defined for ARM64: a placeholder created!"
+
+// https://stackoverflow.com/questions/34488604/equivalent-for-sse-in-power-pc
+// There is no SSE/AVX for POWEPC,Altivec is the POWERPC alternatives
 #else
 #   error "No cpuid intrinsic defined for processor architecture."
 #endif
@@ -172,28 +172,27 @@ static void cpu_print(const char* label, uint8_t yes) {
 }
  
  
-uint8_t detect_OS_AVX(){
+uint8_t detect_OS_AVX(void){
     //  Copied from: http://stackoverflow.com/a/22521619/922184
 
-    bool avxSupported = false;
+    Bool avxSupported = _False_;
 
     int  cpuInfo[4];
     cpuid(cpuInfo, 1, 0);
 
-    bool osUsesXSAVE_XRSTORE = (cpuInfo[2] & (1 << 27)) != 0;
-    bool cpuAVXSuport        = (cpuInfo[2] & (1 << 28)) != 0;
+    Bool osUsesXSAVE_XRSTORE = (cpuInfo[2] & (1 << 27)) != 0;
+    Bool cpuAVXSuport        = (cpuInfo[2] & (1 << 28)) != 0;
 
-    if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
-    {
+    if (osUsesXSAVE_XRSTORE && cpuAVXSuport)   {
         uint64_t xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
         avxSupported = (xcrFeatureMask & 0x6) == 0x6;
     }
 
     return avxSupported;
 }
-bool detect_OS_AVX512(){
+Bool detect_OS_AVX512(void){
     if (!detect_OS_AVX())
-        return false;
+        return _False_;
 
     uint64_t xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xe6) == 0xe6;
@@ -208,8 +207,8 @@ void get_vendor_string(char * name){
     memcpy(name + 8, &CPUInfo[2], 4);
     name[12] = '\0';
 }
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 void detect_host(struct cpu_x86 *cpu){
@@ -225,9 +224,9 @@ void detect_host(struct cpu_x86 *cpu){
     char vendor[13];
     get_vendor_string(vendor);
     if (strcmp(vendor,"GenuineIntel") ==0){
-        cpu->Vendor_Intel = true;
+        cpu->Vendor_Intel = _True_;
     }else if (strcmp(vendor, "AuthenticAMD") ==0){
-        cpu->Vendor_AMD = true;
+        cpu->Vendor_AMD = _True_;
     }
 
     int info[4];
@@ -237,7 +236,8 @@ void detect_host(struct cpu_x86 *cpu){
     cpuid(info, 0x80000000, 0);
     uint32_t nExIds = info[0];
 
-    r_printf("%d\n",nIds);
+    // r_printf("%d\n",nIds);
+
     //  Detect Features
     if (nIds >= 0x00000001){
         cpuid(info, 0x00000001, 0);
@@ -307,7 +307,8 @@ void detect_host(struct cpu_x86 *cpu){
         cpu->HW_XOP   = (info[2] & ((int)1 << 11)) != 0;
     }
 }
-void printinfo(struct cpu_x86 *cpu) {
+
+void print_cpuinfo(struct cpu_x86 *cpu) {
     r_printf("CPU Vendor:\n");
     cpu_print("    AMD         = ", cpu->Vendor_AMD);
     cpu_print("    Intel       = ", cpu->Vendor_Intel);
@@ -382,16 +383,14 @@ void printinfo(struct cpu_x86 *cpu) {
     cpu_print("    Safe to use AVX512:  ", cpu->HW_AVX512_F && cpu->OS_AVX512);
     r_printf("\n");
 }
-void cpu_print_info(){
+
+void detect_print_cpu(void) {
     struct cpu_x86 cpuinfo;
      detect_host(&cpuinfo);
-     printinfo(&cpuinfo);
+     print_cpuinfo(&cpuinfo);
 }
 
-#undef bool
  
-
-
 //https://stackoverflow.com/questions/12594208/c-program-to-determine-levels-size-of-cache
 /*
 To get L2 and L3 cache sizes, you need to use CPUID with EAX=4, and set ECX to 0, 1, 2, ... for
@@ -407,9 +406,9 @@ LineSize = EBX[11:0]
 Sets = ECX
 Total Size = (Ways + 1) * (Partitions + 1) * (Line_Size + 1) * (Sets + 1)
 */
-void i386_cpuid_caches () {
-    int i;
-    for (i = 0; i < 32; i++) {
+void i386_cpuid_caches (Bool quiet) {
+ 
+    for (int i = 0; i < 32; i++) {
 
         // Variables to hold the contents of the 4 i386 legacy registers
         uint32_t eax, ebx, ecx, edx; 
@@ -440,7 +439,7 @@ void i386_cpuid_caches () {
         // See the page 3-191 of the manual.
         int cache_type = eax & 0x1F; 
 
-        if (cache_type == 0) // end of valid cache identifiers
+        if (cache_type == 0) // CODE_EOF of valid cache identifiers
             break;
 
         char * cache_type_string;
@@ -466,29 +465,30 @@ void i386_cpuid_caches () {
         // Total cache size is the product
         size_t cache_total_size = cache_ways_of_associativity * cache_physical_line_partitions * cache_coherency_line_size * cache_sets;
 
-        r_printf(
-            "Cache ID %d:\n"
-            "- Level: %d\n"
-            "- Type: %s\n"
-            "- Sets: %d\n"
-            "- System Coherency Line Size: %d bytes\n"
-            "- Physical Line partitions: %d\n"
-            "- Ways of associativity: %d\n"
-            "- Total Size: %zu bytes (%zu kb)\n"
-            "- Is fully associative: %s\n"
-            "- Is Self Initializing: %s\n"
-            "\n"
-            , i
-            , cache_level
-            , cache_type_string
-            , cache_sets
-            , cache_coherency_line_size
-            , cache_physical_line_partitions
-            , cache_ways_of_associativity
-            , cache_total_size, cache_total_size >> 10
-            , cache_is_fully_associative ? "true" : "false"
-            , cache_is_self_initializing ? "true" : "false"
-        );
+        if (!quiet)
+            r_printf(
+                "Cache ID %d:\n"
+                "- Level: %d\n"
+                "- Type: %s\n"
+                "- Sets: %d\n"
+                "- System Coherency Line Size: %d bytes\n"
+                "- Physical Line partitions: %d\n"
+                "- Ways of associativity: %d\n"
+                "- Total Size: %zu bytes (%zu kb)\n"
+                "- Is fully associative: %s\n"
+                "- Is Self Initializing: %s\n"
+                "\n"
+                , i
+                , cache_level
+                , cache_type_string
+                , cache_sets
+                , cache_coherency_line_size
+                , cache_physical_line_partitions
+                , cache_ways_of_associativity
+                , cache_total_size, cache_total_size >> 10
+                , cache_is_fully_associative ? "true" : "false"
+                , cache_is_self_initializing ? "true" : "false"
+            );
     }
 }
 

@@ -1,4 +1,5 @@
-//Must be  include twice in a unit. So #pragram once must be removed
+//Must be include twice in a unit. So #pragram once must be removed
+
 #include "abc_000_macro.h"
 //#pragma GCC diagnostic ignored "-Wunused-variable"
 

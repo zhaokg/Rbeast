@@ -72,7 +72,7 @@ extern int GetNumCores(void);
 #endif
 
 #ifdef WIN64_OS
-    #include "Processthreadsapi.h" //InitializeProcThreadAttributeList DeleteProcThreadAttributeList
+    #include "Processthreadsapi.h"   // InitializeProcThreadAttributeList DeleteProcThreadAttributeList
 #endif
 
 typedef HANDLE    pthread_t;

@@ -1,12 +1,14 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_datatype.h"
+#include "abc_001_config.h"
 
 #if M_INTERFACE ==1 && defined(MSVC_COMPILER)
 	#include "inttypes.h"
 	#include "mex.h"
     //https://stackoverflow.com/questions/26271154/how-can-i-make-a-mex-function-printf-while-its-running/26271557
     //isoFlush is  an undocumented C++ function that resides in libmwservices.dll
-	extern bool ioFlush(void);
+	extern Bool ioFlush(void);
 	extern "C"  void matlab_IOflush(void)	{
 		ioFlush();
 	}

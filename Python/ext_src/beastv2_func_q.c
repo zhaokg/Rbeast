@@ -411,42 +411,10 @@ void XtX_ByGroup(BEAST2_BASESEG* SEG, I32 numSeg,F32PTR X,F32PTR XtX,I32 N, I32 
 	}
 	
 }
-void MoveCOLsWithinMatrix(F32PTR X, I32 N, I32 Kstart, I32 Kend, I32 Knewstart) {
-
-	rI32 j = Knewstart - Kstart;
-	if (j < 0 || Knewstart > Kend)
-		// dst(k2_new):-----123455----
-		// src(k2_old):----------123455----
-
-		// dst(k2_new):----------------123455----
-		// src(k2_old):-----123455----
-		r_cblas_scopy((Kend-Kstart+1)*N, X+(Kstart-1)*N, 1, X+(Knewstart-1)*N, 1);
-	else
-	{
-		// dst(k2_new):-------------123456----
-		// src(k2_old):---------123456----
-
-		rI32 segStartIdx = Kend+1;
-		while (true) {
-			segStartIdx = segStartIdx - j;
-			if (segStartIdx > Kstart) {
-				r_cblas_scopy(j * N, X + (segStartIdx-1) * N, 1L, X + ((segStartIdx+j)- 1) * N, 1);
-			}
-			else {
-				j = (segStartIdx+j) - Kstart;
-				r_cblas_scopy(j *N, X + (Kstart - 1)*N, 1L, X+(Knewstart-1) * N, 1);
-				break;
-			}
-		}//while (true)
-
-	}//if (j < 0 || k2_new + 1 > Kold)
-}
  
 //https: //stackoverflow.com/questions/3174850/what-is-the-correct-type-for-array-indexes-in-c#
 //https: //stackoverflow.com/questions/797318/how-to-split-a-string-literal-across-multiple-lines-in-c-objective-c
- 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
+  
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////

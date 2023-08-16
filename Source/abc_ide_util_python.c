@@ -15,7 +15,7 @@ int  JDN_to_DateNum(int jdn) {
 }
 
 PyObject* currentModule;
-PyObject* classOutput=NULL;
+PyObject* classOutput  = NULL;
 
 PyObject* setClassObjects(PyObject* self, PyObject* args){
 
@@ -136,10 +136,11 @@ static void* PyGetDictItemString123(void *ptr, char *fldname, int nPartial) {
 
 }
 
-
+ 
 int IsClass(void* ptr, char* class) { return 0; }
 int IsCell(void* ptr) { return 0; }
 int IsChar(void* ptr) {   
+
     if (ptr == NULL) return 0;
 
     if (PyUnicode_Check(ptr)) {
@@ -148,16 +149,38 @@ int IsChar(void* ptr) {
     if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_STRING) {
         return 1;
     }
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_UNICODE) {
+        return 1;
+    }
 
     PyGetItem pyGetItem = NULL;
-    if (PyList_Check(ptr))           pyGetItem = PyList_GetItem;
-    else if (PyTuple_Check(ptr))     pyGetItem = PyDict_GetItem;
+    if      (PyList_Check(ptr))        pyGetItem = PyList_GetItem;
+    else if (PyTuple_Check(ptr))       pyGetItem = PyDict_GetItem;
+ 
+    
     if(pyGetItem) {      
         int sz = (int) PyObject_Size(ptr);
         int ok = 1;
         for (int i = 0; i < sz; ++i) {
             if ( !PyUnicode_Check(pyGetItem(ptr, i) ) ) {
                 ok = 0; 
+                break;
+            }
+        }
+        if (ok) { return 1; }
+    }
+
+    if (PyArray_Check(ptr) && (PyArray_TYPE(ptr) == NPY_STRING || PyArray_TYPE(ptr) == NPY_UNICODE)  ){
+        return 1;
+    }
+
+    if (PyArray_Check(ptr)  && PyArray_TYPE(ptr)==NPY_OBJECT) {
+        void** base = (void**) PyArray_DATA(ptr);
+        int sz      = (int)    PyArray_Size(ptr);
+        int ok      = 1;
+        for (int i = 0; i < sz; ++i) {
+            if (!PyUnicode_Check(base[i])) {
+                ok = 0;
                 break;
             }
         }
@@ -174,11 +197,18 @@ int IsStruct(void* ptr) {
     }
     
     Pob dict = PyGetDict(ptr);
-    if (dict) return 1;
+    if (dict) {
+        if (PyUnicode_Check(ptr)) {
+        // a string also has an dict but is not treated as an object here
+            return 0;
+        }  else {
+            return 1;
+        }        
+    }
 
     return 0L;
 }
-int IsEmpty(void* ptr) {   return (ptr == Py_None || GetNumberOfElements(ptr) == 0);}
+int IsEmpty( void* ptr) {  return (ptr == Py_None || GetNumberOfElements(ptr) == 0);}
 
 //https://numpy.org/devdocs/reference/c-api/dtype.html#c.NPY_COMPLEX64
 //https://docs.python.org/3/c-api/concrete.html
@@ -220,6 +250,20 @@ int IsDouble(void* ptr) {
         if (ok) { return 1; }
     }
  
+
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_OBJECT) {
+        void** base = (void**)PyArray_DATA(ptr);
+        int sz = (int)PyArray_Size(ptr);
+        int ok = 1;
+        for (int i = 0; i < sz; ++i) {
+            if (!PyFloat_Check(base[i])) {
+                ok = 0;
+                break;
+            }
+        }
+        if (ok) { return 1; }
+    }
+
     return 0;
 }
 int IsInt16(void* ptr) {   
@@ -239,7 +283,7 @@ int IsInt32(void* ptr) {
     }
 
     PyGetItem pyGetItem = NULL;
-    if (PyList_Check(ptr))           pyGetItem = PyList_GetItem;
+    if      (PyList_Check(ptr))      pyGetItem = PyList_GetItem;
     else if (PyTuple_Check(ptr))     pyGetItem = PyDict_GetItem;
     if (pyGetItem) {
         int sz = PyObject_Size(ptr);
@@ -252,7 +296,19 @@ int IsInt32(void* ptr) {
         }
         if (ok) { return 1; }
     }
-       
+   
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_OBJECT) {
+        void** base = (void**)PyArray_DATA(ptr);
+        int sz = (int)PyArray_Size(ptr);
+        int ok = 1;
+        for (int i = 0; i < sz; ++i) {
+            if (!PyLong_Check(base[i])) {
+                ok = 0;
+                break;
+            }
+        }
+        if (ok) { return 1; }
+    }
     return 0;
  
 }
@@ -263,6 +319,7 @@ int IsInt64(void* ptr) {
     }
     return 0;
 }
+
 int IsLogical(void* ptr) {
      // a subclass of integer
     if (PyBool_Check(ptr)) {
@@ -272,9 +329,8 @@ int IsLogical(void* ptr) {
         return 1L;
     }
 
-
     PyGetItem pyGetItem = NULL;
-    if (PyList_Check(ptr))           pyGetItem = PyList_GetItem;
+    if      (PyList_Check(ptr))      pyGetItem = PyList_GetItem;
     else if (PyTuple_Check(ptr))     pyGetItem = PyDict_GetItem;
     if (pyGetItem) {
         int sz = PyObject_Size(ptr);
@@ -288,8 +344,22 @@ int IsLogical(void* ptr) {
         if (ok) { return 1; }
     }
      
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_OBJECT) {
+        void** base = (void**)PyArray_DATA(ptr);
+        int sz = (int)PyArray_Size(ptr);
+        int ok = 1;
+        for (int i = 0; i < sz; ++i) {
+            if (!PyBool_Check(base[i])) {
+                ok = 0;
+                break;
+            }
+        }
+        if (ok) { return 1; }
+    }
+
     return 0;
 }
+
 int IsNumeric(void* ptr) {
     return IsDouble(ptr) || IsSingle(ptr) || IsInt32(ptr)|| IsInt16(ptr) || IsInt64(ptr) || IsLogical(ptr);
 }
@@ -426,42 +496,78 @@ I32 GetCharArray(void* ptr, char* dst, int n) {
         return len;
     }
 
-    if (PyArray_Check(ptr)) {
-        r_printf("Not usre how to read strings out of a numpy str array!\n");
-        *dst = 0;        
-    }
-    dst[n - 1] = 0;
-    return 0;
+
+    int idx = 0;
+    return  GetCharVecElem(ptr, idx, dst, n);
+ 
     
 }
 
 I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
-    dst[0] = 0;
-    if (!IsChar(ptr)) return 0;
 
-    Pob tmpItem = NULL;
-    if (PyUnicode_Check(ptr) && n == 0) {
+    Py_ssize_t len = 0; // it has to be of Py_ssize_t type,, as needed for PyUnicode_AsUTF8AndSize
+     
+    PyObject* tmpItem = NULL;
+    if (PyUnicode_Check(ptr) && idx == 0) {
         tmpItem = ptr;
-    }
-    if (PyList_Check(ptr)) {
+    } else   if (PyList_Check(ptr)) {
         tmpItem = PyList_GetItem(ptr, idx);
-    }
-    if (PyTuple_Check(ptr)) {
+    } else  if (PyTuple_Check(ptr)) {
         tmpItem = PyTuple_GetItem(ptr, idx);
     }
 
-    if (PyUnicode_Check(tmpItem)) {
-        Py_ssize_t  len;
+    // It is a list or dict item
+    if (tmpItem && PyUnicode_Check(tmpItem)) {   
         char* str = PyUnicode_AsUTF8AndSize(tmpItem, &len);
-        strncpy(dst, str, n);
+        len = min(len,n - 1);
+        memcpy(dst, str, len);
+        dst[len] = 0;
         return len;
     }
 
-    if (PyArray_Check(ptr)) {
-        r_printf("Not usre how to read strings out of a numpy str array!\n");
-        *dst = 0;
+    //If a Numpy string array
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr)==NPY_STRING) {
+        char* base   = PyArray_DATA(ptr);
+        int   elsize = PyArray_ITEMSIZE(ptr);
+        char* str    = base + elsize * idx;
+        len     = min(elsize, n-1);
+        memcpy(dst, str, len);
+        dst[len] = 0;
+        return len;
     }
-    dst[n - 1] = 0;
+
+    //If a Numpy Unicode array
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_UNICODE) {
+        char* base   = PyArray_DATA(ptr);
+        int   elsize = PyArray_ITEMSIZE(ptr);
+        char* str = base + elsize * idx;
+        len = min(elsize/4, n - 1);  // Assuming a Unicode char has 4 bytse
+        for (int i = 0; i < len; i++) {
+            dst[i] = str[i * 4];
+        }
+        dst[len] = 0;
+        return len;
+    }
+
+    //If a Numpy object array
+    if (PyArray_Check(ptr) && PyArray_TYPE(ptr) == NPY_OBJECT) {
+        void** base  = PyArray_DATA(ptr);
+        int    elsize = PyArray_ITEMSIZE(ptr);
+
+        void* tmpItem = base[idx];
+
+        // It is a list or dict item
+        if (tmpItem && PyUnicode_Check(tmpItem)) {
+            char* str = PyUnicode_AsUTF8AndSize(tmpItem, &len);
+            len = min(len, n - 1);
+            memcpy(dst, str, len);
+            dst[len] = 0;
+            return len;
+        }
+ 
+    }
+
+    dst[len] = 0;
     return 0;
 }
 
@@ -586,7 +692,10 @@ F64   GetNumericElement(const void* Y, I32 idx0) {
     }
     return getNaN();
 }
-void* GetData(const void* ptr) { return PyArray_DATA(ptr);}
+
+void* GetData(const void* ptr) { 
+    return PyArray_DATA(ptr);
+}
 
 /*
 int   GetDataType(VOID_PTR Y) {
@@ -606,6 +715,7 @@ int   GetDataType(VOID_PTR Y) {
     return DATA_UNKNOWN;
 }
 */
+
 int  GetDim1(const void* ptr) {
     if (PyArray_Check(ptr)) {
         npy_intp* dims = PyArray_DIMS(ptr);
@@ -616,6 +726,7 @@ int  GetDim1(const void* ptr) {
     }
     return -9999L;
 }
+
 int  GetDim2(const void* ptr) {
 
     if (!PyArray_Check(ptr)) {
@@ -624,6 +735,7 @@ int  GetDim2(const void* ptr) {
     npy_intp* dims = PyArray_DIMS(ptr);
     return dims[1];
 }
+
 int  GetNumOfDim(const void* ptr) {
     if (PyArray_Check(ptr)) {
         return  PyArray_NDIM(ptr);        
@@ -649,7 +761,6 @@ void GetDimensions(const void* ptr, int dims[], int ndims) {
     }   
 }
  
-
 void * SetDimensions(const void* ptr, int dims[], int ndims) {
     if (PyArray_Check(ptr)) {
         //PyObject* PyArray_Newshape(PyArrayObject * self, PyArray_Dims * newshape, NPY_ORDER order);
@@ -682,6 +793,12 @@ int  GetNumberOfElements(const void* ptr) {
 
     if (PyList_Check(ptr) || PyTuple_Check(ptr)) {
         return PyObject_Size(ptr);
+    }
+
+    if (PyUnicode_Check(ptr) ) {
+    // A string has a dict but  is not treated as an object and instead as a 1 scalar
+    // This must come before the "next" PyGetDict(ptr);"
+        return 1;
     }
 
     PyObject* dict = PyGetDict(ptr);
@@ -782,12 +899,15 @@ static void pySetAddField(void *obj, char *fname, void *value) {
 void* CreateStructVar(FIELD_ITEM* fieldList, int nfields) {
 
     // Find the sentinal element to update nfields
-	int nfields_new = 0;
+	int nfields_actual = 0;
 	for (int i = 0; i < nfields; ++i) {
-		nfields_new++;
-		if (fieldList[i].name[0] == 0) 	break;
+        nfields_actual++;
+        if (fieldList[i].name[0] == 0) {
+            nfields_actual--;
+            break;
+        }
 	}
-	nfields = nfields_new; 
+	nfields = nfields_actual;
 
 	PyObject * _restrict out;
 	{

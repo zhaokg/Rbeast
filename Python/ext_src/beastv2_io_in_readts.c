@@ -13,145 +13,59 @@
 #include "abc_common.h" //CopyStridMEMToF32Arr
 #include "abc_mat.h"
 #include "abc_blas_lapack_lib.h"
-
 #include "beastv2_io.h"
 
-
-static I32 __GetRawTimeDimension(A(IO_PTR) io) {
-	return io->dims[io->meta.whichDimIsTime - 1];
-}
-
-static void GetInputOffsetStride(A(IO_PTR) io, I64 idx, I64 *pStride, I64 *pOffset, I64 *pN)
-{
-	I64 N = __GetRawTimeDimension(io);  // GetRawTimeDimension(io);
+static void __convert_index_to_datasubs3(BEAST2_IO* io, int index, int subs3[]) {
 	
-	I64 stride, offset;	
-	if (io->ndim ==  1)       // Not a 3D stack input
-		stride = 1L,
-		offset = 0;	
-	if (io->ndim == 2)       // Not a 3D stack input
-	{
-		if (io->meta.whichDimIsTime == 1) {
-			stride = 1L,
-			offset = (idx - 1) * N;
-		} 	else {
-			I32 ROW = io->dims[0];
-			stride = ROW,
-			offset = (idx - 1);
+	int subs2[2];
+	ind2sub(io->imgdims, 2L, index, subs2);
+
+	subs3[io->rowdim - 1]  = subs2[0];
+	subs3[io->coldim - 1]  = subs2[1];
+	subs3[io->timedim - 1] = 1;     // can fill any value
+}
+ 
+void BEAST2_fetch_timeSeries(A(YINFO_PTR)  yInfo, int pixelIndex, F32PTR GlobalMEMBuf, A(IO_PTR)  io)  {
+	
+	/********************************************************************/
+	// Fetech the next time series, find missing rows, and normalize it.
+	//  Used in BEAST2_CORVE4 and bastv2_io_in_args (when reading ts to determine period)
+	/********************************************************************/
+
+	int subs3[3];
+	I64 stride, offset;
+	__convert_index_to_datasubs3(io, pixelIndex, subs3);
+	ndarray_get1d_stride_offset(io->dims, 3L, subs3, io->timedim, &stride, &offset);
+
+	int    Nraw = io->dims[io->timedim - 1L];
+	I32    q    = io->q; //q = 1 for BEAST	
+	F32PTR Y    = yInfo->Y;
+	/**************************************************************************/
+	/* Now offest and stride are appropriately set up. Start to extract the ts*/
+	/**************************************************************************/
+	
+	if ( !io->T.out.needAggregate && !io->T.out.needReOrder)  {
+		// Regular inputs
+		for (I32 i = 0; i < q; i++) {
+			f32_from_strided_mem(Y + i * Nraw/*dst*/, io->pdata[i] /*src*/, Nraw, stride, offset, io->dtype[i]);
 		}
+		f32_set_value_to_nan(Y, Nraw*q, io->meta.missingValue); 
+
+	} else {
+	// Irregular inputs
+
+		for (I32 i = 0; i < q; i++) {
+			f32_from_strided_mem(GlobalMEMBuf/*dst*/, io->pdata[i]/*src*/, Nraw, stride, offset, io->dtype[i]);
+			f32_set_value_to_nan(GlobalMEMBuf, Nraw, io->meta.missingValue);
+			I32    Nnew = io->N;
+			tsAggegrationPerform(Y + Nnew * i, Nnew, GlobalMEMBuf, Nraw, io->T.out.numPtsPerInterval, io->T.sorted_time_indices + io->T.out.startIdxOfFirsInterval);
+		}
+
 	}
-	else if (io->ndim == 3L)  // A 3D stack input
-	{
-			I64  ROW, COL;
-			switch (io->meta.whichDimIsTime) {
-			case 1:
-				ROW    = io->dims[1];
-				COL    = io->dims[2];
-				stride = 1L;
-				offset = (idx - 1)*N;
-				break;
-			case 2: {
-				ROW = io->dims[0];
-				COL = io->dims[2];
-				I64 r, c;
-				c = (idx-1) / ROW;
-				r = idx - c*ROW;
-				c = c + 1;
-				stride = ROW;
-				offset = (c - 1)*(N*ROW) + r - 1;
-				break;
-			}
-			case 3: {
-				ROW = io->dims[0],
-				COL = io->dims[1];
-				I64 r, c;
-				c = (idx - 1) / ROW;
-				r = idx - c*ROW;
-				c = c + 1;
-				stride = ROW*COL;
-				offset = (c - 1)*ROW + r - 1;
-				break;
-			}
-
-		} // switch ( io->whichDimIsTime)	 
-
-	} // (io->ndim == 3L)
-	
-	*pStride = stride;
-	*pOffset = offset;
-	*pN      = N;
-}
-
-
-
-static void fetch_next_timeSeries_MEM_reglular(A(YINFO_PTR)  yInfo, int idx,  A(IO_PTR) io)
-{   
-	/********************************************************************/
-	// Fetech the next time series, find missing rows, and normalize it.
-	/********************************************************************/
-	I64  stride, offset, N;
-	GetInputOffsetStride(io, idx, &stride, &offset, &N);
-
-	/**************************************************************************/
-	/* Now offest and stride are appropriately set up. Start to extract the ts*/
-	/**************************************************************************/
-	I32    q = io->q; //q = 1 for BEAST	
-	F32PTR Y = yInfo->Y;
-	for (I32 i = 0; i < q; i++) {
-		CopyStrideMEMToF32Arr(Y + i * N/*dst*/,io->pdata[i] /*src*/, N, stride, offset, io->dtype[i]);
-		f32_set_nan_by_value(Y + i * N, N, io->meta.missingValue);
-		#if R_INTERFACE==1
-			//https://www.markvanderloo.eu/yaRb/2012/07/08/representation-of-numerical-nas-in-r-and-the-1954-enigma/
-		    //https://stackoverflow.com/questions/19084227/what-is-the-minimum-value-of-a-32-bit-signed-integer
-			// In R, the smallest negative interger is treated as NA
-			if (io->dtype[i] == DATA_INT32) {
-				I32 INTMIN = 0x80000001;
-				F32 NAinteger = (F32)(INTMIN);  //the most negative integer
-				f32_set_nan_by_value(Y + i * N, N, NAinteger);
-			}
-		#endif
-	}
-	
-}
-static void fetch_next_timeSeries_MEM_irregular(A(YINFO_PTR)  yInfo, int idx, F32PTR GlobalMEMBuf, A(IO_PTR)  io)
-{   
-	/********************************************************************/
-	// Fetech the next time series, find missing rows, and normalize it.
-	/********************************************************************/		
-	I64 stride, offset, Nraw; 	
-	GetInputOffsetStride(io, idx, &stride, &offset, &Nraw);
-	
-	/**************************************************************************/
-	/* Now offest and stride are appropriately set up. Start to extract the ts*/
-	/**************************************************************************/
-    I32    Nnew = io->N;
-	I32    q    = io->q; //q=1 for BEAST
-	F32PTR Y    = yInfo->Y;	
-	for (I32 i = 0; i < q; i++) {
-		CopyStrideMEMToF32Arr(GlobalMEMBuf/*dst*/, io->pdata[i]/*src*/, Nraw, stride, offset, io->dtype[i]);
-		f32_set_nan_by_value(GlobalMEMBuf, Nraw, io->meta.missingValue);
-	    #if R_INTERFACE==1
-			//https://www.markvanderloo.eu/yaRb/2012/07/08/representation-of-numerical-nas-in-r-and-the-1954-enigma/
-			// In R, the smallest negative interger is treated as NA
-			if (io->dtype[i] == DATA_INT32) {
-				I32 INTMIN    = 0x80000001;
-				F32 NAinteger = (F32) (INTMIN);  //the most negative integer
-				f32_set_nan_by_value(GlobalMEMBuf, Nraw, NAinteger);	
-			}
-		#endif
-		tsAggegrationPerform(Y + Nnew*i, Nnew, GlobalMEMBuf, Nraw, io->T.numPtsPerInterval, io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
-	}			
 
 }
 
-void BEAST2_fetch_next_timeSeries(A(YINFO_PTR)  yInfo, int pixelIndex, F32PTR GlobalMEMBuf, A(IO_PTR)  io)  {
-	// used in BEAST2_CORVE4 and bastv2_io_in_args (when reading ts to determine period)
-		if (io->meta.isRegularOrdered)	 fetch_next_timeSeries_MEM_reglular( yInfo, pixelIndex,  io );
-		else                 			 fetch_next_timeSeries_MEM_irregular(yInfo, pixelIndex, GlobalMEMBuf, io);	 
-
-}
-
-static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F32PTR Xtmp, BEAST2_OPTIONS_PTR opt) {
+static int  __timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F32PTR Xtmp, BEAST2_OPTIONS_PTR opt) {
 	//Xt_mars is passed through Xtmp, and there should be sufficent MEM to fit the global trend and global seasonal compnt
 
 	int    N        = opt->io.N;
@@ -166,18 +80,18 @@ static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo, BEAST2_BASIS_P
 	F32PTR X = Xtmp;
 	int    K = 0;
 	if (yInfo->Yseason || yInfo->Ytrend) {
-		//Use Yeason and Ytrend to determine which compnt to be fit rather than use deseasonalize and Ytrend		 
+		// Use Yeason and Ytrend to determine which compnt to be fit rather than use deseasonalize and Ytrend		 
 		TREND_CONST* bConst = basis[0].type == TRENDID ? &basis[0].bConst.trend : &basis[1].bConst.trend;		
 		SCPY(Ktrend * N, bConst->TERMS, X);
 		X += Ktrend * N;
 		K += Ktrend;
 	}
 	if (yInfo->Yseason){
-		//if deseasonalize=TRUE, detrend has been forced to be TRUE		 
+		// if deseasonalize=TRUE, detrend has been forced to be TRUE		 
 		F32PTR TERMS=NULL;
 		if      (basis[0].type == SEASONID){ SEASON_CONST* bConst = &basis[0].bConst.season; TERMS = bConst->TERMS;} 
-		else if (basis[0].type == DUMMYID) { DUMMY_CONST* bConst  = &basis[0].bConst.dummy;  TERMS = bConst->TERMS;}
-		else if (basis[0].type == SVDID)  {  SVD_CONST* bConst    = &basis[0].bConst.dummy;	 TERMS = bConst->TERMS;	}	
+		else if (basis[0].type == DUMMYID) { DUMMY_CONST * bConst = &basis[0].bConst.dummy;  TERMS = bConst->TERMS;}
+		else if (basis[0].type == SVDID)  {  SVD_CONST   * bConst = &basis[0].bConst.svd;	 TERMS = bConst->TERMS;	}	
 
 		SCPY(Kseason * N, TERMS, X);
 		X += Kseason * N;
@@ -227,7 +141,7 @@ I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F3
 	U08 skipCurrentPixel=0;
 	if (yInfo->Yseason != NULL || yInfo->Ytrend != NULL) {
 		// run timesries_detrenf only if at least one of Yeason and Ytrend is not NULL
-		skipCurrentPixel = _timeseries_deseasonalize_detrend(yInfo, basis, Xtmp, opt);
+		skipCurrentPixel = __timeseries_deseasonalize_detrend(yInfo, basis, Xtmp, opt);
 		if (skipCurrentPixel) return skipCurrentPixel;
 	}
 	
@@ -235,7 +149,9 @@ I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F3
 	F32PTR Y = yInfo->Y;
 	int    N = opt->io.N;
 	int    q = opt->io.q;
-	//Normalize Y with NaN ommitted and then pre-comoute Y'*Y: YtY_plus_Q using gemm
+
+	//NOTE: this is the place to get rowsMissing
+	//Normalize Y with NaN ommitted and then pre-comoute Y'*Y: YtY_plus_Q using gemm	
 	yInfo->nMissing = f32_normalize_multicols_zeroout_nans(Y, yInfo->rowsMissing, N, N, q, yInfo->mean, yInfo->sd);
 	r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, N, 1.0, Y, N, Y, N, 0.f, yInfo->YtY_plus_alpha2Q, q);
 	yInfo->n = N - yInfo->nMissing;
@@ -243,7 +159,43 @@ I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo, BEAST2_BASIS_PTR basis, F3
 	//Npad:N_extended; the mutiples of 8 closest to N, defined for 32-byte alginment
 
 	skipCurrentPixel = yInfo->nMissing > (N * opt->io.meta.maxMissingRate) ? 1L : 0L;
+	if (skipCurrentPixel) {
+		return skipCurrentPixel;
+	}
+
+	// Need to compuate the SVD basis
+	if ('V' == opt->io.meta.seasonForm && opt->io.meta.svdTerms_Object ==NULL) {
+		void compute_seasonal_svdbasis_from_originalY(F32PTR y, int N, int P, F32PTR Yout, int  Kmax, VOID_PTR BUF);
+		void compute_seasonal_svdbasis_from_seasonalY(F32PTR y, int N, int P, F32PTR Yout, int  Kmax, VOID_PTR BUF);
+		int Kmax = opt->prior.seasonMaxOrder;
+		int P    = opt->io.meta.period;
+		SVD_CONST* bConst = basis[0].type == SVDID ? &basis[0].bConst.svd : &basis[1].bConst.svd;
+		F32PTR   Yout      = bConst->TERMS;
+
+		if (opt->io.meta.svdYseason_Object) {
+			F32PTR y = bConst->TERMS; // seasonalY has been copied into bConst->terms before
+			CopyNumericObjToF32Arr(y, opt->io.meta.svdYseason_Object, N);		
+			compute_seasonal_svdbasis_from_seasonalY(y, N, P, Yout, Kmax, Xtmp);
+		} else{
+			compute_seasonal_svdbasis_from_originalY(Y, N, P, Yout, Kmax, Xtmp);
+			
+		}
+
+ 
+		F32PTR ptr  = Yout;
+		F32PTR ptr1 = bConst->SQR_CSUM;
+		for (I32 order = 1; order <= Kmax; order++) {
+			*ptr1 = 0.f;
+			f32_copy(ptr, ptr1 + 1, N);         f32_cumsumsqr_inplace(ptr1 + 1, N);
+			ptr += N;
+			ptr1 += N + 1;
+		} // or (rI32 order = 1; order <= maxSeasonOrder; order++)
+
+	 
+	}
+
 	return skipCurrentPixel;
  	
 }
+
 #include "abc_000_warning.h"

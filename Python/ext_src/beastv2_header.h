@@ -3,6 +3,7 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"   //#include <inttypes.h>  #include <stdint.h>
 #include "abc_ide_util.h"
+#include "abc_ts_func.h"
 #include "abc_mat.h"   //NEWXCOLINFO
 
 #ifndef SOLARIS_COMPILER
@@ -43,23 +44,21 @@ typedef U08 TORDER, *_restrict TORDER_PTR;
 /*************************************************/
 
 typedef struct BEAST2_METADATA {
-	VOID_PTR rawInput;
-	VOID_PTR rawTimeVec;	
-	I08      detrend;
-	I08      deseasonalize;
 	I08		 nrhs;
-	I08		 isMetaStruct;
-	I08		 isRegularOrdered;	
-	I08      seasonForm;
+	I08      detrend;
+	I08      deseasonalize;	
+ 	I08      seasonForm;
+	I08      IsPeriodEstimated;
 	I08      hasSeasonCmpnt;	
 	I08      hasOutlierCmpnt;	
 	
-	I08    whichDimIsTime;
-	F32    period;
-	F32    missingValue;
-	F32    startTime, deltaTime;	
-	F32    maxMissingRate;
-	F32PTR svdTerms;
+	I08     whichDimIsTime;
+	F32     period;
+	F32     missingValue;
+	F32     startTime, deltaTime;	
+	F32     maxMissingRate;
+	VOIDPTR svdTerms_Object;
+	VOIDPTR svdYseason_Object;
 } BEAST2_METADATA, * _restrict BEAST2_METADATA_PTR;
 
 
@@ -81,11 +80,12 @@ typedef struct BEAST2_PRIOR {
 	U08	  modelPriorType;
 	U08   precPriorType;
 
-	U08   seasonMinOrder,   seasonMaxOrder;
-    U08   trendMinOrder,    trendMaxOrder;
-	I16   trendMinSepDist,  seasonMinSepDist;
-	U16   trendMinKnotNum,  seasonMinKnotNum;
-	U16   trendMaxKnotNum,  seasonMaxKnotNum;
+	I16   seasonMinOrder,   seasonMaxOrder;
+	I16   trendMinOrder,    trendMaxOrder;
+	I32   trendMinSepDist,  seasonMinSepDist;
+
+	I16   trendMinKnotNum,  seasonMinKnotNum;
+	I16   trendMaxKnotNum,  seasonMaxKnotNum;
 	I16   outlierMaxKnotNum;
 
 	U16   K_MAX;
@@ -121,40 +121,36 @@ typedef struct BEAST2_EXTRA {
 	I08   removeSingletonDims;
 
 	I08   ncpStatMethod;
-	bool  computeCredible;
-	bool  fastCIComputation;
-	bool  computeSeasonOrder;
-	bool  computeTrendOrder;
+	Bool  computeCredible;
+	Bool  fastCIComputation;
+	Bool  computeSeasonOrder;
+	Bool  computeTrendOrder;
 
-	bool  computeSeasonChngpt, computeTrendChngpt, computeOutlierChngpt;
-	bool  computeSeasonAmp;
-	bool  computeTrendSlope;	
+	Bool  computeSeasonChngpt, computeTrendChngpt, computeOutlierChngpt;
+	Bool  computeSeasonAmp;
+	Bool  computeTrendSlope;	
 	
-	bool tallyPosNegSeasonJump;
-	bool tallyPosNegTrendJump;
-	bool tallyIncDecTrendJump;
-	bool tallyPosNegOutliers;
+	Bool tallyPosNegSeasonJump;
+	Bool tallyPosNegTrendJump;
+	Bool tallyIncDecTrendJump;
+	Bool tallyPosNegOutliers;
 
-	bool  printOptions;
-	bool  printProgressBar;
+	Bool  printOptions;
+	Bool  printProgressBar;
 
 } BEAST2_EXTRA, * _restrict BEAST2_EXTRA_PTR;
-
-typedef struct BEAST2_TIME {
-	I32PTR     sortedTimeIdx;
-	I32PTR     numPtsPerInterval;
-	I32        startIdxOfFirsInterval;
-} BEAST2_TIME;
-
+ 
 struct BEAST2_RESULT;
 typedef struct BEAST2_RESULT BEAST2_RESULT, * _restrict BEAST2_RESULT_PTR;
 typedef struct BEAST2_IO {
 	BEAST2_METADATA	meta;
-	BEAST2_TIME		T;
+	TimeVecInfo	T;
 
 	VOID_PTR		*pdata;
 	DATA_TYPE		*dtype;
 	I08				ndim;
+	I08             rowdim, coldim, timedim;
+	I32				imgdims[2];
 	I32				dims[3];
 	I32				numOfPixels;
 	// q is the number of time series;q=1 is for univaraite TS in BEASTv4.
@@ -326,7 +322,7 @@ typedef struct _NEWTERM {
 //period is used as "basis->bConst.dummy.period" in the following functons: computeXY,Alloc_Init_PrecPrior,DD_CalcBasisKsKeK_prec0123
 //TERMS needed only if meta->io.deseasonlaized=TRUE
 typedef struct DUMMY_CONS { F32PTR TERMS; F32PTR SQRT_N_div_n; I32 period; }          DUMMY_CONST;
-typedef struct SVD_CONS {  F32PTR TERMS; F32PTR SQR_CSUM;}                            SVD_CONST;
+typedef struct SVD_CONS     { F32PTR TERMS; F32PTR SQR_CSUM;}                            SVD_CONST;
 typedef struct SEASON_CONST { F32PTR TERMS, SQR_CSUM, SCALE_FACTOR;}				    SEASON_CONST;
 typedef struct TREND_CONS   { F32PTR TERMS, COEFF_A, COEFF_B, INV_SQR;}	               TREND_CONST;
 typedef struct OUTLIER_CONS { F32    SQRTN, SQRTN_1; }		                           OUTLIER_CONST;
@@ -456,4 +452,4 @@ typedef struct {
 #endif
 
 
-#define AggregatedMemAlloc 1L
+#define AggregatedMemAlloc 0L

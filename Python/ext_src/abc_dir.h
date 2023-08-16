@@ -1,3 +1,5 @@
+#pragma once
+
 #include "abc_dirent.h"
 #include "abc_datatype.h"
 typedef struct DIR_FILELIST {	

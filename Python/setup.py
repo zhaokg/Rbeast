@@ -1,11 +1,10 @@
-import os,sys,glob
+import os, sys, glob
 from   setuptools import setup, find_packages, Extension,find_namespace_packages
-
 
 #import numpy as np
 
-# setup should isstall numpy but numpy is needed to get the numpy headers  in np.get_include()
-# and run the setup before it is installed -- chichen-and-egg problems
+# chichen-and-egg problems:  setup should install numpy but numpy is needed to get the numpy headers in np.get_include()
+# and run the setup before it is installed
 # 
 # https://stackoverflow.com/questions/56008251/setup-requires-does-not-seem-to-install-dependencies
 # https://stackoverflow.com/questions/35516059/python-is-not-installing-dependencies-listed-in-install-requires-of-setuptools
@@ -40,18 +39,19 @@ def is_platform_windows():
 def is_platform_mac():
     return sys.platform == "darwin"
     
-filenames    = glob.glob('ext_src/*.c');
-filenames.append("ext_src/abc_ioFlushcpp.cpp")
 
 extralibs  = []
 if is_platform_windows():
    extralibs=["kernel32", "user32", "gdi32" ]
+
+filenames    = glob.glob('ext_src/*.c');
+filenames.append("ext_src/abc_ioFlushcpp.cpp")
       
 modules = Extension(
             "Rbeast.Rbeast",
             sources       = filenames,
-            include_dirs  = [get_numpy_include(), "ext_src/"],      #[np.get_include(), "ext_src/"],
-            define_macros = [('P_RELEASE','1'),('R_INTERFACE','0')],
+            include_dirs  = [get_numpy_include(), "ext_src/"],      # [ np.get_include(), "ext_src/"],
+            define_macros = [('P_RELEASE','1'),('RRR_INTERFACE','0')],
             libraries     = extralibs
         )
         
@@ -64,7 +64,7 @@ packages = find_namespace_packages(where='./py_src', exclude=['build','tests','e
 #print(packages)
 setup(
     name             = "Rbeast",   
-    version          = '0.1.12',
+    version          = '0.1.15',
     description      = "Bayesian changepoint detection and time series decomposition",
     author           = "Kaiguang Zhao",
     author_email     = 'zhao.1423@osu.edu',
@@ -80,6 +80,7 @@ setup(
         "Programming Language :: Python :: 3.9",                
         "Programming Language :: Python :: 3.10",                        
         "Programming Language :: Python :: 3.11",   
+        "Programming Language :: Python :: 3.12",   
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Hydrology",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
@@ -87,13 +88,13 @@ setup(
         "Topic :: Scientific/Engineering",
         "License :: OSI Approved :: MIT License",
     ],    
-    #setup_requires  = ['numpy'], #deprecated in favor of pyproject.toml
-    install_requires     = ['numpy', 'matplotlib>=2.2.0'],
-    #entry_points={  'console_scripts': ['mycommand=exampleproject.data:main1'] },    
+    #setup_requires      = ['numpy'],           # Deprecated in favor of pyproject.toml
+    install_requires     =  ['numpy>=1.18', 'matplotlib>=2.2.0'], # ['numpy>=1.10', 'matplotlib>=2.2.0'],
+    #entry_points        ={  'console_scripts': ['mycommand=exampleproject.data:main1'] },    
     packages             = packages,    
     package_dir          = {"Rbeast": "py_src/Rbeast","Rbeast.data": "py_src/Rbeast/data", '': '.'},      
     include_package_data = True,      
-    package_data         = {'Rbeast': ['data/nile.csv'],'Rbeast.data': ['beach.csv'] ,'Rbeast': ['data/*.npy','data/*.txt','data/*.csv']},
+    package_data         = {'Rbeast': ['data/nile.csv'],'Rbeast.data': ['googletrend.csv'] ,'Rbeast': ['data/*.npy','data/*.txt','data/*.csv']},
     exclude_package_data = {'': ['*.c','*.cpp']},       
     ext_modules          = [modules]
 )

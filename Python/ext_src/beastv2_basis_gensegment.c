@@ -198,22 +198,23 @@ static int VV_0( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	I32    k = 0;
 	for (I32 j = seg->ORDER1; j <= seg->ORDER2; j++){
-
-		F32   scalingFactor;
 		// there is only one term per order
 		r_cblas_scopy(Nseg, TERM, 1L, X + seg->R1 - 1, 1L);
-		scalingFactor = sqrtf(N / (svd_csum[seg->R2 - 1] - svd_csum[(seg->R1 - 1) - 1]));
-		r_cblas_sscal(Nseg, scalingFactor, X + seg->R1 - 1, 1L);
+		F32 csum_diff     = (svd_csum[seg->R2 - 1] - svd_csum[(seg->R1 - 1) - 1]);
+		F32 scalingFactor = csum_diff==0?0.0: sqrtf(N / csum_diff);  // Some hihger SVD terms may be zeros
+		//r_cblas_sscal(Nseg, scalingFactor, X + seg->R1 - 1, 1L);
 		
-		k       += 1;
+		k    += 1;
 		TERM += N ;
 		X    += Npad;
 		svd_csum += (N + 1L) ;	
 	}
 
+	
 	return k;
 #undef SEASON
 }
+
 static int SS_0( F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST* ptr) {
 
 	#define SEASON  (*((SEASON_CONST*)ptr))

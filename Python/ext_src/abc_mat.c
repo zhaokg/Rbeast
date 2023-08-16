@@ -730,11 +730,11 @@ void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au, F32PTR U, 
 			U += N;
 		}
 
-		F32 prec = (COL == 1) ? 0. : *precPrior;
-		Ucol[COL - 1] = 1.f / sqrt((Au[COL - 1] + prec) - SUM); //invert diagoal element
+		F32 prec       = (COL == 1) ? 0.f : *precPrior;
+		Ucol[COL - 1]  = 1.f / sqrt((Au[COL - 1] + prec) - SUM); //invert diagoal element
 
 		Ucol += N;
-		Au += N;
+		Au   += N;
 	}
 
 }
@@ -1021,6 +1021,71 @@ void linear_regression(F32PTR Y, F32PTR X, int ldx, int N, int K, F32PTR B,F32PT
 		r_ippsSub_32f(Yfit, Y, Yerror,N); //Yerror=Y-Yfit 
 
 }
+
+void simple_linear_regression_nan(F32PTR Y, F32PTR X, int N, F32PTR Yfit, F32PTR Yerror) {
+	F64 Xsum, Ysum, XY, XX;
+	F64 b0, b1;
+	int Ngood;
+
+	Xsum = Ysum = XX = XY = Ngood = 0;
+	
+	if (X) {
+		for (int i = 0; i < N; i++) {
+			int isGoodPt = (X[i] == X[i]) && (Y[i] == Y[i]);
+			Xsum += isGoodPt ? X[i] : 0;
+			Ysum += isGoodPt ? Y[i] : 0;
+			XY += isGoodPt ? X[i] * Y[i] : 0;
+			XX += isGoodPt ? X[i] * X[i] : 0;
+			Ngood += isGoodPt;
+		}
+
+	}
+	else {
+		//Assume X is 0, 1/N, 2/N, (N-1)/N
+		for (int i = 0; i < N; i++) {
+			int isGoodPt =  (Y[i] == Y[i]);
+			F64 x = (double) i / (double)N;
+			Xsum += isGoodPt ? x : 0;
+			Ysum += isGoodPt ? Y[i] : 0;
+			XY += isGoodPt ? x * Y[i] : 0;
+			XX += isGoodPt ? x *x : 0;
+			Ngood += isGoodPt;
+		}
+	}
+	F64 SXY = XY - Xsum * Ysum / Ngood;
+	F64 SXx = XX - Xsum * Xsum / Ngood;
+
+	b1 = SXY / SXx;
+	b0 = Ysum / Ngood - b1 * Xsum / Ngood;
+
+	if (Yfit) {
+		if (X) {
+			for (int i = 0; i < N; i++) {	 
+				Yfit[i] = X[i] * b1 + b0;
+			}
+		}else {
+			for (int i = 0; i < N; i++) {
+				Yfit[i] =  b1*i/N + b0;
+			}
+		}
+	}
+
+	if (Yerror) {
+		if (X) {
+			for (int i = 0; i < N; i++) {
+				Yerror[i] = Y[i]-(X[i] * b1 + b0);
+			}
+		}
+		else {
+			for (int i = 0; i < N; i++) {
+				Yerror[i] = Y[i] - (b1 * i / N + b0);
+			}
+		}
+	}
+}
+
+
+
 /*
 void f32_gemm_XtY1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc) 
 {
@@ -1197,6 +1262,358 @@ void update_XtY_from_Xnewterm(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYn
 
 
 	}
+}
+
+
+
+void get_parts_for_newinfo(NEWCOLINFOv2* new) {
+	// x1, xnew1, x2, xnew2, x3, xnew3, x4
+
+	int Knewterm    = 0;
+	int Kbase_dst   = 1;
+
+	int jParts      = 0;
+	for (int i = 0; i <  new->nbands; ++i) {
+
+		new->parts[jParts].X      = new->X;
+		new->parts[jParts].ks_dst = Kbase_dst;
+		
+		if (i == 0) {
+			new->parts[jParts].ks_src = 1;
+		} else {
+			new->parts[jParts].ks_src = new->ks_x[i-1] + new->kterms_x[i-1];
+		}
+		new->parts[jParts].kterms = new->ks_x[i]- new->parts[jParts].ks_src;
+
+		Kbase_dst += new->parts[jParts].kterms;
+		jParts++;
+		///////////////////////////////////////////////////////	
+
+
+		//////////////////////////////////////////////////////
+		new->parts[jParts].X      = new->Xnewterm;
+		new->parts[jParts].ks_dst = Kbase_dst;
+		
+		new->parts[jParts].ks_src = new->ks_xnewterm[i];
+		new->parts[jParts].kterms = new->kterms_xnewterm[i];
+		Kbase_dst    += new->parts[jParts].kterms;
+		Knewterm     += new->kterms_xnewterm[i];
+
+		jParts++;
+		
+	}
+	// The last part is the X's remaining part
+	new->parts[jParts].X       = new->X;
+	new->parts[jParts].ks_dst = Kbase_dst;	
+	new->parts[jParts].ks_src = new->ks_x[new->nbands - 1] + new->kterms_x[new->nbands - 1];
+	new->parts[jParts].kterms = (new->K - new->parts[jParts].ks_src)+1L;
+    
+	new->Knew     = Kbase_dst + (new->parts[jParts].kterms - 1L);
+	new->Knewterm = Knewterm;
+	new->Kchol    = new->ks_x[0];
+
+	new->isEqualSwap = 0;
+	if (new->K == new->Knew) {
+		new->isEqualSwap = 1;
+		for (int i = 0; i < new->nbands; i++) {
+			if (new->kterms_x[i] != new->kterms_xnewterm[i]) {
+				new->isEqualSwap = 0;
+				break;
+			}
+		}
+	}	
+}
+
+
+void update_XtX_from_Xnewterm_v2(F32PTR XtX, F32PTR XtXnew, NEWCOLINFOv2* new ) {
+
+ 
+	I32 N    = new->N;
+	I32 Nlda = new->Nlda;
+
+	I32 KOLD = new->K;
+	I32 KNEW = new->Knew;
+
+	if (new->isEqualSwap) {
+		SCPY(KOLD * KOLD, XtX, XtXnew);
+	}
+
+	I32 colbase = 1;	
+	for (int i = 0; i < (new->nbands * 2 + 1); i++) {		
+		I32 Kcol = new->parts[i].kterms;
+		if (Kcol == 0) {
+			continue;
+		}
+
+		I32     rowbase = 1;
+		F32PTR  Xcol0 = new->parts[i].X;
+		F32PTR  Xcol  = Xcol0 + (new->parts[i].ks_src - 1) * Nlda;		
+		for (int j = 0; j <= i; j++) {
+			I32  Krow = new->parts[j].kterms;
+			if (Krow == 0) {
+				continue;
+			}
+
+			F32PTR  Xrow0  = new->parts[j].X;
+			F32PTR  Xrow   = Xrow0 + (new->parts[j].ks_src - 1) * Nlda;
+			if (Xcol0 != new->X || Xrow0 != new->X) {
+			 // New XtX values needed to be computed
+				r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, 
+					Krow, Kcol, N, 1.0f,
+					Xrow, Nlda,	Xcol, Nlda, 0.f,
+					XtXnew + (colbase - 1L) * KNEW + rowbase - 1, KNEW);
+			}
+			else if (new->isEqualSwap==0) {
+			// Need to copy old values from XtX to XtXnew
+			
+				I32 row_old = new->parts[j].ks_src;
+				I32 col_old = new->parts[i].ks_src;
+
+				F32PTR ColStart_old = XtX    + (col_old - 1) * KOLD + row_old -1L;
+				F32PTR ColStart_new = XtXnew + (colbase - 1) * KNEW + rowbase- 1L;
+				if (i == j) {
+					// Copy the existing values of the upper triangle from XtX to XtXnew
+					for (int k = 1; k <= Kcol; ++k) {
+						SCPY(k, ColStart_old + (k - 1) * KOLD, ColStart_new + (k - 1) * KNEW);
+					}
+				} else {
+					// Copy the existing values of the full rectangle from XtX to XtXnew
+					for (int k = 1; k <= Kcol; ++k) {						
+						SCPY(Krow, ColStart_old + (k - 1) * KOLD, ColStart_new + (k - 1) * KNEW);
+					}
+				}
+				
+
+	 	   } // if (Xcol0 != new->X || Xrow0 != new->X) 	
+
+		   rowbase += Krow;
+
+		} //for (int j = 0; j <= i; j++)
+
+		colbase += Kcol;
+	}
+	
+
+			 
+}
+
+void update_XtY_from_Xnewterm_v2(F32PTR XtY, F32PTR XtYnew, F32PTR Y, NEWCOLINFOv2* new, I32 q) {
+
+	// X and Xnewterm has a leading dimesnion of new.Nlada
+	// Y has a leading dimension of new.N
+
+	I32 N    = new->N;
+	I32 Nlda = new->Nlda;
+
+	I32 KOLD = new->K;
+	I32 KNEW = new->Knew;
+
+	if (new->isEqualSwap) {
+		SCPY(KOLD*q, XtY, XtYnew);
+	}
+
+	if (q == 1) {
+		I32     rowbase = 1;
+		for (int i = 0; i < (new->nbands * 2 + 1); i++) {
+			I32 Krow = new->parts[i].kterms;
+			I32 row_old = new->parts[i].ks_src;
+			if (Krow == 0) {
+				continue;
+			}
+
+			F32PTR  Xrow0 = new->parts[i].X;
+			F32PTR  Xrow = Xrow0 + (row_old - 1) * Nlda;
+			if (Xrow0 != new->X) {
+				// New XtX values needed to be computed
+				r_cblas_sgemv(CblasColMajor, CblasTrans,
+					N, Krow, 1.f,
+					Xrow, Nlda,
+					Y, 1L, 0.f,
+					XtYnew + rowbase - 1, 1L);
+			}
+			else if (new->isEqualSwap == 0) {
+				// Need to copy old values from XtX to XtXnew			
+				SCPY(Krow, XtY + row_old - 1L, XtYnew + rowbase - 1);
+
+			} // if (Xcol0 != new->X || Xrow0 != new->X) 	
+
+			rowbase += Krow;
+		}
+	}
+	else {	// q > 1
+
+		I32     rowbase = 1;
+		for (int i = 0; i < (new->nbands * 2 + 1); i++) {
+			I32 Krow = new->parts[i].kterms;
+			I32 row_old = new->parts[i].ks_src;
+			if (Krow == 0) {
+				continue;
+			}
+
+			F32PTR  Xrow0 = new->parts[i].X;
+			F32PTR  Xrow = Xrow0 + (row_old - 1) * Nlda;
+			if (Xrow0 != new->X) {
+				// New XtX values needed to be computed
+				r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+					Krow, q, N, 1.f,
+					Xrow, Nlda,
+					Y, N, 0.f,
+					XtYnew + rowbase - 1, KNEW);
+			}
+			else if (new->isEqualSwap == 0) {
+				// Need to copy old values from XtX to XtXnew							
+				for (I32 c = 0; c < q; ++c) {
+					SCPY(Krow, XtY +c*KOLD+ row_old - 1L, XtYnew + c * KNEW + rowbase - 1);
+				}
+			} // if (Xcol0 != new->X || Xrow0 != new->X) 	
+
+			rowbase += Krow;
+		}
+	
+	} //else {	// q > 1
+
+ 
+}
+
+void shift_last_elems(void * X, I32 Kstart, I32 Kend, I32 Knewstart, I32 elemSize) {
+	// K are all one-based indices
+	
+	I08PTR x = X;
+	if (Knewstart == Kstart) { 	// a. No need to move at all
+		return;
+	}	else if (Knewstart < Kstart || Knewstart > Kend) {	// b.Move forwward or no overlapping
+		// dst(k2_new):-----123455----
+		// src(k2_old):----------123455----
+
+		// dst(k2_new):----------------123455----
+		// src(k2_old):-----123455----		
+		memcpy(x + (Knewstart - 1) * elemSize, x+(Kstart - 1) *elemSize,  (Kend - Kstart + 1) * elemSize);
+		//memcpy(dst, src, size)
+	}	else {	// c. Movee backward with some overlapping
+		// dst(k2_new):-------------123456----
+		// src(k2_old):---------123456----
+		I32 segStartIdx = Kend + 1;	
+		int nElemsCopy  = Knewstart-Kstart;  //j>0
+		while (_True_) {
+			segStartIdx = segStartIdx - nElemsCopy;
+			if (segStartIdx > Kstart) {
+				//memcpy(dst, src, size)
+				memcpy(x + ((segStartIdx + nElemsCopy) - 1) * elemSize, x + (segStartIdx - 1) * elemSize, nElemsCopy * elemSize) ;
+			} else {
+				nElemsCopy = (segStartIdx + nElemsCopy) - Kstart;
+				memcpy(x + (Knewstart - 1) * elemSize,  x+ (Kstart - 1) * elemSize, nElemsCopy * elemSize);
+				break;
+			}
+		}//while (_True_)
+	} //if (j < 0 || k2_new + 1 > Kold)
+
+}
+
+void swap_elem_bands(NEWCOLINFOv2* new, void *x, void *xnew, I32 elemSize) {
+
+	U08PTR X    = x;
+	U08PTR Xnew = xnew;
+
+	if (new->isEqualSwap == 0) {
+		// First, shift X's col bands
+		// X1, Xnewterm1, X2, Xnewterm2, X3, Xnewtem4, Xn4
+		// Need to shift X2, X3, and X4
+		int    Kend    = new->K;
+		int    Kadjust = 0;
+		for (int i = 3; i <= (new->nbands * 2 + 1); i += 2) {
+			if (new->parts[i - 1].kterms == 0) {
+				continue;
+			}
+			int Kstart    = new->parts[i - 1].ks_src + Kadjust;
+			int Knewstart = new->parts[i - 1].ks_dst;
+			shift_last_elems(X,Kstart, Kend, Knewstart, elemSize);
+
+			// then the original cols have been shifted
+			Kadjust += (Knewstart - Kstart);
+			Kend    += Kadjust;
+		}
+
+	}
+
+	// Insert the Xnewterm nto the shiftted X 
+	for (int i = 2; i <= (new->nbands * 2 + 1); i += 2) {
+		if (new->parts[i - 1].kterms == 0) {
+			continue;
+		}
+		int Knewterm = new->parts[i - 1].kterms;
+		// memcpy(dst, src, size)
+		memcpy(X + (new->parts[i - 1].ks_dst - 1) * elemSize, Xnew + (new->parts[i - 1].ks_src - 1) * elemSize, Knewterm * elemSize);		
+	}
+
+}
+
+void shift_lastcols_within_matrix(F32PTR X, I32 N, I32 Kstart, I32 Kend, I32 Knewstart) {
+
+	if (Knewstart == Kstart) {
+		return;
+	}
+
+	int j = Knewstart - Kstart;
+	if (j < 0 || Knewstart > Kend) {
+		// dst(k2_new):-----123455----
+		// src(k2_old):----------123455----
+
+		// dst(k2_new):----------------123455----
+		// src(k2_old):-----123455----
+		r_cblas_scopy((Kend - Kstart + 1) * N, X + (Kstart - 1) * N, 1, X + (Knewstart - 1) * N, 1);
+	} else {
+		// dst(k2_new):-------------123456----
+		// src(k2_old):---------123456----
+		I32 segStartIdx = Kend + 1;
+		while (_True_) {
+			segStartIdx = segStartIdx - j;
+			if (segStartIdx > Kstart) {
+				SCPY(j * N, X + (segStartIdx - 1) * N, X + ((segStartIdx + j) - 1) * N);				
+			} else {
+				j = (segStartIdx + j) - Kstart;
+				SCPY(j * N, X + (Kstart - 1) * N, X + (Knewstart - 1) * N);
+				break;
+			}
+		}//while (_True_)
+	}//if (j < 0 || k2_new + 1 > Kold)
+
+}
+
+void swap_cols_bands_within_matrx(NEWCOLINFOv2* new) {
+	
+	F32PTR X = new->X;
+
+	if (new->isEqualSwap == 0) {
+		// First, shift X's col bands
+		// X1, Xnewterm1, X2, Xnewterm2, X3, Xnewtem4, Xn4
+		// Need to shift X2, X3, and X4
+		int    Kend    = new->K;
+		int    Kadjust = 0;		
+		for (int i = 3; i <= (new->nbands * 2 + 1); i += 2) {
+			if (new->parts[i - 1].kterms == 0) {
+				continue;
+			}
+			int Kstart     = new->parts[i - 1].ks_src + Kadjust;
+			int Knewstart  = new->parts[i - 1].ks_dst;
+			shift_lastcols_within_matrix(X, new->Nlda, Kstart, Kend, Knewstart);
+						
+			// then the original cols have been shifted
+			Kadjust += (Knewstart - Kstart);
+			Kend    += Kadjust;		
+		}
+
+	}
+
+	// Insert the Xnewterm nto the shiftted X
+	int N = new->Nlda;
+	for (int i = 2; i <= (new->nbands * 2 + 1); i += 2) {
+		if (new->parts[i - 1].kterms == 0) {
+			continue;
+		}
+		int Knewterm = new->parts[i - 1].kterms;
+		SCPY(Knewterm*N, new->Xnewterm + (new->parts[i-1].ks_src- 1) * N, X + (new->parts[i - 1].ks_dst - 1) * N);
+	}
+		
 }
 #include "abc_000_warning.h"
  

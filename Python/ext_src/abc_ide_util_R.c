@@ -15,11 +15,17 @@
 
 #if R_INTERFACE == 1
 
+
+int  JDN_to_DateNum(int jdn) {
+	return jdn - 2440588;
+}
+
+
 SEXP getListElement(SEXP list, const char* str) {
 
 	SEXP elmt = NULL; // R_NilValue;
 	SEXP names = getAttrib(list, R_NamesSymbol);
-	for (int i = 0; i < length(list); i++)
+	for (int i = 0; i < length(names); i++)
 		if (strcmp(CHAR(STRING_ELT(names, i)), str) == 0) {
 			elmt = VECTOR_ELT(list, i);
 			break;
@@ -31,8 +37,8 @@ SEXP getListElement(SEXP list, const char* str) {
 SEXP getListElement_CaseIn(SEXP list, const char* str)
 {
 	SEXP elmt = NULL; // R_NilValue;
-	SEXP names = getAttrib(list, R_NamesSymbol);
-	for (int i = 0; i < length(list); i++)
+	SEXP names = getAttrib(list, R_NamesSymbol); 
+	for (int i = 0; i < length(names); i++)
 		if (strcicmp(CHAR(STRING_ELT(names, i)), str) == 0) {
 			elmt = VECTOR_ELT(list, i);
 			break;
@@ -75,21 +81,33 @@ int IsInt32(void* ptr)   { return TYPEOF((SEXP)ptr) == INTSXP;  }
 int IsInt16(void* ptr)   { return 0; }
 int IsInt64(void* ptr)   { return 0; }
 //http://adv-r.had.co.nz/C-interface.html
-int IsLogical(void* ptr) { return TYPEOF((SEXP)ptr) == LGLSXP; };
+int IsLogical(void* ptr) { return TYPEOF((SEXP)ptr) == LGLSXP; }
 
-VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind) { 
-	return VECTOR_ELT(strucVar, ind); 
+VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind0) { 
+	return VECTOR_ELT(strucVar, ind0); 
 }
 
+void GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char* str, int buflen) {
+ 
+	SEXP names = getAttrib(strucVar, R_NamesSymbol);
+	int  n     = length(names);
+	if (ind0 < n) {
+		const char* name = CHAR(STRING_ELT(names, ind0));
+		strncpy(str, name, buflen);
+		str[buflen - 1] = 0;
+	}	else {
+		str[0] = 0;
+	}
+ 	
+}
 
 I32 GetCharArray(void *ptr, char * dst, int n) {
-
-	if (TYPEOF((SEXP)ptr) != STRSXP) {
+	dst[0] = 0;
+	if (ptr==NULL || TYPEOF((SEXP)ptr) != STRSXP) {
 		return 0;
 	}
 
-	char* tmpstr;
-	tmpstr = CHAR(STRING_ELT(ptr, 0));
+	const char* tmpstr= CHAR(STRING_ELT(ptr, 0));
 	strncpy(dst, tmpstr, n);
 	dst[n] = 0;
 	return (I32) strlen(dst);
@@ -102,8 +120,7 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 		return 0;
 	}
 
-	char* tmpstr;
-	tmpstr = CHAR(STRING_ELT((SEXP)ptr, idx));
+	const char* tmpstr = CHAR(STRING_ELT((SEXP)ptr, idx));
 	strncpy(dst, tmpstr, n);
 	dst[n] = 0;
 	return (I32)strlen(dst);
@@ -132,8 +149,8 @@ void* GetField123(const void* structVar, char* fname, int nPartial) {
 
 	void* elem = (void*)getListElement_CaseIn(structVar, fname);
 	if (elem == NULL) {	 
-		SEXP names = getAttrib(structVar, R_NamesSymbol);
-		for (int i = 0; i < length(structVar); i++)
+		SEXP names = getAttrib(structVar, R_NamesSymbol); // names may be NULL
+		for (int i = 0; i < length(names); i++)
 			if (strcicmp_nfirst(CHAR(STRING_ELT(names, i)), fname,nPartial) == 0) {
 				elem = VECTOR_ELT(structVar, i);
 				break;
@@ -197,6 +214,20 @@ void GetDimensions(const void * ptr, int dims[], int ndims) {
 	}
 	UNPROTECT(1);
 }
+void * SetDimensions(const void* ptr, int dims[], int ndims) {
+	
+	if (!ptr) return NULL;
+
+	SEXP  tmp = PROTECT(allocVector(INTSXP, ndims));	
+	for (int i = 0; i < ndims; i++) 	{
+		INTEGER(tmp)[i] = dims[i];
+	}
+	setAttrib(ptr, R_DimSymbol, tmp);
+	UNPROTECT(1);
+
+	return ptr;
+}
+
 
 int GetNumberOfElements(const void * ptr) {	
 	return Rf_length((SEXP)ptr);
@@ -260,13 +291,16 @@ void *CreateNumVar(DATA_TYPE dtype, int *dims, int ndims, VOIDPTR * data_ptr) {
 void *CreateStructVar(FIELD_ITEM *fieldList, int nfields) { 	
 
 	// Find the sentinal element to update nfields
-	int nfields_new = 0;
+	int nfields_actual = 0;
 	for (int i = 0; i < nfields; ++i) {
-		nfields_new++;
-		if (fieldList[i].name[0] == 0) 	break;
+		nfields_actual++;
+		if (fieldList[i].name[0] == 0) {
+			nfields_actual--;
+			break;
+		}
 	}
-	nfields = nfields_new;
-
+	nfields = nfields_actual;
+ 
 // www.mathworks.com/help/matlab/apiref/mxsetfieldbynumber.html	
 	
 ///https://github.com/kalibera/rchk/issues/21
@@ -357,6 +391,9 @@ void ReplaceStructField(VOIDPTR s, char* fname, VOIDPTR newvalue){
 	if (index <0) {
 		return;
 	}
+
+	
+	// no need to porect old value; we want to let it get destoried
 	SEXP oldvalue = VECTOR_ELT(s, index);
 
 	SET_VECTOR_ELT(s, index, newvalue);
@@ -432,7 +469,7 @@ void ConsumeInterruptSignal() { return ; }
 
 		/*		
 		char s[10];
-		while (stricmp(s, "exit")!=0) {	R_ReadConsole("", s, 1, 0);	s[4] = 0;	}		
+		while (strcicmp(s, "exit")!=0) {	R_ReadConsole("", s, 1, 0);	s[4] = 0;	}		
 		*/
 		return R_ReadConsole;
 	}
@@ -454,14 +491,14 @@ void ConsumeInterruptSignal() { return ; }
 	}
 
 
-	bool GetUserInput(void * nullPtr)
+	 Bool GetUserInput(void * nullPtr)
 	{
 		int (*R_ReadConsole)(const char *prompt, unsigned char *buf, int len, int addtohistory);
 		R_ReadConsole = GetReadConsole();
 		char str[100];
 		str[0]=0;
 
-		while (stricmp(str, "exit") != 0) {
+		while (strcicmp(str, "exit") != 0) {
 			R_ReadConsole("", str, 10, 0);
 			str[4] = 0;
 		}
@@ -472,7 +509,7 @@ void ConsumeInterruptSignal() { return ; }
 
 #else
 
-const static achar = 'a';
+const static char achar = 'a';
 #endif
 
 #include "abc_000_warning.h"

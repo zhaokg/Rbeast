@@ -1,4 +1,4 @@
-#include "abc_000_warning.h"
+﻿#include "abc_000_warning.h"
 
 #include "abc_001_config.h"
 
@@ -9,83 +9,55 @@
 #include "abc_ide_util.h"
 #include "abc_ts_func.h"
 #include "abc_common.h"  //WriteF32ArrayToStrideMEM
+#include "abc_vec.h"
 #include "beastv2_io.h"
 
-static void GetOutputOffsetStride(A(IO_PTR) io, I64 idx, I64 Nvec, I64* pStride, I64* pOffset)
-{
-	//index should be 1-based.
-	I64 stride, offset;
-	if (io->ndim == 1)       // A 1d vcetor
-		stride = 1L, offset = (idx - 1) * Nvec;
-	else if (io->ndim == 2L)  // A 2 D mat input
-	{
-		I32 nPixel = io->meta.whichDimIsTime==1? 
-							io->dims[1]:  /*whichDim=1*/
-			                io->dims[0]; /*whichDim=2*/
+static void __convert_index_to_outdatasubs3(BEAST2_IO* io, int index, int dims[],int subs3[]) {
 
-		if(io->out.whichDimIsTime==1)
-			stride = 1L, offset = (idx - 1) * Nvec;
-		else {
-			stride = nPixel;
-			offset = (idx - 1);
-		}
+	int subs2[2];
+	ind2sub(io->imgdims, 2L, index, subs2);
+
+	int rows = io->dims[io->rowdim - 1];
+	int cols = io->dims[io->coldim - 1];
+
+	if (io->out.whichDimIsTime == 1) {
+		subs3[0] = 1;  // can fill any value
+		subs3[1] = subs2[0]; 
+		subs3[2] = subs2[1]; 
+		
+		dims[1] = rows;
+		dims[2] = cols;
 	}
-	else if (io->ndim == 3L)  // A 3D stack input
-	{
-		int  ROW, COL;
-		switch (io->meta.whichDimIsTime) {
-		case 1:
-			ROW = io->dims[1];
-			COL = io->dims[2];
-			break;
-		case 2:
-			ROW = io->dims[0];
-			COL = io->dims[2];
-			break;
-		case 3:
-			ROW = io->dims[0],
-			COL = io->dims[1];
-		}
+	else if (io->out.whichDimIsTime == 2) {
+		subs3[1] = 1;  // can fill any value
+		subs3[0] = subs2[0]; 
+		subs3[2] = subs2[1]; 
 
-		switch (io->out.whichDimIsTime) {
-		case 1:
-			stride = 1L;
-			offset = (idx - 1) * Nvec;
-			break;
-		case 2: {
-			int c = (idx - 1) / ROW;
-			int r = idx - c * ROW;
-			c = c + 1;
-			stride = ROW;
-			offset = (c - 1) * (Nvec * ROW) + r - 1;
-			break;
-		}
-		case 3: {
-			int c = (idx - 1) / ROW;
-			int r = idx - c * ROW;
-			c = c + 1;
-			stride = ROW * COL;
-			offset = (c - 1) * ROW + r - 1;
-			break;
-		}
+		dims[0] = rows;
+		dims[2] = cols;
+	}
+	else if (io->out.whichDimIsTime == 3) {
+		subs3[2] = 1;  // can fill any value
+		subs3[0] = subs2[0];
+		subs3[1] = subs2[1];
 
-		} // switch ( io->whichDimIsTime)	 
+		dims[0] = rows;
+		dims[1] = cols;
+	}
 
-	} // (io->ndim == 3L)
-
-	*pStride = stride;
-	*pOffset = offset;
 }
 
-void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelIndex)
-{
+ 
+
+void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelIndex) {
+
 	BEAST2_IO_PTR       io  =  &opt->io;
 	BEAST2_RESULT_PTR   mat = io->out.result;
 
 	DATA_TYPE datType = io->out.dtype;
 	const I64 N		  = io->N;
 	const I64 q       = io->q;
-	const I64 seasonMaxKnotNum = opt->prior.seasonMaxKnotNum;
+	const I64 seasonMaxKnotNum  = opt->prior.seasonMaxKnotNum;
 	const I64 trendMaxKnotNum	= opt->prior.trendMaxKnotNum;
 	const I64 outlierMaxKnotNum = opt->prior.outlierMaxKnotNum;
 
@@ -94,77 +66,87 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 	I08 hasTrendCmpnt   = 1;
 	I08 hasAlways       = 1;
 
-	I64 len, offset, stride;
+	int outTimeDim0 = io->out.whichDimIsTime-1L;
+	int subs3[3];
+	int dims[3];
+	__convert_index_to_outdatasubs3(io, pixelIndex, dims, subs3);
+	
 
-	len = 1, offset = pixelIndex - 1, stride = 1; //TODO: changed from 0 to 1
-	WriteF32ArraryToStrideMEM(result->marg_lik, mat->marg_lik,	len, stride, offset, datType);
- 
-	len = q*q, GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
-	WriteF32ArraryToStrideMEM(result->sig2,		mat->sig2,		len, stride, offset, datType);
-
-    len = 1, offset = (pixelIndex - 1) * 1, stride = 1; 
- 	for (I32 i=0; i < q; ++i) {		
-		WriteF32ArraryToStrideMEM(result->R2   + i,  mat[i].R2,   len, stride, offset, datType);
-        WriteF32ArraryToStrideMEM(result->RMSE + i,  mat[i].RMSE, len, stride, offset, datType);
-	}
-
-	if (opt->extra.dumpInputData) {
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);		
-        for (I32 i = 0; i < q; ++i) {
-			WriteF32ArraryToStrideMEM(result->data+i*N, mat[i].data, len, stride, offset, datType);
-		}
-	}
-
-	#define  _(x)          WriteF32ArraryToStrideMEM((F32PTR)result->x,  mat->x,  len,  stride, offset, datType)
+	#define  _(x)           f32_to_strided_mem((F32PTR)result->x,  mat->x,  len,  stride, offset, datType)
 	#define  _2(x,y)        _(x), _(y)
 	#define  _3(x,y,z)      _2(x,y), _(z)
 	#define  _4(x,y,z,v)    _3(x,y,z), _(v)
-	#define  _5(x,y,z,v,v1) _4(x,y,z,v), _(v1)
+	#define  _5(x,y,z,v,w)  _4(x,y,z,v), _(w)
+
+#define GET_OFFSET_STRIDE(Ntime)  do {                                                       \
+			  dims[outTimeDim0] = Ntime;                                                  \
+			  len=ndarray_get1d_stride_offset(dims, 3L, subs3, outTimeDim0 + 1L, &stride, &offset); \
+			} while(0);
+
+	I64 len, offset, stride;
+
+	len = 1, offset = pixelIndex - 1, stride = 1; //TODO: changed from 0 to 1
+	f32_to_strided_mem(result->marg_lik, mat->marg_lik,	len, stride, offset, datType);
  
+	GET_OFFSET_STRIDE(q * q);
+	f32_to_strided_mem(result->sig2,		mat->sig2,		len, stride, offset, datType);
+
+    len = 1, offset = (pixelIndex - 1) * 1, stride = 1; 
+ 	for (I32 i=0; i < q; ++i) {		
+		f32_to_strided_mem(result->R2   + i,  mat[i].R2,   len, stride, offset, datType);
+        f32_to_strided_mem(result->RMSE + i,  mat[i].RMSE, len, stride, offset, datType);		
+	}
+
+	if (opt->extra.dumpInputData) {
+		GET_OFFSET_STRIDE(N);
+        for (I32 i = 0; i < q; ++i) {
+			f32_to_strided_mem(result->data+i*N, mat[i].data, len, stride, offset, datType);
+		}
+	}
+
+
 	/*****************************************************************/
 	//         Write outputs for SEASON
 	/*****************************************************************/
 	if (hasSeasonCmpnt) {
 
 		len = 1, offset = pixelIndex - 1, stride = 0;
-		_(sncp);
-		_(sncp_median);
-		_(sncp_mode);
-		_(sncp_pct90);
-		_(sncp_pct10);
-
-		len = (seasonMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		_5(sncp, sncp_median, sncp_mode,sncp_pct90,sncp_pct10);
+				
+		GET_OFFSET_STRIDE(seasonMaxKnotNum + 1);
 		_(sncpPr);
-
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+ 
+		GET_OFFSET_STRIDE(N); 
 		_(scpOccPr);
         for (I32 i = 0; i < q; ++i) {			
-			WriteF32ArraryToStrideMEM(result->sY  + N*i,  mat[i].sY,  len, stride, offset, datType);
-			WriteF32ArraryToStrideMEM(result->sSD + N*i,  mat[i].sSD, len, stride, offset, datType);
+			f32_to_strided_mem(result->sY  + N*i,  mat[i].sY,  len, stride, offset, datType);
+			f32_to_strided_mem(result->sSD + N*i,  mat[i].sSD, len, stride, offset, datType);
 		}
-		if (opt->extra.computeSeasonOrder) _(sorder);
+		if (opt->extra.computeSeasonOrder) {
+			_(sorder);
+		}
 		if (opt->extra.computeSeasonAmp)   {
         	for (I32 i = 0; i < q; ++i) {
-				WriteF32ArraryToStrideMEM(result->samp + N * i,   mat[i].samp, len, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->sampSD + N * i, mat[i].sampSD, len, stride, offset, datType);
+				f32_to_strided_mem(result->samp + N * i,   mat[i].samp, len, stride, offset, datType);
+				f32_to_strided_mem(result->sampSD + N * i, mat[i].sampSD, len, stride, offset, datType);
 			}
         }
 
 		if (opt->extra.computeCredible) {
-			len = N * 2, GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(N*2); 
 			for (I32 i = 0; i < q; ++i) {				
-				//WriteF32ArraryToStrideMEM(result->sCI + len*i, mat[i].sCI, len, stride, offset, datType);				
-				WriteF32ArraryToStrideMEM(result->sCI +      N*i, mat[i].sCI, N, stride, offset, datType);				
-				WriteF32ArraryToStrideMEM(result->sCI + N*q+ N*i, mat[i].sCI, N, stride, offset+N*stride, datType);
+				//f32_to_strided_mem(result->sCI + len*i, mat[i].sCI, len, stride, offset, datType);				
+				f32_to_strided_mem(result->sCI +      N*i, mat[i].sCI, N, stride, offset, datType);				
+				f32_to_strided_mem(result->sCI + N*q+ N*i, mat[i].sCI, N, stride, offset+N*stride, datType);
 			}			
 		}
 		if (opt->extra.computeSeasonChngpt) {
-			len = seasonMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(seasonMaxKnotNum); 
 			_2(scp, scpPr);
 			for (int i = 0; i < q; ++i) {
-				WriteF32ArraryToStrideMEM(result->scpAbruptChange + len * i, mat[i].scpAbruptChange, len, stride, offset, datType);
+				f32_to_strided_mem(result->scpAbruptChange + len * i, mat[i].scpAbruptChange, len, stride, offset, datType);
 			}
-			len = seasonMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(seasonMaxKnotNum*2); 
 			_(scpCI);
 		}
 
@@ -181,41 +163,41 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 		_(tncp_pct90);
 		_(tncp_pct10);
 
-		len = (trendMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(trendMaxKnotNum+1); 
 		_(tncpPr);
-
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+				
+		GET_OFFSET_STRIDE(N); 
 		_(tcpOccPr);
         for (I32 i = 0; i < q; ++i) {			
-			WriteF32ArraryToStrideMEM(result->tY  + N * i,  mat[i].tY, len, stride, offset, datType);
-			WriteF32ArraryToStrideMEM(result->tSD + N * i, mat[i].tSD, len, stride, offset, datType);
+			f32_to_strided_mem(result->tY  + N * i,  mat[i].tY, len, stride, offset, datType);
+			f32_to_strided_mem(result->tSD + N * i, mat[i].tSD, len, stride, offset, datType);
 		}	
 		if (opt->extra.computeTrendOrder)   _(torder);
 		if (opt->extra.computeTrendSlope)  {
 			for (I32 i = 0; i < q; ++i) {
-				WriteF32ArraryToStrideMEM(result->tslp + N * i,          mat[i].tslp, len, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->tslpSD + N * i,        mat[i].tslpSD, len, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->tslpSgnPosPr + N * i,  mat[i].tslpSgnPosPr, len, stride, offset, datType);		
-				WriteF32ArraryToStrideMEM(result->tslpSgnZeroPr + N * i, mat[i].tslpSgnZeroPr, len, stride, offset, datType);
+				f32_to_strided_mem(result->tslp + N * i,          mat[i].tslp, len, stride, offset, datType);
+				f32_to_strided_mem(result->tslpSD + N * i,        mat[i].tslpSD, len, stride, offset, datType);
+				f32_to_strided_mem(result->tslpSgnPosPr + N * i,  mat[i].tslpSgnPosPr, len, stride, offset, datType);		
+				f32_to_strided_mem(result->tslpSgnZeroPr + N * i, mat[i].tslpSgnZeroPr, len, stride, offset, datType);
 			}	
         }
 
 		if (opt->extra.computeCredible) {
-			len = N * 2, GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(N*2);
 			for (I32 i = 0; i < q; ++i) {
-				//WriteF32ArraryToStrideMEM(result->tCI + len * i, mat[i].tCI, len, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->tCI + N * i,         mat[i].tCI, N, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->tCI + N * q + N * i, mat[i].tCI, N, stride, offset + N * stride, datType);
+				//f32_to_strided_mem(result->tCI + len * i, mat[i].tCI, len, stride, offset, datType);
+				f32_to_strided_mem(result->tCI + N * i,         mat[i].tCI, N, stride, offset, datType);
+				f32_to_strided_mem(result->tCI + N * q + N * i, mat[i].tCI, N, stride, offset + N * stride, datType);
 			}
 		}
 		if (opt->extra.computeTrendChngpt) {
-			len = trendMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(trendMaxKnotNum); 
 			_2(tcp, tcpPr);
 			for (int i = 0; i < q; ++i) {
-				WriteF32ArraryToStrideMEM(result->tcpAbruptChange + len * i, mat[i].tcpAbruptChange, len, stride, offset, datType);
+				f32_to_strided_mem(result->tcpAbruptChange + len * i, mat[i].tcpAbruptChange, len, stride, offset, datType);
 			}
-
-			len = trendMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+ 
+			GET_OFFSET_STRIDE(trendMaxKnotNum*2); 
 			_(tcpCI);
 		}
 
@@ -229,29 +211,29 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 		_(oncp_pct90);
 		_(oncp_pct10);
 
-		len = (outlierMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(outlierMaxKnotNum + 1); 
 		_(oncpPr);
 
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(N); 
 		_(ocpOccPr);
 		for (I32 i = 0; i < q; ++i) {
-			WriteF32ArraryToStrideMEM(result->oY + N * i, mat[i].oY, len, stride, offset, datType);
-			WriteF32ArraryToStrideMEM(result->oSD + N * i, mat[i].oSD, len, stride, offset, datType);
+			f32_to_strided_mem(result->oY + N * i, mat[i].oY, len, stride, offset, datType);
+			f32_to_strided_mem(result->oSD + N * i, mat[i].oSD, len, stride, offset, datType);
 		}
 
 		if (opt->extra.computeCredible) {
-			len = N * 2, GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(N*2);
 			for (I32 i = 0; i < q; ++i) {
-				//WriteF32ArraryToStrideMEM(result->oCI + len * i, mat[i].oCI, len, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->oCI + N * i,         mat[i].oCI, N, stride, offset, datType);
-				WriteF32ArraryToStrideMEM(result->oCI + N * q + N * i, mat[i].oCI, N, stride, offset + N * stride, datType);
+				//f32_to_strided_mem(result->oCI + len * i, mat[i].oCI, len, stride, offset, datType);
+				f32_to_strided_mem(result->oCI + N * i,         mat[i].oCI, N, stride, offset, datType);
+				f32_to_strided_mem(result->oCI + N * q + N * i, mat[i].oCI, N, stride, offset + N * stride, datType);
 			}
 		}
 		if (opt->extra.computeOutlierChngpt) {
-			len = outlierMaxKnotNum;    GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(outlierMaxKnotNum);  
 			_2(ocp, ocpPr);
 
-			len = outlierMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+			GET_OFFSET_STRIDE(outlierMaxKnotNum*2);
 			_(ocpCI);
 		}
 	}
@@ -260,45 +242,54 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 	if (opt->extra.tallyPosNegSeasonJump && hasSeasonCmpnt ) {
 		len = 1, offset = pixelIndex - 1, stride = 0;
 		_2(spos_ncp, sneg_ncp);
-		len = (seasonMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+ 
+		GET_OFFSET_STRIDE(seasonMaxKnotNum+1); 
 		_2(spos_ncpPr, sneg_ncpPr);
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(N); 
 		_2(spos_cpOccPr, sneg_cpOccPr);
 
-		len = seasonMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(seasonMaxKnotNum); 
 		_3(spos_cp, spos_cpPr, spos_cpAbruptChange);
 		_3(sneg_cp, sneg_cpPr, sneg_cpAbruptChange);
-		len = seasonMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(seasonMaxKnotNum*2); 
 		_2(spos_cpCI, sneg_cpCI);
 	}
 
 	if (opt->extra.tallyPosNegTrendJump) {
 		len = 1, offset = pixelIndex - 1, stride = 0;
 		_2(tpos_ncp, tneg_ncp);
-		len = (trendMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(trendMaxKnotNum+1); 
 		_2(tpos_ncpPr, tneg_ncpPr);
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(N);
 		_2(tpos_cpOccPr, tneg_cpOccPr);
 
-		len = trendMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(trendMaxKnotNum); 
 		_3(tpos_cp, tpos_cpPr, tpos_cpAbruptChange);
 		_3(tneg_cp, tneg_cpPr, tneg_cpAbruptChange);
-		len = trendMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(trendMaxKnotNum*2);
 		_2(tpos_cpCI, tneg_cpCI);
 	}
 
 	if (opt->extra.tallyIncDecTrendJump) {
 		len = 1, offset = pixelIndex - 1, stride = 0;
 		_2(tinc_ncp, tdec_ncp);
-		len = (trendMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(trendMaxKnotNum+1); 
 		_2(tinc_ncpPr, tdec_ncpPr);
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(N); 
 		_2(tinc_cpOccPr, tdec_cpOccPr);
 
-		len = trendMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(trendMaxKnotNum); 
 		_3(tinc_cp, tinc_cpPr, tinc_cpAbruptChange);
 		_3(tdec_cp, tdec_cpPr, tdec_cpAbruptChange);
-		len = trendMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(trendMaxKnotNum*2);
 		_2(tinc_cpCI, tdec_cpCI);
 
 	}
@@ -306,15 +297,19 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 	if (opt->extra.tallyPosNegOutliers && hasOutlierCmpnt) {
 		len = 1, offset = pixelIndex - 1, stride = 0;
 		_2(opos_ncp, oneg_ncp);
-		len = (outlierMaxKnotNum + 1);  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(outlierMaxKnotNum + 1);
 		_2(opos_ncpPr, oneg_ncpPr);
-		len = N;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+		GET_OFFSET_STRIDE(N); 
 		_2(opos_cpOccPr, oneg_cpOccPr);
 
-		len = outlierMaxKnotNum;  GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+		GET_OFFSET_STRIDE(outlierMaxKnotNum); 
 		_2(opos_cp, opos_cpPr);
 		_2(oneg_cp, oneg_cpPr);
-		len = outlierMaxKnotNum * 2; GetOutputOffsetStride(io, pixelIndex, len, &stride, &offset);
+
+
+		GET_OFFSET_STRIDE(outlierMaxKnotNum * 2); 
 		_2(opos_cpCI, oneg_cpCI);
 	}
 

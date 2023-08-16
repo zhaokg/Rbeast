@@ -82,7 +82,7 @@ extern "C" {
 	int HaveEqualDimesions(const void* p1, const void* p2);
 	int CopyNumericObjToF32Arr(F32PTR outmem, VOID_PTR infield, int N);
 	int CopyNumericObjToI32Arr(I32PTR outmem, VOID_PTR infield, int N);
-	int CopyNumericObjToF64Arr(F32PTR outmem, VOID_PTR infield, int N);
+	int CopyNumericObjToF64Arr(F64PTR outmem, VOID_PTR infield, int N);
 
 	extern I32  CheckInterrupt(void);
 	extern void ConsumeInterruptSignal(void);
@@ -168,7 +168,7 @@ extern "C" {
 #define  r_warning(...)  printf(__VA_ARGS__)
 #define  r_malloc(x)     PyMem_RawMalloc(x, char)  //from header file R_ext\RS.h
 #define  r_free(x)       PyMem_RawFree(x) 
-#define  IDE_NULL       Py_None
+#define  IDE_NULL        Py_None
 #endif
 
 // defined in globalvars.c
@@ -282,8 +282,8 @@ extern "C" {
 #define PROTECT(XXXX)   XXXX
 #define UNPROTECT(XXXX) XXXX
 #elif P_INTERFACE == 1 
-#define PROTECT(XXXX)   XXXX
-#define UNPROTECT(XXXX) XXXX
+	#define PROTECT(XXXX)   XXXX
+	#define UNPROTECT(XXXX) XXXX
 	extern PyTypeObject BarObject_Type;  //tentative definition
 	extern PyObject* currentModule;
 	extern PyObject* classOutout;

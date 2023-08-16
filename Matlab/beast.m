@@ -138,22 +138,22 @@ function out = beast(y, varargin)
 %       
 %       % Explicitly specify deltat=1. BEAST knows nothing about the unit
 %       % of 1871 and 1.0 (i.e., 1871 years, 1871 seconds, or 1871 meters?) 
-%       o=beast(Nile, 'start', 1871, 'deltat', 1.0, 'season','none') 
+%       o = beast(Nile, 'start', 1871, 'deltat', 1.0, 'season','none') 
 %
 %       % start is given a date 1871-1 (Year-Mon). The time unit is
 %       % then fractional/decimal year. delta=1.0 means 1.0 year
-%       o=beast(Nile, 'start', [1871,1], 'deltat', 1.0, 'season','none') 
+%       o = beast(Nile, 'start', [1871,1], 'deltat', 1.0, 'season','none') 
 %
 %       % period=0 means a trend-only signal, which is equivalent to season='none'
-%       o=beast(Nile, 'start', 1871, 'deltat', 1, 'period', 0) 
+%       o = beast(Nile, 'start', 1871, 'deltat', 1, 'period', 0) 
 %
 %       % Use a string to specify a unit for deltat or period (e.g., deltat='1 year')
 %       % The time unit is also fractional year. 1871 means Year 1871
-%       o=beast(Nile, 'start', 1871, 'deltat', '1 year', 'period', 0) 
+%       o = beast(Nile, 'start', 1871, 'deltat', '1 year', 'period', 0) 
 %
 %       % Use a string to specify a unit for delta or period (e.g., deltat='12 mo')
 %       % The time unit is fractional year. 1871 means Year 1871
-%       o=beast(Nile, 'start', 1871, 'deltat', '12 mo', 'period', 0) 
+%       o = beast(Nile, 'start', 1871, 'deltat', '12 mo', 'period', 0) 
 %
 %       % Do not print the options 
 %       o=beast(Nile, 'start', 1871, 'deltat',1.0,'season','none','print.options',false)
@@ -171,15 +171,15 @@ function out = beast(y, varargin)
 %
 %       % delta  = 1/12: for dates, the default unit is year, so delta=1/12yr=1 month;       
 %       % period = 1.0 means 1 year
-%       o=beast(beach, 'start', [2004,1],'deltat', 1/12, 'period',1.0)  
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12, 'period',1.0)  
 %
 %       % period='12 month': use a string to explicitly specify the unit              
-%       o=beast(beach, 'start', [2004,1],'deltat', 1/12, 'period','12 month')
-%       o=beast(beach, 'start', [2004,1],'deltat', '1 month', 'period','365 days')
+%       o = beast(beach, 'start', [2004,1],'deltat', 1/12, 'period','12 month')
+%       o = beast(beach, 'start', [2004,1],'deltat', '1 month', 'period','365 days')
 %
 %       %% Monthly air co2 data since 1959: deltaTime=1/12 year
 %       load('co2.mat')     
-%       o=beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'period',1.0)
+%       o = beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'period',1.0)
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
@@ -189,13 +189,13 @@ function out = beast(y, varargin)
 %       Y    = sqrt(double(covid19.newcases));
 %       Date = covid19.datestr;
 %       % the min length of seasonal segments is set to 30 data points
-%       o=beast(Y, 'start',[2020,01,22], 'deltat', 1/365, 'period', 7/365,'sseg.min',30)
+%       o    = beast(Y, 'start',[2020,01,22], 'deltat', 1/365, 'period', 7/365,'sseg.min',30)
 %       printbeast(o)
 %       plotbeast(o)
 %       plotbeast(o,'ncpStat','median')
 %
 %       % Use a string to specify delta with a unit
-%       o=beast(Y, 'start',[2020,01,22], 'deltat', '1.0 day',  'period', '7days','sseg.min',30)
+%       o = beast(Y, 'start',[2020,01,22], 'deltat', '1.0 day',  'period', '7days','sseg.min',30)
 %
 %       % Convert and aggregate the daily data into a weekly time series (i.e., deltaT=7 days)
 %       % then fit a trend-only model with no periodic component

@@ -1,9 +1,10 @@
 #pragma once
 #include "abc_000_macro.h"
+#include <inttypes.h>
 
-extern int get_thread_stacksize();
-extern int GetNumCores();
- 
+extern int get_thread_stacksize(void);
+extern int GetNumCores(void);
+
  
 #if defined(WIN64_OS) || defined(WIN32_OS)
 
@@ -71,13 +72,19 @@ extern int GetNumCores();
 #endif
 
 #ifdef WIN64_OS
-    #include "Processthreadsapi.h" //InitializeProcThreadAttributeList DeleteProcThreadAttributeList
+    #include "Processthreadsapi.h"   // InitializeProcThreadAttributeList DeleteProcThreadAttributeList
 #endif
 
-typedef HANDLE        pthread_t;
+typedef HANDLE    pthread_t;
 typedef struct {
-                  LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList;
-	              SIZE_T                       dwStackSize;    
+         SIZE_T                       sizeAttributeList;
+         PPROC_THREAD_ATTRIBUTE_LIST  lpAttributeList;
+	     SIZE_T                       dwStackSize;    
+    #ifdef WIN64_OS
+	    PROCESSOR_NUMBER ProcNumber;
+    #else
+         void * ProcNumber;
+    #endif
 }   pthread_attr_t;
 
 typedef CRITICAL_SECTION   pthread_mutex_t;
@@ -85,106 +92,65 @@ typedef int                pthread_mutexattr_t;
 typedef CONDITION_VARIABLE pthread_cond_t;
 typedef int                pthread_condattr_t;
 
-typedef struct {
-    #ifdef WIN64_OS
-	PROCESSOR_NUMBER ProcNumber;
-    #else
-    void * ProcNumber;
-    #endif
+
+ 
+
+typedef struct cpu_set {
+    int        core_count;
+    uint64_t   core_mask[4];
 } cpu_set_t;
 
+ 
+static INLINE int pthread_attr_init(pthread_attr_t * attr) {
 
-static INLINE int pthread_attr_init(pthread_attr_t * attr)
-{
-#ifdef WIN64_OS
-    attr->dwStackSize     = 0;
-    attr->lpAttributeList = NULL;
+    if (attr == NULL) return 0;
 
+    attr->dwStackSize      = 0;
+    attr->lpAttributeList  = NULL;
+    attr->sizeAttributeList = 0;
+
+#ifdef WIN64_OS    
     // stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads
     DWORD  attributeCounts = 1L;
     SIZE_T size;
-    if (InitializeProcThreadAttributeList(NULL, attributeCounts, 0, &size)
-        || GetLastError() == ERROR_INSUFFICIENT_BUFFER)  {
-        attr->lpAttributeList =  malloc(size);
-        InitializeProcThreadAttributeList(attr->lpAttributeList, attributeCounts, 0, &size);
+    if ( InitializeProcThreadAttributeList(NULL, attributeCounts, 0, &size) || GetLastError() == ERROR_INSUFFICIENT_BUFFER)  {      
+        attr->sizeAttributeList        = size;
+       // Pm;u get the size of the mem needed for attributeLists
+       // The actual allocation will be done in pthread_setaffinity_np
     }
 #endif
     return 0;
 }
 
-static INLINE int	pthread_attr_setstacksize(pthread_attr_t* tattr, size_t  size) {
-       tattr->dwStackSize = size;
-       return 0;
-}
+static INLINE int	pthread_attr_setstacksize(pthread_attr_t* tattr, size_t  size) {  tattr->dwStackSize = size;    return 0;}
 
 // On windows,A sloppy way to get the default stack size: create a thread and run GetCurrentTrheadLimits
-static int pthread_attr_getstacksize(pthread_attr_t* attr, size_t* stacksize) {
-    return pthread_attr_getstacksize_win32(attr, stacksize);
-}
-
-static INLINE  int pthread_attr_destroy(pthread_attr_t* attr)
-{
-#ifdef WIN64_OS
+extern int pthread_attr_getstacksize_win32(pthread_attr_t* attr, size_t* stacksize);
+static INLINE int pthread_attr_getstacksize(pthread_attr_t* attr, size_t* stacksize) {    return pthread_attr_getstacksize_win32(attr, stacksize); }
+static INLINE int pthread_attr_destroy(pthread_attr_t* attr) {
+    #ifdef WIN64_OS
     if (attr->lpAttributeList != NULL) {
         DeleteProcThreadAttributeList(attr->lpAttributeList);
         free(attr->lpAttributeList);
     }    
-#endif
-    return 0;
-}
-
-//https://stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads
-static INLINE  int pthread_attr_setaffinity_np ( pthread_attr_t* attr, size_t cpusetsize, const cpu_set_t* cpuset)
-{
-    #ifdef WIN64_OS
-    BOOL fok = UpdateProcThreadAttribute(
-                    attr->lpAttributeList,
-                    0L,
-                    PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR,
-                    &( ((cpu_set_t *)cpuset)->ProcNumber),
-                    sizeof(PROCESSOR_NUMBER), NULL, NULL);
-    return fok;
-    #else
-    //Do notting
-    return 0;
     #endif
-}
-static int pthread_mutex_init(pthread_mutex_t* mutex, const pthread_mutexattr_t* attr) {
-	InitializeCriticalSection(mutex); 
     return 0;
 }
 
-static INLINE int pthread_mutex_destroy(pthread_mutex_t* mutex) {
-	DeleteCriticalSection(mutex);
-    return 0;
-}
-static INLINE int pthread_mutex_lock(pthread_mutex_t* mutex) {
-	EnterCriticalSection(mutex);
-    return 0;
-}
-static INLINE int pthread_mutex_unlock(pthread_mutex_t* mutex){
-	LeaveCriticalSection(mutex);
-    return 0;
-}
-static INLINE int pthread_cond_init(pthread_cond_t * cond, const pthread_condattr_t * attr) {
-	InitializeConditionVariable(cond);
-    return 0;
-}
+extern int pthread_attr_setaffinity_np(pthread_attr_t* attr, size_t cpusetsize, const cpu_set_t* cpuset);
 
-static INLINE int pthread_cond_wait(pthread_cond_t * cond, pthread_mutex_t * mutex) {
-	SleepConditionVariableCS(cond, mutex, INFINITE);
-    return 0;
-}
-static INLINE int pthread_cond_signal(pthread_cond_t * cond) {
-	WakeConditionVariable(cond);
-    return 0;
-}
+static INLINE int pthread_mutex_init(pthread_mutex_t* mutex, const pthread_mutexattr_t* attr) {    InitializeCriticalSection(mutex);    return 0;}
+static INLINE int pthread_mutex_destroy(pthread_mutex_t* mutex) {     DeleteCriticalSection(mutex);   return 0;}
+static INLINE int pthread_mutex_lock(pthread_mutex_t* mutex)    {     EnterCriticalSection(mutex);    return 0; }
+static INLINE int pthread_mutex_unlock(pthread_mutex_t* mutex)  {     LeaveCriticalSection(mutex);   return 0; }
+static INLINE int pthread_cond_init(pthread_cond_t * cond, const pthread_condattr_t * attr) {     InitializeConditionVariable(cond);  return 0;}
+static INLINE int pthread_cond_wait(pthread_cond_t * cond, pthread_mutex_t * mutex) {   SleepConditionVariableCS(cond, mutex, INFINITE);  return 0;}
+static INLINE int pthread_cond_signal(pthread_cond_t * cond) {   	WakeConditionVariable(cond);    return 0;}
 static INLINE int pthread_cond_destroy(pthread_cond_t * cond) {
 	//https:// stackoverflow.com/questions/28975958/why-does-windows-have-no-deleteconditionvariable-function-to-go-together-with
     return 0;
 }
-static INLINE void pthread_exit(void *value_ptr)
-{
+static INLINE void pthread_exit(void *value_ptr) {
 	//https:// stackoverflow.com/questions/11226072/windows-c-closing-thread-with-closehandle
 	//Closehandle doesn't destory the thread; it only destory the handle itself and the thread may still run and 
 	// we lose the handle to kil or wait on it
@@ -192,12 +158,10 @@ static INLINE void pthread_exit(void *value_ptr)
 }
 
 #define PTHREAD_CREATE_JOINABLE  1
-static INLINE int  pthread_attr_setdetachstate(pthread_attr_t * attr, int detachstate)
-{
-    return 0;
-}
-static INLINE int pthread_join(pthread_t thread, void **retvalue_ptr)
-{  //Even after the thread exited - its handle is valid. You can for instance query its return value
+static INLINE int         pthread_attr_setdetachstate(pthread_attr_t * attr, int detachstate) {   return 0;}
+static INLINE  pthread_t  pthread_self(void) { return (pthread_t)GetCurrentThreadId(); }
+static INLINE int pthread_join(pthread_t thread, void **retvalue_ptr) {
+  //Even after the thread exited - its handle is valid. You can for instance query its return value
 	WaitForSingleObject(thread, INFINITE);
     if (retvalue_ptr) {
         //https://stackoverflow.com/questions/7100441/how-can-you-get-the-return-value-of-a-windows-thread
@@ -206,23 +170,19 @@ static INLINE int pthread_join(pthread_t thread, void **retvalue_ptr)
 	CloseHandle(thread);
     return 0;
 }
-static INLINE  pthread_t  pthread_self(void) {
-    return (pthread_t) GetCurrentThreadId();
-}
 
-extern int  GetCPUInfo();
-extern void PrintCPUInfo();
+extern int  GetCPUInfo(void);
+extern void PrintCPUInfo(void);
 
 extern void CPU_ZERO(cpu_set_t* cpus);
 extern void CPU_SET(int i, cpu_set_t* cpus);
+extern int  CPU_ISSET(int i, cpu_set_t* cpus);
 
 extern int  pthread_create0(pthread_t* tid, const pthread_attr_t* attr, void* (*start) (void*), void* arg);
-
-static int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, void* (*start) (void*), void* arg)
-{
-    pthread_create0(tid, attr, start, arg);
-    return 0;
+static INLINE int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, void* (*start) (void*), void* arg) {
+    return  pthread_create0(tid, attr, start, arg);
 }
+extern int  sched_getcpu(void);
 
 #elif   defined(LINUX_OS)
     
@@ -236,60 +196,107 @@ static int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, void* (*s
         #include <sched.h>  ////cpu_set_t , CPU_SET
 	    #include <pthread.h>
 
-
-#elif   defined(MAC_OS) 
-
+#elif    defined(MAC_OS) 
+ 
     #include <mach/thread_policy.h> // for thread_port_t etc. //https://github.com/xoreaxeaxeax/sandsifter/issues/3
+
+   //https://lists.apple.com/archives/darwin-kernel/2014/Nov/msg00003.html
+   //protoptye for thread_policy_st moved here
+    #include <mach/thread_act.h> 
+    #include <sys/sysctl.h> // header for systclbyname()
     #include <pthread.h>
    //https://stackoverflow.com/questions/32282270/c99-error-unknown-type-name-pid-t
     #include <sys/types.h> // pid_t
     #include <unistd.h>   // pid_t
-    #include <inttypes.h>
     #define SYSCTL_CORE_COUNT   "machdep.cpu.core_count"
 
-    typedef struct cpu_set {    uint32_t    count; } cpu_set_t;
+   // Borrowed from http://www.hybridkernel.com/2015/01/18/binding_threads_to_cores_osx.html
+   // https://developer.apple.com/library/archive/releasenotes/Performance/RN-AffinityAPI/
+typedef struct cpu_set { 
+        int        core_count; 
+        uint64_t   core_mask[4]; } cpu_set_t;
 
     static inline void   CPU_ZERO(cpu_set_t* cs) {
-        cs->count = 0; 
+        cs->core_count   = GetNumCores();
+        if (cs->core_count > 256) cs->core_count = 256; // bcz we use a int64 as the mask, so up to 64 cores are suppored
+        cs->core_mask[0] = cs->core_mask[1]= cs->core_mask[2]= cs->core_mask[3]= 0;
     }
 
-    static inline void    CPU_SET(int num, cpu_set_t* cs) { 
-        num = num % GetNumCores(); cs->count |= (1 << num); 
+    static inline void    CPU_SET(int num, cpu_set_t* cs) {           
+        num = num % cs->core_count;;
+        int grpId = num / 64;
+        int bitId = num - grpId * 64;
+        cs->core_mask[grpId] |= (1 << bitId);
     }
 
     static inline int     CPU_ISSET(int num, cpu_set_t* cs) {
-        num = num % GetNumCores(); return (cs->count & (1 << num)); 
+        num       = num % cs->core_count;;
+        int grpId = num / 64;
+        int bitId = num - grpId * 64;
+        return (cs->core_mask[grpId] & (1 << bitId));
     }
 
-    static int sched_getaffinity(pid_t pid, size_t cpu_size, cpu_set_t* cpu_set)    {
+    static inline int     CPU_get_first_bit_id(cpu_set_t* cs) {
+        int grpId = 0;
+        for (grpId = 0; grpId < 4; grpId++) {
+            if (cs->core_mask[grpId] != 0)   break;
+        }
+
+        if (grpId < 4) {
+            int      num  = 0;
+            uint64_t mask = cs->core_mask[grpId];
+            for (num = 0; num < 64  ; num++) {
+                if (mask & (1 << num)) {
+                    break;
+                }
+            }
+            return grpId * 64 + num;
+        }
+        else {
+            return 0;
+        }
+
+    }
+    static inline int sched_getaffinity(pid_t pid, size_t cpu_size, cpu_set_t* cpu_set)    {
         int32_t core_count = 0;
-        size_t  len = sizeof(core_count);
+        size_t  len        = sizeof(core_count);
         int ret = sysctlbyname(SYSCTL_CORE_COUNT, &core_count, &len, 0, 0);
         if (ret) {
-            //printf("error while get core count %d\n", ret);
-            return -1;
+            return -1;             //printf("error while get core count %d\n", ret);
         }
-        cpu_set->count = 0;
+        CPU_ZERO(cpu_set);
         for (int i = 0; i < core_count; i++) {
-            cpu_set->count |= (1 << i);
+            CPU_SET(i, cpu_set);
         }
 
         return 0;
     }
 
-    static int pthread_setaffinity_np(pthread_t thread, size_t cpu_size,   cpu_set_t *cpu_set) {
+    // /stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
+    #include <cpuid.h>
+    #define CPUID(INFO, LEAF, SUBLEAF) __cpuid_count(LEAF, SUBLEAF, INFO[0], INFO[1], INFO[2], INFO[3])
 
-            thread_port_t mach_thread;
-            int core = 0;
+    static int sched_getcpu() {
+        uint32_t CPUInfo[4];
+        CPUID(CPUInfo, 1, 0);
+        /* CPUInfo[1] is EBX, bits 24-31 are APIC ID */
+        int CPU;
+        if ((CPUInfo[3] & (1 << 9)) == 0) {
+            CPU = -1;  /* no APIC on chip */
+        }
+        else {
+            CPU = (unsigned)CPUInfo[1] >> 24;
+        }
+        return CPU;
+    }
 
-            for (core = 0; core < 8 * cpu_size; core++) {
-                  if (CPU_ISSET(core, cpu_set)) break;
-            }
-            //printf("binding to core %d\n", core);
-            thread_affinity_policy_data_t policy = { core };
-            mach_thread = pthread_mach_thread_np(thread);
-            thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY,
-                            (thread_policy_t)&policy, 1);
+    static int pthread_setaffinity_np(pthread_t thread, size_t cpu_size,   cpu_set_t *cpu_set) {            
+            thread_port_t mach_thread = pthread_mach_thread_np(thread);             
+            int core = CPU_get_first_bit_id(cpu_set);
+            // binding to core %d\n"
+            thread_affinity_policy_data_t policy;
+            policy.affinity_tag                 = core;            
+            thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
             return 0;
         }
 

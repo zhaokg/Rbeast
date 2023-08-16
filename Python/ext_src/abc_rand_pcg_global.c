@@ -7,7 +7,7 @@
 #include "abc_ide_util.h"    //r_printf
 #include "abc_vec.h"  
 
-
+#include "assert.h"  
  
 
 //https://hal.archives-ouvertes.fr/hal-02700791/document: a nice intro to the pcg alg
@@ -51,6 +51,14 @@ static pcg32_random_t global_state = {
 
 void pcg_set_seed(U64 initstate, U64 initseq)
 {	
+	extern void init_gauss_rnd(void);
+	init_gauss_rnd();
+
+	if (initstate == 0 ) {
+	// Used to just initialzie the Guass structure.
+		return;
+	}
+
 	initstate = initstate & initseq; //Added bcz only initseq is supplied as a seed. We run initseq to randomize initstate a little bit
 
 	initstate = initstate == 0 ? PCG_DEFAULT_GLOBAL_STATE_64    : initstate;
@@ -64,7 +72,7 @@ void pcg_set_seed(U64 initstate, U64 initseq)
 	global_state.state += initstate;
 	pcg_random(&rnd, 1);
 }
-void pcg_print_state() {r_printf("state: %30" PRIu64 " inc: %30"  PRIu64 "\n", global_state.state, global_state.inc);}
+void pcg_print_state(void) {r_printf("state: %30" PRIu64 " inc: %30"  PRIu64 "\n", global_state.state, global_state.inc);}
 
 // pcg32_random_r(rng)
 //   Generate a uniformly distributed 32-bit random number
@@ -134,7 +142,9 @@ void pcg_get_lcg_multiplier_shift_multistep( I32 delta, U64 cur_mult, U64 cur_pl
 //  a hybrid rejection sampling method
 /**************************************************************************/
 GAUSS_CONSTANT GAUSS
-= { .x = { 0, 0.019584285230127, 0.039176085503098, 0.058782936068943, 0.078412412733112,
+= { 
+	
+.x = { 0, 0.019584285230127, 0.039176085503098, 0.058782936068943, 0.078412412733112,
 0.098072152488661, 0.117769874579095, 0.137513402144336, 0.157310684610171, 0.177169820991740, 0.197099084294312,
 0.217106947210130, 0.237202109328788, 0.257393526100938, 0.277690439821577, 0.298102412930487, 0.318639363964375,
 0.339311606538817, 0.360129891789569, 0.381105454763557, 0.402250065321725, 0.423576084201200, 0.445096524985516,
@@ -145,6 +155,7 @@ GAUSS_CONSTANT GAUSS
 1.113194277160929, 1.150349380376008, 1.189164350199337, 1.229858759216589, 1.272698641190536, 1.318010897303537,
 1.366203816372098, 1.417797137996268, 1.473467577947101, 1.534120544352547, 1.601008664886076, 1.675939722773444,
 1.761670410363067, 1.862731867421652, 1.987427885929896, 2.153874694061456, 2.41755901623650 },
+
 //y[i+1]/y[i]*2^24
 .yRatio = { 16773999, 16767562, 16761112, 16754640, 16748136, 16741589, 16734989, 16728325, 16721587, 16714763,
 16707840, 16700807, 16693651, 16686358, 16678913, 16671302, 16663507, 16655512, 16647297, 16638843, 16630128, 16621128,
@@ -152,7 +163,9 @@ GAUSS_CONSTANT GAUSS
 16462265, 16444942, 16426470, 16406715, 16385522, 16362712, 16338074,16311363, 16282287, 16250497, 16215576, 16177016,
 16134195, 16086343, 16032497, 15971429, 15901559, 15820813, 15726414, 15614561, 15479906,15314686, 15107183, 14838856,
 14478538, 13969524, 13196768, 11886086, 9182634 },
+
 //1/y[i]*2^24
+/*
 .yInverse = { 0.167772160000000e8, 0.167804337107029e8, 0.167900954887396e8, 0.168062273321792e8, 0.168288727728840e8,
 0.168580931819422e8, 0.168939682029590e8, 0.169365963190389e8, 0.169860955611753e8,0.170426043678181e8, 0.171062826076636e8,
 0.171773127802660e8, 0.172559014119663e8, 0.173422806679528e8, 0.174367102051039e8, 0.175394792947299e8, 0.176509092495599e8,
@@ -165,61 +178,132 @@ GAUSS_CONSTANT GAUSS
 0.426607037407803e8, 0.458372068395134e8, 0.496786432318855e8, 0.544228824001546e8, 0.604390940468508e8, 0.683340892537681e8,
 0.791831158870118e8, 0.950978898378280e8, 1.208991317887296e8, 1.706491807080511 },
 
-.PARAM_R = 2.41755901623650,
-.INV_PARAM_R = 0.413640367529367
+ .PARAM_R     = 2.41755901623650,
+ .INV_PARAM_R = 0.413640367529367
+ */
 };
 
+#define INV_2p24  ((F64)1./(1LL<<24))
+#define INV_2p25  ((F64)1./(1LL<<25))
+#define INV_2p32  ((F64)1./(1LL<<32))
+
+
+extern void init_gauss_rnd(void);
+void init_gauss_rnd(void) {
+
+	static I08 isInitialized = 0;
+	if (isInitialized) {
+		return;
+	}
+
+	for (int i = 0; i < 63; i++) {
+		GAUSS.yRatio[i] = exp(-0.5 * (GAUSS.x[i + 1] * GAUSS.x[i + 1] - GAUSS.x[i] * GAUSS.x[i]));
+	}
+
+	for (int i = 0; i < 63; i++) {
+		if (GAUSS.x[i + 1] >= 1.0) {
+			GAUSS.inflectionId = i;
+			break;
+		}
+	}
+	
+	// this is the optimal lamda maximizing the acceptance ratio.
+	F32 a = GAUSS.x[63];
+	GAUSS.exp_lamda = (a + sqrt(a * a + 4)) / 2;
+
+	F32PTR x    = GAUSS.x;
+	F32    del  = GAUSS.x[1];
+	I32    Imax = ceil(GAUSS.x[63] / del); 
+
+	// GUASS.indices saves the left-side bin index
+	for (int i = 0; i < Imax; i++) {
+		F32 low = i * del;
+		F32 up  = (i + 1) * del;
+		
+		GAUSS.indices[i] = -9999;
+
+		int bingo = 0;
+		for (int k = 0; k < 64; k++) {
+
+			if (x[k] >= low && x[k] <= up) {
+				if (x[k] == low) {
+					GAUSS.indices[i] = k;					
+				}	else {
+					GAUSS.indices[i] = k - 1;
+				}	
+
+				bingo = 1;
+				break;		
+			}
+
+
+			if (x[k] <= low && up <= x[k + 1]) {
+				GAUSS.indices[i] = k;
+				bingo = 1;
+				break;
+			}
+
+		}
+	
+		assert(bingo);
+	}
+
+
+	isInitialized = 1;
+}
 
 void pcg_gauss(F32PTR RND, int N)
 {
-	for (int i = 1; i <= N; i++)
-	{
+	for (int i = 1; i <= N; i++) {
+
 		U32 rnd[2];
 		pcg_random(rnd, 2);
 
-		U32 U24 = rnd[0];
-		U08  u8 = U24 & 0xff;
-		U24 = U24 >> 8;
-		int sign = (u8 & 0x80) ? +1 : -1;
-		u8 = u8 & 0x3f;
+		U32  U24_32 = (rnd[0] >> 7) * INV_2p25;
+		U32  BinIdx  = rnd[0] & 0x3f;
+		I32  sign    = rnd[0] & 0x40;  //U24 & 0x80		
 
-		F32 x;
-		I64 IDX = u8;
-		if (u8 < 63)
-		{
-			F32 delta;
-			delta = (GAUSS.x[IDX + 1] - GAUSS.x[IDX]) * 2.328306436538696e-10f;//divided by 2^32;
+		F32 x; 
+		if (BinIdx < 63) 	{
+			F32 delta   = GAUSS.x[BinIdx + 1] - GAUSS.x[BinIdx];
+			F32 yRatio  = GAUSS.yRatio[BinIdx] ;
 			while (1) {
-				x = GAUSS.x[IDX] + delta*(F32)rnd[1];
-				if (U24 <= GAUSS.yRatio[IDX]) 
+ 
+				if (U24_32 <= yRatio) {
+					x = GAUSS.x[BinIdx] + delta * U24_32 / yRatio;
 					break;
-				if (U24 <= expf(-0.5f*x*x)* GAUSS.yInverse[IDX])
+				}
+
+				F64 U1    = rnd[1] * INV_2p32;
+				int check = U24_32 <= yRatio + (1.f - yRatio) * U1;	
+				x         = GAUSS.x[BinIdx+1] -  delta * U1;
+			 
+				if (BinIdx < GAUSS.inflectionId && check)      { break; }
+				if (BinIdx > GAUSS.inflectionId && check == 0) { goto UpdateSamplerLabel; }
+				if ( log(U24_32) <= -0.5f* (x * x- GAUSS.x[BinIdx]* GAUSS.x[BinIdx])  ) {
 					break;
+				}				
+
+				// Need at least two rand numbers
+				UpdateSamplerLabel:
 				pcg_random(rnd, 2);
-				U24 = rnd[0] >> 8;
+				U24_32 = (F64)rnd[0] * INV_2p32; //32-bit random number
+			}
+		} else	{
+		while (1) {
+				F64 U1 = rnd[1] * INV_2p32;                   // divideed by 2^32			
+				x = GAUSS.x[63] - log(U1) / GAUSS.exp_lamda;        // x is inf if U1==0
+				//if (expf(-GAUSS.PARAM_R * (x - 0.5f * GAUSS.PARAM_R)) * U2  < expf(-0.5f * x * x))
+				if (log(U24_32) < -0.5f * ((x - GAUSS.exp_lamda) * (x - GAUSS.exp_lamda)))
+					break;
+
+				// Need at least two rand numbers
+				pcg_random(rnd, 2);
+				U24_32 = rnd[0] * INV_2p32; //divideed by 2^32
 			}
 		}
-		else
-		{
-			F32 U1, U2;
 
-			U2 = (F32)U24* 5.960464477539063e-08f; // divuded by 2^24
-			while (1)
-			{
-				U1 = rnd[1] * 2.328306436538696e-10f; //divideed by 2^32
-				U1 = 1 - U1;
-
-				x = GAUSS.PARAM_R - logf(U1) *GAUSS.INV_PARAM_R;
-				if (exp(-GAUSS.PARAM_R * (x - 0.5f * GAUSS.PARAM_R)) * U2  < expf(-0.5f * x * x))
-					break;
-
-				pcg_random(rnd, 2);
-				U2 = rnd[0] * 2.328306436538696e-10f;
-
-			}
-		}
-
-		*RND++ = x*sign;
+		*RND++ = sign? x:-x;
 	}//Completion of the For loop
 }
  
@@ -289,12 +373,12 @@ void pcg_gamma(F32PTR rnd, F32 a, int N)
 					}		else					{
 						if (logZ <= 2 * (b * logf(gam / b) - y)) break;
 					}
-				} //END of  (gam >= 0)
+				} //CODE_EOF of  (gam >= 0)
 
-			}//END WHILE
+			}//CODE_EOF WHILE
 			*rnd++ = gam;
 
-		}//END FOR
+		}//CODE_EOF FOR
 		return;
 	}
 
@@ -328,9 +412,9 @@ void pcg_gamma(F32PTR rnd, F32 a, int N)
 					if (-logf(1 - u[1]) >= (1 - a) * logf(gam))
 						break;
 				}
-			}//END WHILE
+			}//CODE_EOF WHILE
 			*rnd++ = gam;
-		}//END FOR
+		}//CODE_EOF FOR
 		return;
 	}
 
@@ -435,7 +519,7 @@ void  pcg_wishart_unit_lowtriangle_zeroout_notmp(F32PTR wishrnd, I32 m, F32 df)
 	I32     numGaussRnd = (m - 1) * m / 2;
 	F32PTR  gauss       =  wishrnd + 1;
 	pcg_gauss(gauss, numGaussRnd);
-	gauss = gauss + numGaussRnd-1; //go to the end of the guass
+	gauss = gauss + numGaussRnd-1; //go to the CODE_EOF of the guass
 
 	wishrnd += (m-2) * m; // go to the start of the second row from the last
 	for (int col =m-1; col >=2; col--) {

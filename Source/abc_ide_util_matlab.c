@@ -370,8 +370,9 @@ void * CreateStructVar(FIELD_ITEM *fieldList, int nfields)
 	for (int i = 0; i < nfields; ++i) {
 		nfields_actual++;
 		if (fieldList[i].name[0] == 0) {
+			nfields_actual--;
 			break;
-		}	
+		}
 	}
 	nfields = nfields_actual;
 

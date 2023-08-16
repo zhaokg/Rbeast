@@ -1,25 +1,27 @@
 from . import Rbeast as cb
 
 def print(o, index = 0):
+    """
+   USAGE: printbeast(o, index)
 
-# USAGE: <strong>extractbeast(o, index) </strong>
-#
-#   <strong>o</strong>:  the time series analysis output from  beast123; o
-#   should contain results for mulltiple time series
-#
-#   <strong>index </strong>: if o contains results for more than 1 time
-#   series, index specifies for which time series the result is extracted.
-#   If o is the result for a 3D stacked cube, index will be a vector of 2
-#   integer to specify the row and col of the desired pixel. If o contains
-#   only one time series, index will be ignored
+   o :  the time series analysis output from  beast123; o
+   should contain results for mulltiple time series
 
+   index: if o contains results for more than 1 time
+   series, index specifies for which time series the result is printed.
+   If o is the result for a 3D stacked cube, index will be a vector of 2
+   integer to specify the row and col of the desired pixel. If o contains
+   only one time series, index will be ignored
+
+  Contact info : To report bug or get help, do not hesitate to contact Kaiguang Zhao
+   at <strong>zhao.1423@osu.edu</strong>.
+    """
     if hasattr(o, 'marg_lik'):
         if isinstance(index, int):
            index=index+1
         else:
            index = [x+1 for x in index]   
         cb.Rbeast('print',o,index);
-
 
 def obj_repr(o):    
     N    = len( o.__dict__.keys())

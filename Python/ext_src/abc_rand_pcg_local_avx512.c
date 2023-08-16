@@ -81,6 +81,17 @@
 #define PCG_DEFAULT_GLOBAL_INCREMENT_64 0xda3e39cb94b95bdbULL
 
 
+void avx512_pcg_print_state(local_pcg32_random_t* rng) {
+
+	r_printf("PCG State: \n");
+	r_printf("State: %"  PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 "\n", rng->state512[0], rng->state512[1], rng->state512[2], rng->state512[3]);
+	r_printf("State: %"  PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 "\n", rng->state512[4], rng->state512[5], rng->state512[6], rng->state512[7]);
+	r_printf("Increment: %"  PRIx64  "\n", rng->increment512);
+	r_printf("Mutiplier8: %"  PRIx64  "\n", rng->MULTIPLIER_8steps);
+	r_printf("INcrementr8: %"  PRIx64  "\n\n", rng->INCREMENT_8steps);
+}
+
+
 void avx512_pcg_set_seed(local_pcg32_random_t* rng, U64 initstate, U64 initseq)
 {
 	initstate = PCG_DEFAULT_GLOBAL_STATE_64 ^ initseq; //Added bcz only initseq is supplied as a seed. We run initseq to randomize initstate a little bit
@@ -112,10 +123,13 @@ void avx512_pcg_set_seed(local_pcg32_random_t* rng, U64 initstate, U64 initseq)
 
 	// Compute the multiper and shift constants for a four-step advance
 	pcg_get_lcg_multiplier_shift_multistep(8L, PCG_DEFAULT_MULTIPLIER_64, rng->increment512, &rng->MULTIPLIER_8steps, &rng->INCREMENT_8steps);
+
+	extern void init_gauss_rnd(void);
+	init_gauss_rnd(); //Indepedent of PCG, used to initialize the GAUSS structure
 }
 
 static __mmask16        masktemplate[16];
-static INLINE void      FillMaskTemplate() { for (I32 i = 0; i < 16; i++)    masktemplate[i] = (1UL << i) - 1UL; }
+static INLINE void      FillMaskTemplate(void) { for (I32 i = 0; i < 16; i++)    masktemplate[i] = (1UL << i) - 1UL; }
 static INLINE __mmask16 GetMoveMask(int n) { return masktemplate[n]; }
 
 
@@ -162,11 +176,11 @@ void avx512_pcg_random(local_pcg32_random_t* rng, U32PTR rnd, I32 N) {
 	_mm256_zeroupper();
 }
 
-void SetupPCG_AVX512() {
+void SetupPCG_AVX512(void) {
 	FillMaskTemplate();
 	local_pcg_set_seed = avx512_pcg_set_seed;
 	local_pcg_random   = avx512_pcg_random;
-
+	local_pcg_print_state = avx512_pcg_print_state;
 }
 #endif
 
