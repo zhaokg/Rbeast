@@ -6,7 +6,8 @@
   tmpfld  = file.path(tempdir(), "RbeastTmpDir" )             # get a temp folder
   dir.create(tmpfld)                                          # create a tmp folder
   unzip(zipfile, exdir= normalizePath(tmpfld))                # unzip the images to the tmp folder
- 
+
+  library(raster)             # the raster pacakge is needed to read the tiff files
   filelist=list.files(path=tmpfld, pattern='*.tif', full.names=TRUE)  # the tiff filenames
   ndvi3d  = stack(filelist)                                           # create a rasterstack object 
   inMemory(ndvi3d)            # image data not read yet
