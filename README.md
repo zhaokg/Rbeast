@@ -192,12 +192,13 @@ rb.print(o)
 o  # see a list of output fields in the output variable o
 ```
 
-The second example `beach` is a monthly time series of the Google Search popularity of the word ***beach*** over the US. This time series is reguarly-spaced (i.e., deltat=`1 month` =`1/12 year`); it has a cyclyic component with a period of 1 year (e.g., freq = `period / deltat` =  1 year / 1 month = 1/(1/12) = 12).
- 
- > We follow R's terminology to use `freq` to refer to the number of data points per `period` -- freq = period/deltaT; apparently, this differs from the standard definiton in physics -- freq = 1/period.
+The second example `googletrend` is a monthly time series of the Google Search popularity of the word ***beach*** over the US. This monthly time series is reguarly-spaced (i.e., deltat=`1 month` =`1/12 year`); it has a cyclyic component with a period of 1 year. That is, the number of data points per period is `period` / `deltat` = 1 year / 1 month = 1/(1/12) = 12.
+
   ```python
-beach, year = rb.load_example('beach')
-o = rb.beast(beach, start= 2004, deltat=1/12, freq =12)
+beach, year = rb.load_example('googletrend')
+o = rb.beast(beach, start= 2004.0, deltat=1/12, period = 1.0)       # the time unit is unknown or arbitrary
+o = rb.beast(beach, start= 2004.0, deltat=1/12, period ='1.0 year') # the time unit is fractional year
+o = rb.beast(beach, start= 2004.0, deltat='1 month', period =1.0)   # the time unit is fractional year
 rb.plot(o)
 rb.print(o)
   ```
