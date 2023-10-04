@@ -175,7 +175,7 @@ A package **`Rbeast`** has been deposited at PyPI: https://pypi.org/project/Rbea
   ```python
     pip install Rbeast
   ```
-> Currently, a binary wheel file was built only for Windows and Python 3.8. For other OS platforms or Python versions, the installation requires a compiler to build the package from the C/C++ code, which is a hassle-free process in Linux (requiring gcc) or Mac (requiring xcode). If needed, contact Kaiguang Zhao (zhao.1423@osu.edu) to help build the package for your specific OS platforms and Python versions.
+> Binary wheel files were built on Windows, MacOS, and Linux for Python version 3.7 to 3.11 (either x86_64 or arm64 CPU). If the installation fails, please install from the source to build the package using `pip install Rbeast --no-binary :none:`, which requies a C/C++ compliler (e.g., requiring gcc on Linux or xcode on Mac). If needed, contact Kaiguang Zhao (zhao.1423@osu.edu) to help build the package for your OS platform and Python version.
 
 #### Run and test Rbeast in Python
 
@@ -246,6 +246,7 @@ Despite being published originally for ecological and enviornmental applications
 |Analytical Chemistry|*Šimić, M., Neuper, C., Hohenester, U. and Hill, C., 2023. Optofluidic force induction as a process analytical technology. Analytical and Bioanalytical Chemistry, pp.1-11.*|
 | Ecosystem Sciences | *Lyu, R., Zhao, W., Pang, J., Tian, X., Zhang, J. and Wang, N., 2022. [Towards a sustainable nature reserve management: Using Bayesian network to quantify the threat of disturbance to ecosystem services](https://www.sciencedirect.com/science/article/pii/S2212041622000791?casa_token=4gYXQ65EcfgAAAAA:mdYwpF_tXZ_W0IUu8JPhlm4_P9RrabtiDGhkwu3ogElVwHb6Ie7HEWbFwgm8JDSdf99drcCYSw). Ecosystem Services, 58, p.101483.* |
 | Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. [Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon](https://iopscience.iop.org/article/10.1088/1748-9326/ac8236/meta). Environmental Research Letters.*|
+|Geology| *Fan, X., Goeppert, N. and Goldscheider, N., 2023. Quantifying the historic and future response of karst spring discharge to climate variability and change at a snow-influenced temperate catchment in central Europe. Hydrogeology Journal, pp.1-17.*|
 |Wildlife|*Smith, Matthew M., and Jonathan N. Pauli. "Connectivity maintains genetic diversity and population persistence within an archipelagic refugia even under declining lake ice." Mechanisms of species recovery for a forest carnivore in a changing landscape: 173.*|
 |  Climate Sciences|*Duke, N.C., Mackenzie, J.R., Canning, A.D., Hutley, L.B., Bourke, A.J., Kovacs, J.M., Cormier, R., Staben, G., Lymburner, L. and Ai, E., 2022. [ENSO-driven extreme oscillations in mean sea level destabilise critical shoreline mangroves—An emerging threat](https://journals.plos.org/climate/article?id=10.1371/journal.pclm.0000037). PLOS Climate, 1(8), p.e000003*|
 | Finance|*Candelaria, Christopher A., Shelby M. McNeill, and Kenneth A. Shores. (2022). What is a School Finance Reform? Uncovering the ubiquity and diversity of school finance reforms using a Bayesian changepoint estimator.(EdWorkingPaper: 22-587). Retrieved from Annenberg Institute at Brown University: https://doi.org/10.26300/4vey-3w10*|
@@ -282,4 +283,4 @@ BEAST is distributed as is and without warranty of suitability for application. 
 
 ## Acknowledgement:
 
-BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
+BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through Microsoft Azure for Research (CRM0518513) and a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
