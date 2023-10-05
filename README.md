@@ -224,7 +224,7 @@ In any case, for those users handling stacked time-series images, do not use `be
 * Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 
-<h2 id="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
+<h2 id="publicationid" name="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
 
 Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a list of selected peer-reviewed pulications that used BEAST for statistical data analysis.
 
