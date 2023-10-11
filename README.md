@@ -224,6 +224,20 @@ In any case, for those users handling stacked time-series images, do not use `be
 * Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 
+## Compilation from C source code (for developers and experts only)
+
+ Though not needed but if preferred, the code can be compiled for your specific machines. Check the [Rbeast\Source](https://github.com/zhaokg/Rbeast/tree/master/Source) folder at GitHub for details.
+ 
+
+## Reporting Bugs or getting help
+
+BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
+
+
+## Acknowledgement:
+
+BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through Microsoft Azure for Research (CRM0518513) and a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
+
 <h2 id="publicationid" name="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
 
 Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a list of selected peer-reviewed pulications that used BEAST for statistical data analysis.
@@ -271,17 +285,3 @@ Despite being published originally for ecological and enviornmental applications
 |Environmental Engineering|*Bainbridge, R., Lim, M., Dunning, S., Winter, M.G., Diaz-Moreno, A., Martin, J., Torun, H., Sparkes, B., Khan, M.W. and Jin, N., 2022. Detection and forecasting of shallow landslides: lessons from a natural laboratory. Geomatics, Natural Hazards and Risk, 13(1), pp.686-704.*|
 |Hydrology|*Yang, X., Tian, S., You, W. and Jiang, Z., 2021. Reconstruction of continuous GRACE/GRACE-FO terrestrial water storage anomalies based on time series decomposition. Journal of Hydrology, 603, p.127018.*|
 |Landscape Ecology|*Adams, B.T., Matthews, S.N., Iverson, L.R., Prasad, A.M., Peters, M.P. and Zhao, K., 2021. Spring phenological variability promoted by topography and vegetation assembly processes in a temperate forest landscape. Agricultural and Forest Meteorology, 308, p.108578.*|
-
-## Compilation from C source code (for developers and experts only)
-
- Though not needed but if preferred, the code can be compiled for your specific machines. Check the [Rbeast\Source](https://github.com/zhaokg/Rbeast/tree/master/Source) folder at GitHub for details.
- 
-
-## Reporting Bugs or getting help
-
-BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
-
-
-## Acknowledgement:
-
-BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through Microsoft Azure for Research (CRM0518513) and a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
