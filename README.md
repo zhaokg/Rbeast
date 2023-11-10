@@ -3,7 +3,7 @@
 
 ##    BEAST:  A Bayesian Ensemble Algorithm for Change-Point Detection and Time Series Decomposition
 
-####  BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for *changepoint detection (e.g., breakpoints, structural breaks, regime shifts, or anomalies), trend analysis, time series decomposition (e.g., trend vs seasonality), time series segmentation, and interrupted time series analysis*. See a list of <a href="#publicationid"> selected studies using BEAST </a>.
+**BEAST (Bayesian Estimator of Abrupt change, Seasonality, and Trend) is a fast, generic Bayesian model averaging algorithm to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations, as described in <ins>[Zhao et al. (2019)](https://go.osu.edu/beast2019)</ins>. BEAST is useful for *changepoint detection (e.g., breakpoints, structural breaks, regime shifts, or anomalies), trend analysis, time series decomposition (e.g., trend vs seasonality), time series segmentation, and interrupted time series analysis*. See a list of <a href="#publicationid"> selected studies using BEAST </a>.**
 
 
 **Quick Installation**
@@ -175,7 +175,7 @@ A package **`Rbeast`** has been deposited at PyPI: https://pypi.org/project/Rbea
   ```python
     pip install Rbeast
   ```
-> Currently, a binary wheel file was built only for Windows and Python 3.8. For other OS platforms or Python versions, the installation requires a compiler to build the package from the C/C++ code, which is a hassle-free process in Linux (requiring gcc) or Mac (requiring xcode). If needed, contact Kaiguang Zhao (zhao.1423@osu.edu) to help build the package for your specific OS platforms and Python versions.
+> Binary wheel files were built on Windows, MacOS, and Linux for Python version 3.7 to 3.11 (either x86_64 or arm64 CPU). If the installation fails, please install from the source to build the package using `pip install Rbeast --no-binary :none:`, which requies a C/C++ compliler (e.g., requiring gcc on Linux or xcode on Mac). If needed, contact Kaiguang Zhao (zhao.1423@osu.edu) to help build the package for your OS platform and Python version.
 
 #### Run and test Rbeast in Python
 
@@ -224,13 +224,28 @@ In any case, for those users handling stacked time-series images, do not use `be
 * Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y., 2021. [Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine](https://pages.charlotte.edu/gang-chen/wp-content/uploads/sites/184/2021/05/Hu_2021_BEAST-HF-s.pdf). ISPRS Journal of Photogrammetry and Remote Sensing, 176, pp.250-261. (an application paper)
 
 
-<h2 id="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
+## Compilation from C source code (for developers and experts only)
+
+ Though not needed but if preferred, the code can be compiled for your specific machines. Check the [Rbeast\Source](https://github.com/zhaokg/Rbeast/tree/master/Source) folder at GitHub for details.
+ 
+
+## Reporting Bugs or getting help
+
+BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
+
+
+## Acknowledgement:
+
+BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through Microsoft Azure for Research (CRM0518513) and a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
+
+<h2 id="publicationid" name="publicationid"> Selected publications using BEAST/Rbeast  </h2>   <a name=publications></a>
 
 Despite being published originally for ecological and enviornmental applications, BEAST is developed as a generic tool applicable to time series or time-series-like data arising from all disciplines. BEAST is not a heuristic algorithm but a rigorous statistical model. Below is a list of selected peer-reviewed pulications that used BEAST for statistical data analysis.
 
 | Discipline | Publication Title |
 | --- | --- |
 | Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. [Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement](https://www.sciencedirect.com/science/article/pii/S0034425722003285?casa_token=wj-jESXHBrQAAAAA:MPS5ThIzaw2Tvveml2fKYPzVmul24NTF11uGZpeBMTOfwtdA_hpx2OSwGR7686QPiN5xO1pHKQ). Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
+|Paleoclimatology|*Anastasia Zhuravleva et al., 2023. Caribbean salinity anomalies contributed to variable North Atlantic circulation and climate during the Common Era.  Science Advances,   DOI:10.1126/sciadv.adg2639*|
 |   Population Ecology  | *Henderson, P. A. (2021). [Southwood's Ecological Methods (5th edition)](https://www.google.com/books/edition/Southwood_s_Ecological_Methods/snEhEAAAQBAJ?hl=en&gbpv=1&pg=PA473&printsec=frontcover). Oxford University Press., page 475-476*|
 |Cardiology|*Ozier, D., Rafiq, T., de Souza, R. and Singh, S.M., 2023. [Use of Sacubitril/Valsartan Prior to Primary Prevention Implantable Cardioverter Defibrillator Implantation](https://www.sciencedirect.com/science/article/pii/S2589790X22002062). CJC Open.*|
 |Anthropocene Science|*Thomas, E.R., Vladimirova, D.O., Tetzner, D.R., Emanuelsson, D.B., Humby, J., Turner, S.D., Rose, N.L., Roberts, S.L., Gaca, P. and Cundy, A.B., 2023. The Palmer ice core as a candidate Global boundary Stratotype Section and Point for the Anthropocene series. The Anthropocene Review, p.20530196231155191.*|
@@ -246,12 +261,14 @@ Despite being published originally for ecological and enviornmental applications
 |Analytical Chemistry|*Šimić, M., Neuper, C., Hohenester, U. and Hill, C., 2023. Optofluidic force induction as a process analytical technology. Analytical and Bioanalytical Chemistry, pp.1-11.*|
 | Ecosystem Sciences | *Lyu, R., Zhao, W., Pang, J., Tian, X., Zhang, J. and Wang, N., 2022. [Towards a sustainable nature reserve management: Using Bayesian network to quantify the threat of disturbance to ecosystem services](https://www.sciencedirect.com/science/article/pii/S2212041622000791?casa_token=4gYXQ65EcfgAAAAA:mdYwpF_tXZ_W0IUu8JPhlm4_P9RrabtiDGhkwu3ogElVwHb6Ie7HEWbFwgm8JDSdf99drcCYSw). Ecosystem Services, 58, p.101483.* |
 | Environmental Sciences| *Nickerson, S., Chen, G., Fearnside, P., Allan, C.J., Hu, T., de Carvalho, L.M. and Zhao, K., 2022. [Forest loss is significantly higher near clustered small dams than single large dams per megawatt of hydroelectricity installed in the Brazilian Amazon](https://iopscience.iop.org/article/10.1088/1748-9326/ac8236/meta). Environmental Research Letters.*|
+|Geology| *Fan, X., Goeppert, N. and Goldscheider, N., 2023. Quantifying the historic and future response of karst spring discharge to climate variability and change at a snow-influenced temperate catchment in central Europe. Hydrogeology Journal, pp.1-17.*|
 |Wildlife|*Smith, Matthew M., and Jonathan N. Pauli. "Connectivity maintains genetic diversity and population persistence within an archipelagic refugia even under declining lake ice." Mechanisms of species recovery for a forest carnivore in a changing landscape: 173.*|
 |  Climate Sciences|*Duke, N.C., Mackenzie, J.R., Canning, A.D., Hutley, L.B., Bourke, A.J., Kovacs, J.M., Cormier, R., Staben, G., Lymburner, L. and Ai, E., 2022. [ENSO-driven extreme oscillations in mean sea level destabilise critical shoreline mangroves—An emerging threat](https://journals.plos.org/climate/article?id=10.1371/journal.pclm.0000037). PLOS Climate, 1(8), p.e000003*|
 | Finance|*Candelaria, Christopher A., Shelby M. McNeill, and Kenneth A. Shores. (2022). What is a School Finance Reform? Uncovering the ubiquity and diversity of school finance reforms using a Bayesian changepoint estimator.(EdWorkingPaper: 22-587). Retrieved from Annenberg Institute at Brown University: https://doi.org/10.26300/4vey-3w10*|
 | Public health|*Linnell, K., Fudolig, M., Schwartz, A., Ricketts, T.H., O'Neil-Dunne, J.P., Dodds, P.S. and Danforth, C.M., 2022. [Spatial changes in park visitation at the onset of the pandemic](https://journals.plos.org/globalpublichealth/article?id=10.1371/journal.pgph.0000766). arXiv preprint arXiv:2205.15937.*|
 |Biometerology|*Li, Y., Liu, Y., Bohrer, G., Cai, Y., Wilson, A., Hu, T., Wang, Z. and Zhao, K., 2022. [Impacts of forest loss on local climate across the conterminous United States: Evidence from satellite time-series observations](https://www.sciencedirect.com/science/article/pii/S0048969721047264?casa_token=X9fIQLvFlXcAAAAA:0nk-D2dV1cXmaIxJ7Tp79sx16npj5kgkDFjM4N2roh_akQyIfIkRaHfxPjPtp5v5dGWo-GFBcA). Science of The Total Environment, 802, p.149651.*|
 | Applied Math|*Ferguson, Daniel, and François G. Meyer. [Probability density estimation for sets of large graphs with respect to spectral information using stochastic block models](https://arxiv.org/abs/2207.02168). arXiv preprint arXiv:2207.02168 (2022).*|
+|Transportation Science| *Delavary, M., Kalantari, A.H., Mohammadzadeh Moghaddam, A., Fakoor, V., Lavallière, M. and Wilhelm Siebert, F., 2023. Road traffic mortality in Iran: longitudinal trend and seasonal analysis, March 2011-February 2020. International Journal of Injury Control and Safety Promotion, pp.1-12.*|
 |Water quality|*He, Ziming, Jiayu Yao, Yancen Lu, and Danlu Guo. "Detecting and explaining long‐term changes in river water quality in south‐eastern Australia." Hydrological Processes: e14741.*|
 |Air quality|*Wu, S., Yao, J., Wang, Y. and Zhao, W., 2023. Influencing factors of PM2. 5 concentrations in the typical urban agglomerations in China based on wavelet perspective. Environmental Research, p.116641.*|
 | Hydrology | *Zohaib, M. and Choi, M., 2020. [Satellite-based global-scale irrigation water use and its contemporary trends](https://www.sciencedirect.com/science/article/pii/S0048969720302291?casa_token=pPXP5Q9glsMAAAAA:QBZq1T9FXB3JgnHwM9ug1sIDSMd2u7Jl4L2qA0fCvCwtAGcB_WhAbgTjEZBO9B_WXxtu7WKarA). Science of The Total Environment, 714, p.136719.* |
@@ -266,20 +283,7 @@ Despite being published originally for ecological and enviornmental applications
 |Forest Ecology|*Moreno-Fernández, D., Viana-Soto, A., Camarero, J.J., Zavala, M.A., Tijerín, J. and García, M., 2021. Using spectral indices as early warning signals of forest dieback: The case of drought-prone Pinus pinaster forests. Science of The Total Environment, 793, p.148578.*|
 |Atmospheric Sciences|*Tingwei, C., Tingxuan, H., Bing, M., Fei, G., Yanfang, X., Rongjie, L., Yi, M. and Jie, Z., 2021. Spatiotemporal pattern of aerosol types over the Bohai and Yellow Seas observed by CALIOP. Infrared and Laser Engineering, 50(6), p.20211030.*|
 |Terrestrial ecology|*Dashti, H., Pandit, K., Glenn, N.F., Shinneman, D.J., Flerchinger, G.N., Hudak, A.T., de Graaf, M.A., Flores, A., Ustin, S., Ilangakoon, N. and Fellows, A.W., 2021. [Performance of the ecosystem demography model (EDv2. 2) in simulating gross primary production capacity and activity in a dryland study area](https://www.sciencedirect.com/science/article/pii/S0168192320303725?casa_token=01dOFp15Vg4AAAAA:NpXogEEWfNjgkR-jzE5fItgIlqDh5Ll-cdwQihcibCRiWbOiXwEE_WQ3YtAQFjQ_B9t4W2T8og). Agricultural and Forest Meteorology, 297, p.108270.*|
+|Statistics|*Storath, M. and Weinmann, A., 2023. Smoothing splines for discontinuous signals. Journal of Computational and Graphical Statistics, (just-accepted), pp.1-26.*|
 |Environmental Engineering|*Bainbridge, R., Lim, M., Dunning, S., Winter, M.G., Diaz-Moreno, A., Martin, J., Torun, H., Sparkes, B., Khan, M.W. and Jin, N., 2022. Detection and forecasting of shallow landslides: lessons from a natural laboratory. Geomatics, Natural Hazards and Risk, 13(1), pp.686-704.*|
 |Hydrology|*Yang, X., Tian, S., You, W. and Jiang, Z., 2021. Reconstruction of continuous GRACE/GRACE-FO terrestrial water storage anomalies based on time series decomposition. Journal of Hydrology, 603, p.127018.*|
 |Landscape Ecology|*Adams, B.T., Matthews, S.N., Iverson, L.R., Prasad, A.M., Peters, M.P. and Zhao, K., 2021. Spring phenological variability promoted by topography and vegetation assembly processes in a temperate forest landscape. Agricultural and Forest Meteorology, 308, p.108578.*|
-
-## Compilation from C source code (for developers and experts only)
-
- Though not needed but if preferred, the code can be compiled for your specific machines. Check the [Rbeast\Source](https://github.com/zhaokg/Rbeast/tree/master/Source) folder at GitHub for details.
- 
-
-## Reporting Bugs or getting help
-
-BEAST is distributed as is and without warranty of suitability for application. The one distributed above is still a beta version, with potential room for further improvement. If you encounter flaws with the software (i.e. bugs) please report the issue. Providing a detailed description of the conditions under which the bug occurred will help to identify the bug, you can directly email its maintainer Dr. Kaiguang Zhao at zhao.1423@osu.edu. Alternatively, Use the [Issues tracker](https://github.com/zhaokg/Rbeast/issues) on GitHub to report issues with the software and to request feature enhancements. 
-
-
-## Acknowledgement:
-
-BEAST is developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao. The development of BEAST received supported through a USGS 104B grant and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. The contribution of Xuesong Zhang was supported through USDA-ARS.
