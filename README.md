@@ -18,7 +18,7 @@
    
 **Quick Usage**
 
-> One-liner code for Python, Matlab and R. Check below or [github.com/zhaokg/Rbeast](https://github.com/zhaokg/Rbeast) for more details.
+> One-liner code for Python, Matlab and R:
 ```
 # Python example
 import Rbeast as rb; (Nile, Year)=rb.load_example('nile'); o=rb.beast(Nile,season='none'); rb.plot(o)
