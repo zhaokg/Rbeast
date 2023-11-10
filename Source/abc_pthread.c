@@ -10,6 +10,7 @@
 #elif defined(MAC_OS)
 	#include <sys/param.h>
 	#include <sys/sysctl.h>
+   #include "abc_pthread.h"  // needed for cpu_set__t
 #elif defined(LINUX_OS) || defined(SOLARIS_OS)
    //https://docs.oracle.com/cd/E36784_01/html/E36874/sysconf-3c.html
 	#include <unistd.h> // needed for sysconf
@@ -52,12 +53,10 @@ clang requires -pthread when compiling but not when linking. This is annoying, b
 
 */
 
-void PrintBits(size_t const size, void const* const ptr)
-{
+void PrintBits(size_t const size, void const* const ptr) {	
     unsigned char* b = (unsigned char*)ptr;
     unsigned char byte;
     int i, j;
-
     for (i = size - 1; i >= 0; i--) {
         for (j = 7; j >= 0; j--) {
             byte = (b[i] >> j) & 1;
@@ -97,10 +96,15 @@ int CountSetBits64(uint64_t x) {
 }
 
 int GetNumCores(void)  {
-    //https://stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
+
+    static int CORE_COUNT = 0;
+    if (CORE_COUNT > 0) {
+        return CORE_COUNT;
+    }
+
+    // stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
 #if defined(_WIN32) || defined(WIN64_OS)    
-    uint32_t count;
-	count = GetCPUInfo(); 
+    uint32_t count = GetCPUInfo(); 
 #elif defined(__MACH__)
     int nm[2];
     size_t   len = 4;
@@ -116,16 +120,65 @@ int GetNumCores(void)  {
         if(count < 1) { count = 1; }
     }
 #else
-    uint32_t count;
-    count = sysconf(_SC_NPROCESSORS_ONLN);
+    uint32_t count = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
-	return count >= 1 ? count : 1L;
+    CORE_COUNT = count >= 1 ? count : 1L;
+    return  CORE_COUNT;
 }
 
+////////////////////////////////////////////////////////////////////
+#if defined(_WIN32) || defined(WIN64_OS) ||  defined(MAC_OS) 
+
+void  CPU_ZERO(cpu_set_t* cs) {
+    cs->core_count = GetNumCores();
+    //We use a int64 as the mask, so up to 64*4 cores are suppored
+    if (cs->core_count > 256) cs->core_count = 256; 
+    cs->core_mask[0] = cs->core_mask[1] = cs->core_mask[2] = cs->core_mask[3] = 0;
+}
+
+void    CPU_SET(int num, cpu_set_t* cs) {
+    num = num % cs->core_count;;
+    int grpId = num / 64;
+    int bitId = num - grpId * 64;
+    cs->core_mask[grpId] |= (1 << bitId);
+}
+
+int   CPU_ISSET(int num, cpu_set_t* cs) {
+    num = num % cs->core_count;;
+    int grpId = num / 64;
+    int bitId = num - grpId * 64;
+    return (cs->core_mask[grpId] & (1 << bitId));
+}
+
+int   CPU_get_first_bit_id(cpu_set_t* cs) {
+    int grpId = 0;
+    for (grpId = 0; grpId < 4; grpId++) {
+        if (cs->core_mask[grpId] != 0)   break;
+    }
+
+    if (grpId < 4) {
+        int      num = 0;
+        uint64_t mask = cs->core_mask[grpId];
+        for (num = 0; num < 64; num++) {
+            if (mask & (1 << num)) {
+                break;
+            }
+        }
+        return grpId * 64 + num;
+    }
+    else {
+        return 0;
+    }
+
+}
+
+#endif
+////////////////////////////////////////////////////////////////////
 
 #if defined(_WIN32) || defined(WIN64_OS)
 
 typedef struct __CPUINFO {
+
     //docs.microsoft.com/en-us/windows/win32/procthread/what-s-new-in-processes-and-threads
     DWORD (WINAPI* GetActiveProcessorGroupCount)     (void);
     DWORD (WINAPI* GetActiveProcessorCount)          (WORD GroupNumber);
@@ -150,8 +203,7 @@ typedef struct __CPUINFO {
     BOOL  (WINAPI*  GetNumaHighestNodeNumber)(  PULONG HighestNodeNumber   );
     BOOL  (WINAPI*  GetNumaProcessorNodeEx)  (
                 PPROCESSOR_NUMBER Processor,
-                PUSHORT           NodeNumber   );
- 
+                PUSHORT           NodeNumber   ); 
     BOOL(WINAPI* GetNumaAvailableMemoryNode) (
                 UCHAR      Node,
                 PULONGLONG AvailableBytes   ); //available since Win XP
@@ -187,9 +239,9 @@ static void InitCPUFuncs(void) {
     if (cpuFunc.isInitilized)  {
         return;
     }
-    HMODULE kerHandle  = GetModuleHandle(TEXT("kernel32"));
-    cpuFunc.GetActiveProcessorGroupCount     =  GetProcAddress(kerHandle, "GetActiveProcessorGroupCount");
-    cpuFunc.GetActiveProcessorCount          =  GetProcAddress(kerHandle, "GetActiveProcessorCount");
+    HMODULE kerHandle                        = GetModuleHandle(TEXT("kernel32"));
+    cpuFunc.GetActiveProcessorGroupCount     = GetProcAddress(kerHandle, "GetActiveProcessorGroupCount");
+    cpuFunc.GetActiveProcessorCount          = GetProcAddress(kerHandle, "GetActiveProcessorCount");
     cpuFunc.GetLogicalProcessorInformationEx = GetProcAddress(kerHandle, "GetLogicalProcessorInformationEx");
     cpuFunc.CreateRemoteThreadEx             = GetProcAddress(kerHandle, "CreateRemoteThreadEx");
     cpuFunc.GetThreadGroupAffinity           = GetProcAddress(kerHandle, "GetThreadGroupAffinity");
@@ -242,13 +294,11 @@ static int  GetCoreNumbers_WIN7V1(void) {
 }
 
 //https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
-static int GetCoreNumbers_WINXP(void)
-{         
+static int GetCoreNumbers_WINXP(void) {         
+
     cpuInfo = (CPUINFO){ 0, };
 
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
-   
-
   
     PCACHE_DESCRIPTOR Cache;
 
@@ -274,8 +324,6 @@ static int GetCoreNumbers_WINXP(void)
         }
     }
 
-    
-    
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr =  buffer;
     DWORD byteOffset = 0;
     while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)     {
@@ -337,7 +385,6 @@ static int GetCoreNumbers_WIN7V2(void) {
     #ifdef WIN64_OS
 
     cpuInfo = (CPUINFO){0, };
-    
 
     InitCPUFuncs();
 
@@ -474,7 +521,7 @@ static int GetCoreNumbers_WIN7V2(void) {
 
 static void RankCPU(void) {
 
-#ifdef WIN64_OS
+   #ifdef WIN64_OS
 
     PROCESSOR_NUMBER procNum;
     cpuFunc.GetCurrentProcessorNumberEx(&procNum);
@@ -512,7 +559,7 @@ static void RankCPU(void) {
         }
 
     }
-#endif
+  #endif
 }
 
 int sched_getcpu(void) {
@@ -580,50 +627,10 @@ void PrintCPUInfo() {
     //r_printf(" - CPU affinity mask of current thread: %#x\n", cpuInfo.currentThreadAffinity);
 
 }
-
- void   CPU_ZERO(cpu_set_t* cs) {
-    cs->core_count    = GetNumCores();
-    if (cs->core_count > 256) cs->core_count = 256; // bcz we use a int64 as the mask, so up to 64 cores are suppored
-    cs->core_mask[0] = cs->core_mask[1] = cs->core_mask[2] = cs->core_mask[3] = 0;
-}
-
-void    CPU_SET(int num, cpu_set_t* cs) {
-    num = num % cs->core_count;;
-    int grpId = num / 64;
-    int bitId = num - grpId * 64;
-    cs->core_mask[grpId] |= (1 << bitId);
-}
-
- int   CPU_ISSET(int num, cpu_set_t* cs) {
-    num = num % cs->core_count;;
-    int grpId = num / 64;
-    int bitId = num - grpId * 64;
-    return (cs->core_mask[grpId] & (1 << bitId));
-}
-
-  int   CPU_get_first_bit_id(cpu_set_t* cs) {
-    int grpId = 0;
-    for (grpId = 0; grpId < 4; grpId++) {
-        if (cs->core_mask[grpId] != 0)   break;
-    }
-
-    if (grpId < 4) {
-        int      num = 0;
-        uint64_t mask = cs->core_mask[grpId];
-        for (num = 0; num < 64; num++) {
-            if (mask & (1 << num)) {
-                break;
-            }
-        }
-        return grpId * 64 + num;
-    }
-    else {
-        return 0;
-    }
-
-}
  
 
+ #include <stdlib.h>     // for malloc and free
+ 
  int pthread_attr_setaffinity_np(pthread_attr_t* attr, size_t cpusetsize, const cpu_set_t* cpuset) {
      
      if (cpuset == NULL)   return 0; 
@@ -637,14 +644,14 @@ void    CPU_SET(int num, cpu_set_t* cs) {
          attr->lpAttributeList = NULL;
      }
 
-     DWORD  attributeCounts = 1L;
-     attr->lpAttributeList  = malloc(attr->sizeAttributeList);
-     InitializeProcThreadAttributeList(attr->lpAttributeList, attributeCounts, 0, &attr->sizeAttributeList);
+    DWORD  attributeCounts = 1L;
+    attr->lpAttributeList  = malloc(attr->sizeAttributeList);
+    InitializeProcThreadAttributeList(attr->lpAttributeList, attributeCounts, 0, &attr->sizeAttributeList);
 
     int coreId                = CPU_get_first_bit_id(cpuset);    
-    attr->ProcNumber.Group    =   cpuInfo.cpuGroup[coreId];
-    attr->ProcNumber.Number   =   cpuInfo.coreIDinGroup[coreId];
-    attr->ProcNumber.Reserved =   0;    // PROCESSRO_NUMBER; the reserved field must be sset to 0s; otherwise CreateRemoteTHreadEX fails.
+    attr->ProcNumber.Group    = cpuInfo.cpuGroup[coreId];
+    attr->ProcNumber.Number   = cpuInfo.coreIDinGroup[coreId];
+    attr->ProcNumber.Reserved = 0;    // PROCESSRO_NUMBER; the reserved field must be set to 0s; otherwise CreateRemoteTHreadEX fails.
     // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute
     // ProcNumber must persit  until the attribute list is destroyed using the DeleteProcThreadAttributeList function.
     // That is, when calling CreateRemoteThreadEx, ProcNumber must be sitll in the memoery, so we move it as fields of attr
@@ -656,6 +663,7 @@ void    CPU_SET(int num, cpu_set_t* cs) {
     return 0;
 #endif
 }
+
 
  // pthread_create has a conflict with the pthread lib if provided/
  // instead of exploring options with weak symbol, I make it static here
@@ -730,10 +738,10 @@ int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start)
             static INLINE unsigned __int64  readgsqword_good(unsigned __int64 Offset) {
                 // this is a solution proposed here https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104657
                 unsigned __int64 ret;
-                unsigned __int64 volatile Offset1 = Offset;
+                unsigned __int64 volatile OffsetVolatile = Offset;
                 __asm__("mov{" "q" " %%" "gs" ":%[offset], %[ret] | %[ret], %%" "gs" ":%[offset]}"
-                    : [ret] "=r" (ret)
-                    : [offset] "m" ((*(unsigned __int64*)(size_t)Offset1)));
+                    : [ret]    "=r" (ret)
+                    : [offset] "m" ((*(unsigned __int64*)(size_t)OffsetVolatile)));
                 return ret;
             }
 
@@ -784,7 +792,6 @@ int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start)
 
 //https://docs.oracle.com/cd/E88353_01/html/E37843/pthread-getattr-np-3c.html
 int get_thread_stacksize(void) {
-
     pthread_attr_t attr;
     size_t   stksize;
     void*    stkaddr;
@@ -799,8 +806,10 @@ int get_thread_stacksize(void) {
 //pthread_getattr_np ; But not portable to Mac OS
 //pthread_self() 
 int get_thread_stacksize(void) {
-
     return  0;
-    }
+}
+
+	
 #endif
+
 #include "abc_000_warning.h"
