@@ -562,7 +562,7 @@ def plot_o(h, ytitle, has, clr, x, t, t2t, Y, CI, ncp, cp):
     # points( t,   Y,    type = 'l',col='#333333');
     # TypeError: stem() got an unexpected keyword argument 'use_line_collection'
     # https://matplotlib.org/3.1.0/api/_as_gen/matplotlib.pyplot.stem.html
-    if version >= '3.3':
+    if version <= '3.3':
          h.stem( t, Y,  linefmt='-', markerfmt=None ,use_line_collection=True)
     else: 
          h.stem( t, Y,  linefmt='-', markerfmt=None)
