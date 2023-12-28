@@ -1,4 +1,4 @@
-## Compilation BEAST from source code (for developers and experts only)
+## Compilation of BEAST from source code (for developers and experts only)
 
 The BEAST source code appears more complicated than necessary, mainly because the same source is used for R, Matlab, and Python interfaces (also for Julia and IDL) as well as for various compilations settings (e.g., compiler variants, alternative library dependencies, cross-platform compatibility, CPU instruction sets, mixed language interfaces, and Win32 API native interfaces). The complication control variables are defined as MACROs in abc_macro.h. Of the soure code files, there are dozens of "abc_xxxx.c" files, which are some auxiliary files; the BEAST algorithm itself is coded in beastv2_COREV4.c; and the R and Matlab interfaces are coded in glue.c and abc_ide_util.c.
 
