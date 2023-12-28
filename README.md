@@ -7,7 +7,7 @@
 
 
 **Quick Installation**
-> BEAST was impemented in C/C++ but accessible from  R, Python, Matlab, and Octave.  Run the following to install:
+> BEAST was impemented in C/C++ but accessible from  R, Python, Matlab, and Octave.  Install it as follows:
 
 * [Python](#python):   **`pip install Rbeast`**   
 * [Matlab](#matlab):  **`eval(webread('http://b.link/rbeast',weboptions('cert','')))`**
