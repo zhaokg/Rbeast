@@ -92,44 +92,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 
 	void * ANS  = NULL;
 	int    nptr = 0;
-	if      (__IS_STRING_EQUAL(algorithm, beastv4Demo)) 	{
-
-		#ifdef WIN64_OS
-			#if P_INTERFACE ==1
-					// Covert the second arg into a Numpy Array. the pointer returend
-					// is a new ref that MUST be dec-refed at the end
-					prhs[1] = CvtToPyArray_NewRef(prhs[1]);
-			#endif
-
-			//BEAST2_OPTIONS    option = {0,}; 
-			BEAST2_OPTIONS      option = { {{0,},}, }; //Warning from MacOS: suggest braces around initialization of subobject [-Wmissing-braces]
-			option.io.out.result	 = NULL;		// result to be allocated in OUput_allocMEM
-			GLOBAL_OPTIONS           = (BEAST2_OPTIONS_PTR)&option;
-				
-			if ( BEAST2_GetArgs(prhs,nrhs,&option) ==0 ) {
-				BEAST2_DeallocateTimeSeriesIO(&(option.io));
-				return IDE_NULL;
-			}
-		
-	
-			option.extra.computeCredible = TRUE;
-			ANS = PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
-			
-			void DllExport BEAST2_WinMain(VOID_PTR  option);
-			BEAST2_WinMain((BEAST2_OPTIONS_PTR)GLOBAL_OPTIONS);
-			BEAST2_DeallocateTimeSeriesIO(&(option.io));
-
-			#if P_INTERFACE ==1
-					Py_XDECREF(prhs[1]);
-			#endif
-		#else
-			r_printf("WARNING: The GUI interface is supporte only on the Windows 64 operating system.\n");
-		#endif	
-
-	}
-	else if (__IS_STRING_EQUAL(algorithm, beastv4))
-	{
-
+	if   (__IS_STRING_EQUAL(algorithm, beast_bayes))  	{
 		/*
 		// Initialize mutex and condition variable objects
 		pthread_mutex_init(&MUTEX_WRITE, NULL);
@@ -246,9 +209,11 @@ void * mainFunction(void *prhs[], int nrhs) {
 				thread_stat[i] = pthread_create(&thread_id[i], &attr, beast2_main_corev4_mthrd, (void*)NULL);
 			 #endif
 				if ( 0 == thread_stat[i]) {
-					r_printf("Parallel computing: thread#%-02d generated ... \n", i + 1);
+					//glue_code.c:160:42: warning: '0' flag ignored with '-' 
+					//r_printf("Parallel computing: thread#%-02d generated ... \n", i + 1);
+					r_printf("Parallel computing: thread#%-2d generated ... \n", i + 1);
 			    } else {
-					r_printf("Parallel computing: thread#%-02d failed to generate ... \n", i + 1);
+					r_printf("Parallel computing: thread#%-2d failed to generate ... \n", i + 1);
 				}
 				
 			}
@@ -298,9 +263,9 @@ void * mainFunction(void *prhs[], int nrhs) {
 				if (thread_stat[0] == 0) {
 				// threads that were gnerated successfully
 					I64 ret = 0;
-					pthread_join(thread_id[i], &ret);
+					pthread_join(thread_id[i], &ret); // the second arg is a pointer to a void ptr, so ret here must be I64.
 					//r_printf("\nstack size %d.\n", ret/1024/1024);
-					r_printf("Parallel computing : Thread # % -02d finished ... \n", i);
+					r_printf("Parallel computing : Thread # %-2d finished ... \n", i);
 				}				
 			}
 			if (IDE_USER_INTERRUPT==0)
@@ -323,6 +288,272 @@ void * mainFunction(void *prhs[], int nrhs) {
 				Py_XDECREF(prhs[1]);
 		 #endif
  
+	}
+	else if (__IS_STRING_EQUAL(algorithm, tsextract)) {
+		extern void* BEAST2_TsExtract(void* o, void* pindex);
+
+		//prhs[o] is "tsextract"
+		ANS = PROTECT(BEAST2_TsExtract(prhs[1], prhs[2]));
+		nptr++;
+	}
+	else if (__IS_STRING_EQUAL(algorithm, print)) {
+		extern void* BEAST2_PrintResult(void* o, void* pindex);
+		//prhs[o] is "tsextract"
+		BEAST2_PrintResult(prhs[1], prhs[2]);
+	}
+	else if (__IS_STRING_EQUAL(algorithm, disp)) {
+		//prhs[o] is "disp"
+		IDEPrintObject(prhs[1]);
+	}
+	if   (    __IS_STRING_EQUAL(algorithm, beast_bic) || __IS_STRING_EQUAL(algorithm, beast_aicc)
+		   || __IS_STRING_EQUAL(algorithm, beast_aic) || __IS_STRING_EQUAL(algorithm, beast_hic) )  	{
+		/*
+		// Initialize mutex and condition variable objects
+		pthread_mutex_init(&MUTEX_WRITE, NULL);
+		pthread_cond_init(&CONDITION_WRITE, NULL);
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+		DATA_AVAILABLE_WRITE = false;
+		pthread_create(&THREADID_WRITE, &attr, WRITE, (VOID_PTR )&threadParWrite);
+		pthread_attr_destroy(&attr); 	
+		*/
+
+		int whichCritia = 0;
+		if (__IS_STRING_EQUAL(algorithm, beast_bic)) {
+			whichCritia = 1;
+		}
+		else if (__IS_STRING_EQUAL(algorithm, beast_aic)) {
+			whichCritia = 2;
+		}
+		else if (__IS_STRING_EQUAL(algorithm, beast_aicc)) {
+			whichCritia = 3;
+		}
+		else if (__IS_STRING_EQUAL(algorithm, beast_hic)) {
+			whichCritia = 4;
+		}
+
+		/**********************************/
+	    //stackoverflow.com/questions/10828294/c-and-c-partial-initialization-of-automatic-structure
+	    //stackoverflow.com/questions/11152160/initializing-a-struct-to-0
+		//BEAST2_OPTIONS      option = {0,};		
+		BEAST2_OPTIONS      option = { {{0,},}, }; //Warning from MacOS: suggest braces around initialization of subobject [-Wmissing-braces]
+	
+		#if P_INTERFACE ==1
+			// Covert the second arg into a Numpy Array. the pointer returend
+			// is a new ref that MUST be dec-refed at the end
+			prhs[1] = CvtToPyArray_NewRef(prhs[1]);
+		#endif
+
+		if (BEAST2_GetArgs(prhs, nrhs, &option) == 0) {
+			BEAST2_DeallocateTimeSeriesIO(&(option.io));
+		    #if P_INTERFACE ==1
+				Py_XDECREF(prhs[1]);
+		    #endif
+			return IDE_NULL;
+		}		
+		
+		option.io.out.result		 = NULL;		 	// result to be allocated in OUput_allocMEM
+
+		if (option.io.q == 1) {
+			ANS = PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;	
+		} else {			
+			//memset(&option.extra, 0, sizeof(option.extra));
+			option.extra.computeSeasonAmp = 0;
+			option.extra.computeTrendSlope = 0;
+			option.extra.tallyIncDecTrendJump= 0;
+			option.extra.tallyPosNegTrendJump = 0;
+			option.extra.tallyPosNegOutliers = 0;
+			option.extra.tallyPosNegSeasonJump = 0;
+ 
+			option.extra.computeTrendChngpt = 1;
+			option.extra.computeSeasonChngpt = 1;
+			//option.extra.computeOutlierChngpt = 1;
+			BEAST2_print_options(&option); 
+			ANS = PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
+		}
+		/**********************************/
+		
+		extern int beast2_main_corev4_bic(int whichCritia);
+		extern int beast2_main_core_bic_mthrd(void* dummy);
+
+		GLOBAL_OPTIONS = (BEAST2_OPTIONS_PTR)&option;
+		if (option.io.numOfPixels ==1) {
+			beast2_main_corev4_bic(whichCritia);
+			BEAST2_DeallocateTimeSeriesIO(&(option.io));
+			r_printf("\n");
+		} else {
+			/**********************************/
+			I32 NUM_THREADS			= option.extra.numParThreads;  // I32 NUM_CORES_TOUSE= option.extra.numCPUCoresToUse;;			
+			I32 NUM_THREADS_PER_CPU = option.extra.numThreadsPerCPU;
+			I32 NUM_CORES           = GetNumCores();
+
+			NUM_CORES	        = max(NUM_CORES, 1L);			
+			NUM_THREADS_PER_CPU = max(NUM_THREADS_PER_CPU, 1L);
+			
+			NUM_THREADS = (NUM_THREADS <= 0) ? NUM_CORES * NUM_THREADS_PER_CPU : NUM_THREADS;
+			NUM_THREADS = min(NUM_THREADS, option.io.numOfPixels);
+
+			/**********************************/
+			NUM_OF_PROCESSED_PIXELS		 = 0;
+			NUM_OF_PROCESSED_GOOD_PIXELS = 0;
+			NEXT_PIXEL_INDEX			 = 1;
+						
+			//Initialize mutex and condition variable objects
+			// threadID,  mutex, and condvaar are  global variables.
+			pthread_mutex_init(&mutex, NULL);
+			pthread_cond_init(&condVar, NULL);
+						
+			// For portability, explicitly create threads in a joinable state 
+			pthread_attr_t attr;
+			pthread_attr_init(&attr);
+			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+			thread_id = malloc(sizeof(pthread_t) * NUM_THREADS);
+
+  		   int8_t *thread_stat = malloc(sizeof(int8_t) * NUM_THREADS);
+			for (I32 i = 0; i < NUM_THREADS; i++) {
+             #if defined(LINUX_OS) || defined (WIN32_OS) || defined (WIN64_OS) 
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				CPU_SET( i%NUM_CORES, &cpuset);
+				//https://stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads
+				pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+				thread_stat[i]=pthread_create( &thread_id[i], &attr, beast2_main_core_bic_mthrd, (void*)whichCritia);
+				//https://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
+				//sched_setaffinity(thread_id[i], sizeof(cpuset), &cpuset)
+			 #elif defined(MAC_OS)
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				CPU_SET(i % NUM_CORES, &cpuset);
+				//https://stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads			
+				thread_stat[i] = pthread_create(&thread_id[i], &attr, beast2_main_corev4_mthrd, (void*)NULL);
+				pthread_setaffinity_np(thread_id[i], sizeof(cpu_set_t), &cpuset);
+		     #elif defined (SOLARIS_OS)
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				CPU_SET(i % NUM_CORES, &cpuset);
+				//https://stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads			
+				thread_stat[i] = pthread_create(&thread_id[i], &attr, beast2_main_corev4_mthrd, (void*)NULL);
+				sched_getaffinity(thread_id[i], sizeof(cpu_set_t), &cpuset);
+			 #else
+				thread_stat[i] = pthread_create(&thread_id[i], &attr, beast2_main_corev4_mthrd, (void*)NULL);
+			 #endif
+				if ( 0 == thread_stat[i]) {
+					//glue_code.c:160:42: warning: '0' flag ignored with '-' 
+					//r_printf("Parallel computing: thread#%-02d generated ... \n", i + 1);
+					r_printf("Parallel computing: thread#%-2d generated ... \n", i + 1);
+			    } else {
+					r_printf("Parallel computing: thread#%-2d failed to generate ... \n", i + 1);
+				}
+				
+			}
+			r_printf("Rbeast: Waiting on %d threads...\n", NUM_THREADS);
+			pthread_attr_destroy(&attr);
+
+
+			IDE_USER_INTERRUPT = 0;
+			#if R_INTERACE==1
+				r_printf("Press and hold the ESCAPE key or the STOP button to interrupt and quit while running.\n" );
+			#elif M_INTERFACE==1
+				r_printf("Press and hold CTR+C to interrupt and quit while running.\n");
+			#endif
+
+			if (option.extra.printProgressBar) {
+				// Print a blank line to be backspaced by the follow
+				void* StrBuf      = malloc(option.extra.consoleWidth * 3);
+				PERCENT_COMPLETED = 0;
+				REMAINING_TIME    = 10000;
+				printProgress2(PERCENT_COMPLETED, REMAINING_TIME, option.extra.consoleWidth, StrBuf, 1);
+
+				// https://www.mathworks.com/matlabcentral/answers/101658-is-it-possible-to-start-new-threads-from-a-c-mex-file
+				// https://stackoverflow.com/questions/28227313/multithreaded-pthreads-matlab-mex-function-causes-matlab-to-crash-after-exitin
+				// https://stackoverflow.com/questions/54010898/how-do-you-print-to-console-in-a-multi-threaded-mex-function
+				while (PERCENT_COMPLETED < 1.f && NEXT_PIXEL_INDEX < option.io.numOfPixels && IDE_USER_INTERRUPT==0) {
+										
+					printProgress2(PERCENT_COMPLETED, REMAINING_TIME, option.extra.consoleWidth, StrBuf, 0);
+					if (CheckInterrupt()) {
+						ConsumeInterruptSignal();// only needed for Matlab
+						IDE_USER_INTERRUPT = 1;
+						r_printf("Quitting due to unexpected user interruption...\n");
+					}					
+					Sleep_ms(2 * 1000);
+				}
+
+				if (IDE_USER_INTERRUPT == 0) {
+					printProgress2(1.0, 0, option.extra.consoleWidth, StrBuf, 0);
+				}
+
+				free(StrBuf);
+			}  
+
+			// Wait for all threads to complete
+			r_printf("\nFinalizing ... \n");
+			for (I32 i = 0; i < NUM_THREADS; i++) {
+				//pthread_join(thread_id[i], NULL);
+				if (thread_stat[0] == 0) {
+				// threads that were gnerated successfully
+					I64 ret = 0;
+					pthread_join(thread_id[i], &ret); // the second arg is a pointer to a void ptr, so ret here must be I64.
+					//r_printf("\nstack size %d.\n", ret/1024/1024);
+					r_printf("Parallel computing : Thread # %-2d finished ... \n", i);
+				}				
+			}
+			if (IDE_USER_INTERRUPT==0)
+				r_printf("\nRbeast: Waited on %d threads. Done.\n", NUM_THREADS);
+			else
+				r_printf("\nQuitted unexpectedly upon the user's interruption.\n");
+
+			// Clean up and exit		
+			pthread_mutex_destroy(&mutex);
+			pthread_cond_destroy(&condVar);
+			// pthread_exit(NULL);	
+
+			free(thread_id);
+			free(thread_stat);
+
+			BEAST2_DeallocateTimeSeriesIO(&(option.io));
+		}
+		
+	     #if P_INTERFACE == 1
+				Py_XDECREF(prhs[1]);
+		 #endif
+ 
+	}
+	else if (__IS_STRING_EQUAL(algorithm, beastv4Demo)) 	{
+
+		#ifdef WIN64_OS
+			#if P_INTERFACE ==1
+					// Covert the second arg into a Numpy Array. the pointer returend
+					// is a new ref that MUST be dec-refed at the end
+					prhs[1] = CvtToPyArray_NewRef(prhs[1]);
+			#endif
+
+			//BEAST2_OPTIONS    option = {0,}; 
+			BEAST2_OPTIONS      option = { {{0,},}, }; //Warning from MacOS: suggest braces around initialization of subobject [-Wmissing-braces]
+			option.io.out.result	 = NULL;		// result to be allocated in OUput_allocMEM
+			GLOBAL_OPTIONS           = (BEAST2_OPTIONS_PTR)&option;
+				
+			if ( BEAST2_GetArgs(prhs,nrhs,&option) ==0 ) {
+				BEAST2_DeallocateTimeSeriesIO(&(option.io));
+				return IDE_NULL;
+			}
+		
+	
+			option.extra.computeCredible = TRUE;
+			ANS = PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
+			
+			void DllExport BEAST2_WinMain(VOID_PTR  option);
+			BEAST2_WinMain((BEAST2_OPTIONS_PTR)GLOBAL_OPTIONS);
+			BEAST2_DeallocateTimeSeriesIO(&(option.io));
+
+			#if P_INTERFACE ==1
+					Py_XDECREF(prhs[1]);
+			#endif
+		#else
+			r_printf("WARNING: The GUI interface is supporte only on the Windows 64 operating system.\n");
+		#endif	
+
 	}
 	#if !defined(R_RELEASE) &&  !defined(M_RELEASE) &&  !defined(P_RELEASE)
 	else if  (__IS_STRING_EQUAL(algorithm, "mrbeast"))
@@ -353,13 +584,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 		MV_DeallocateTimeSeriesIO(option.io);
 	} 
 	#endif
-	else if (__IS_STRING_EQUAL(algorithm, tsextract)) {
-		extern void* BEAST2_TsExtract(void* o, void* pindex);
 
-		//prhs[o] is "tsextract"
-		ANS = PROTECT(BEAST2_TsExtract(prhs[1], prhs[2]));
-		nptr++;
-	}
 	else if (__IS_STRING_EQUAL(algorithm, svd)) {
 		typedef struct SVDBasisMEM {
 			int N, P, Ncycle;
@@ -409,15 +634,6 @@ void * mainFunction(void *prhs[], int nrhs) {
 		free(buf);
 		MEM.free_all(&MEM);
 	}
-	else if (__IS_STRING_EQUAL(algorithm, print)) {
-		extern void* BEAST2_PrintResult(void* o, void* pindex);
-		//prhs[o] is "tsextract"
-		BEAST2_PrintResult(prhs[1], prhs[2]); 
-	}
-	else if (__IS_STRING_EQUAL(algorithm, disp)) { 
-	//prhs[o] is "disp"
-		IDEPrintObject(prhs[1]); 
-	}
 	else if (__IS_STRING_EQUAL(algorithm, datenum)) {
 		int y = GetScalar(prhs[1]);
 		int m = GetScalar(prhs[2]);
@@ -434,7 +650,7 @@ void * mainFunction(void *prhs[], int nrhs) {
 	else if (__IS_STRING_EQUAL(algorithm, cpu)) {
 	   ANS = NULL;
        #if defined(WIN64_OS) || defined(WIN32_OS)
-		  int GetCPUInfo();
+		  int GetCPUInfo(void);
 		  GetCPUInfo();
         #endif
 

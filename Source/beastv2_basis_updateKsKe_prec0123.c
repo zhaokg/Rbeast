@@ -34,6 +34,7 @@ static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis) {
 	basis->K = kCounter - 1;
 
 }
+
 static void VV_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
 {
 	/***************************************************************
@@ -84,12 +85,12 @@ static void SS_CalcBasisKsKeK_prec012(BEAST2_BASIS_PTR  basis)
 
 	int NUM_OF_SEG = basis->nKnot + 1L; // Number of seasonal segment		
 	int kCounter   = 1L;                  // A counter for basis terms
-	for (rI32 i = 1; i <= NUM_OF_SEG; i++) {
+	for (I32 i = 1; i <= NUM_OF_SEG; i++) {
 		//The start index is k
 		*KS++ = kCounter;
 		//Loop through all the terms of each segment: Number of terms is 2*Harmonic Order		
 		I32 order = ORDER[i - 1];
-		for (rI32 j = 1; j <= order; j++) {
+		for (I32 j = 1; j <= order; j++) {
 			//The first term of each order is SIN
 			///////////*TERM_TYPE++ = j; // 0 stands for a seasonal term
 			kCounter++;

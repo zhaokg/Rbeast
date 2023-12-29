@@ -17,8 +17,8 @@ static const int DAYS_CUMSUM[2][13] = {
 	                                    { 0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
 										{ 0, 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }  
                                       };
-static int  DAYS_Per_MONTH[13]      = {   0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-
+static const int  DAYS_Per_MONTH[13]        = {   0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+static const int  DAYS_Per_MONTH_LEAP[13]   = {   0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 // overiq.com/c-examples/c-program-to-calculate-the-day-of-year-from-the-date/
 static int IsLeapYear(int year)                      { return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);}
 static int GetNumDays(int year)                      { return IsLeapYear(year) ? 366 : 365;          }
@@ -40,12 +40,12 @@ static int YMD_from_intDOY_ag1(int doy, int y, int* M, int *D) {
 
 static int YMD_from_intDOY_ag2(int doy, int y, int* M, int* D) {
 
-	DAYS_Per_MONTH[2] = IsLeapYear(y) ? 29 : 28;
+	int *days_per_month = IsLeapYear(y) ? DAYS_Per_MONTH_LEAP : DAYS_Per_MONTH;
 	int mon;
 	for (mon = 1; mon <= 12; mon++) {
-		if (doy <= DAYS_Per_MONTH[mon])
+		if (doy <= days_per_month[mon])
 			break;
-		doy -= DAYS_Per_MONTH[mon];
+		doy -= days_per_month[mon];
 	}
 	*M = mon;
 	*D = doy;

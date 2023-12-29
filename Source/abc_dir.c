@@ -150,7 +150,7 @@ void FreeFlist(FILELIST_PTR flist) {
 void PrintFlist(FILELIST_PTR flist) {
 	if (flist == NULL) return;
 	for (int i = 0; i < flist->num; i++){
-		r_printf("%s \n", flist->offset[i]);
+		r_printf("%s \n", (char*) flist->offset[i]);
 	}
 }
 

@@ -1222,7 +1222,8 @@ static int IsRegularTS(F64PTR t, int N, F32* dt) {
 		  return;
 	  }
 	  if (IsNaN(t.data_dt)|| IsNaN(t.data_start)) {
-		  assert(0);  r_printf("ERROR: there must be something wrong with regards to deltaTime and start.\n", IsDate);
+		  assert(0); 
+		  r_printf("ERROR: there must be something wrong with regards to deltaTime and start.\n");
 		  return;
 	  }
 

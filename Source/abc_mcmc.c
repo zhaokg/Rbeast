@@ -139,7 +139,7 @@ void InsertNewRowToUpdateCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci)
 		r_cblas_scopy(N, newDataRow, 1, ci->CI95 + offset, 1); 
 		ci->samplesInserted++;
 
-		I32 nSamples = info->nSamples;
+		U32 nSamples = info->nSamples;
 		if (ci->samplesInserted == nSamples) {
 			r_mkl_simatcopy('C', 'T', N, nSamples, 1, ci->CI95, N, nSamples);
 			//make a copy of cred_upper into "cred_lower"

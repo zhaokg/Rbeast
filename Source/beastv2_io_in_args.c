@@ -691,6 +691,9 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 		U08   trendMinKnotNum, seasonMinKnotNum;
 		U08   trendMaxKnotNum, seasonMaxKnotNum,  outlierMaxKnotNum;
 
+		U08   trendLeftMargin, trendRightMargin;
+		U08   seasonLeftMargin, seasonRightMargin;
+
 		U08   seasonBasisFuncType, trendBasisFuncType,  outlierBasisFuncType;
 		U08   modelPriorType;
 		U08   precPriorType;
@@ -726,6 +729,9 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 				o.seasonMinSepDist = (tmp = GetField123Check(S, "seasonMinSepDist", 10)) ? GetScalar(tmp) : (m.seasonMinSepDist = 1);
 				o.seasonMinKnotNum = (tmp = GetField123Check(S, "seasonMinKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMinKnotNum = 1);
 				o.seasonMaxKnotNum = (tmp = GetField123Check(S, "seasonMaxKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum = 1);
+
+				o.seasonLeftMargin  = (tmp = GetField123Check(S, "seasonLeftMargin", 10)) ? GetScalar(tmp) : (m.seasonLeftMargin = 1);
+				o.seasonRightMargin = (tmp = GetField123Check(S, "seasonRightMargin", 10)) ? GetScalar(tmp) : (m.seasonRightMargin = 1);
 			}
 
 			o.trendMinOrder     = (tmp = GetField123Check(S, "trendMinOrder",  10)) ?   GetScalar(tmp) : (m.trendMinOrder = 1);
@@ -734,6 +740,9 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			o.trendMinKnotNum   = (tmp = GetField123Check(S, "trendMinKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMinKnotNum = 1);			
 			o.trendMaxKnotNum   = (tmp = GetField123Check(S, "trendMaxKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum = 1);
 			
+			o.trendLeftMargin  = (tmp = GetField123Check(S, "trendLeftMargin", 10)) ? GetScalar(tmp) : (m.trendLeftMargin = 1);
+			o.trendRightMargin = (tmp = GetField123Check(S, "trendRightMargin", 10)) ? GetScalar(tmp) : (m.trendRightMargin = 1);
+
 			if (io->meta.hasOutlierCmpnt) {
 				o.outlierMaxKnotNum = (tmp = GetField123Check(S, "outlierMaxKnotNum", 10)) ? GetScalar(tmp) : (m.outlierMaxKnotNum = 1);
 				o.outlierSigFactor = (tmp = GetFieldCheck(S, "outlierSigFactor")) ? GetScalar(tmp) : (m.outlierSigFactor = 1);
@@ -741,7 +750,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 
 			o.sigFactor         = (tmp = GetFieldCheck(S,  "sigFactor")) ?			GetScalar(tmp) : (m.sigFactor        = 1);
 
-			o.sig2              = (tmp = GetField123Check(S, "sig2",2)) ?				GetScalar(tmp) : (m.sig2 = 1);
+			o.sig2              = (tmp = GetField123Check(S, "sig2",2)) ?			GetScalar(tmp) : (m.sig2 = 1);
 			o.precValue		    = (tmp = GetField123Check(S, "precValue",5)) ?		GetScalar(tmp) : (m.precValue = 1);
 			o.alpha1			= (tmp = GetField123Check(S, "alpha1",0)) ?			GetScalar(tmp) : (m.alpha1 = 1);
 			o.alpha2			= (tmp = GetField123Check(S, "alpha2",0)) ?			GetScalar(tmp) : (m.alpha2 = 1);
@@ -794,20 +803,90 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			if (m.seasonMaxOrder)      o.seasonMaxOrder = (period / 2 - 1);    o.seasonMaxOrder = min(o.seasonMaxOrder, period );  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
 		}
 		
-		if (m.seasonMinSepDist || o.seasonMinSepDist <= 0)   o.seasonMinSepDist = period / 2;          o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
-		if (m.seasonMinKnotNum)                              o.seasonMinKnotNum = 0;                   o.seasonMinKnotNum = max(min(o.seasonMaxKnotNum, o.seasonMinKnotNum), 0);
-		if (m.seasonMaxKnotNum)                              o.seasonMaxKnotNum = min(floor(N / (o.seasonMinSepDist + 1) - 1.f), 5);  o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, floor(N / (o.seasonMinSepDist + 1) - 1.f));   o.seasonMaxKnotNum = max(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+		if (m.seasonMinSepDist || o.seasonMinSepDist <= 0)   o.seasonMinSepDist  = period / 2;         
+		o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 
+		o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1       ); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
+
+		if (m.seasonLeftMargin  || o.seasonLeftMargin  < 0)   o.seasonLeftMargin  = o.seasonMinSepDist;          
+		if (m.seasonRightMargin || o.seasonRightMargin < 0)   o.seasonRightMargin = o.seasonMinSepDist;
+
+		I32 Nleft = N - (1 + o.seasonLeftMargin + o.seasonRightMargin);
+		if (Nleft < 1) {
+			
+			if (N - (1 + o.seasonMinSepDist * 2) < 1) {
+				o.seasonLeftMargin  = 0;
+				o.seasonRightMargin = 0;
+			} else {
+				o.seasonLeftMargin  = o.seasonMinSepDist;
+				o.seasonRightMargin = o.seasonMinSepDist;
+			}
+			q_warning("WARNING: prior$seasonLeftMargin and prior$seasonRightMargin are too large, and no remaining data points are "
+				      "available as potential changepoints! Their vaules are changed to %d and %d.", o.seasonLeftMargin, o.seasonRightMargin);
+
+			Nleft = N - (1 + o.seasonLeftMargin + o.seasonRightMargin);
+		}
+
+		I32 MaxChangePointPossible = ceil((Nleft + 0.0) / (o.seasonMinSepDist + 1.0));
+
+		if (m.seasonMinKnotNum   )   o.seasonMinKnotNum = 0;                  
+		if (m.seasonMaxKnotNum==0)   o.seasonMinKnotNum =  min(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+		o.seasonMinKnotNum = max(o.seasonMinKnotNum, 0);
+		o.seasonMinKnotNum = min(o.seasonMinKnotNum, MaxChangePointPossible);
+
+		if (m.seasonMaxKnotNum)     o.seasonMaxKnotNum  = min(MaxChangePointPossible, 5);
+		o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, MaxChangePointPossible);
+		o.seasonMaxKnotNum = max(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+	}
+
+	{ // the trend component
+		if (m.trendMinOrder || o.trendMinOrder < 0)      o.trendMinOrder    = 0L;
+		if (m.trendMaxOrder)                             o.trendMaxOrder    = 1L;				                    
+		o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);	
+
+		if (m.trendMinSepDist || o.trendMinSepDist <= 0) o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ;
+		o.trendMinSepDist = max(o.trendMinSepDist, o.trendMaxOrder + 1);
+		o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
+
+		if (m.trendLeftMargin  || o.trendLeftMargin < 0)     o.trendLeftMargin = o.trendMinSepDist;
+		if (m.trendRightMargin || o.trendRightMargin < 0)    o.trendRightMargin = o.trendMinSepDist;
+
+		I32 Nleft = N - (1 + o.trendLeftMargin + o.trendRightMargin);
+		if (Nleft < 1) {
+
+			if (N - (1 + o.trendMinSepDist * 2) < 1) {
+				o.trendLeftMargin = 0;
+				o.trendRightMargin = 0;
+			}
+			else {
+				o.trendLeftMargin = o.trendMinSepDist;
+				o.trendRightMargin = o.trendMinSepDist;
+			}
+			q_warning("WARNING: prior$trendLeftMargin and prior$trendRightMargin are too large, and no remaining data points are "
+				"available as potential changepoints! Their vaules are changed to %d and %d.", o.trendRightMargin, o.trendRightMargin);
+
+			Nleft = N - (1 + o.trendLeftMargin + o.trendRightMargin);
+		}
+
+		I32 MaxChangePointPossible = ceil((Nleft + 0.0) / (o.trendMinSepDist + 1.0));
+
+
+		if (m.trendMinKnotNum)       o.trendMinKnotNum = 0;	   
+		o.trendMinKnotNum = max(min(o.trendMaxKnotNum, o.trendMinKnotNum), 0);
+
+		if (m.trendMinKnotNum)        o.trendMinKnotNum = 0;
+		if (m.trendMaxKnotNum == 0)   o.trendMinKnotNum = min(o.trendMinKnotNum, o.trendMaxKnotNum);
+		o.trendMinKnotNum = max(o.trendMinKnotNum, 0);
+		o.trendMinKnotNum = min(o.trendMinKnotNum, MaxChangePointPossible);
+
+		if (m.trendMaxKnotNum)     o.trendMaxKnotNum = min(MaxChangePointPossible, 10);
+		o.trendMaxKnotNum = min(o.trendMaxKnotNum, MaxChangePointPossible);
+		o.trendMaxKnotNum = max(o.trendMaxKnotNum, o.trendMinKnotNum);	 
 	}
 	
-	if (m.trendMinOrder)                             o.trendMinOrder    = 0L;				                      o.trendMinOrder	  = max(o.trendMinOrder, 0L);
-	if (m.trendMaxOrder)                             o.trendMaxOrder    = 1L;				                      o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);	
-	if (m.trendMinSepDist || o.trendMinSepDist <= 0) o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ; o.trendMinSepDist = max(o.trendMinSepDist, o.trendMaxOrder + 1);	o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
-	if (m.trendMinKnotNum)                           o.trendMinKnotNum = 0;	                                      o.trendMinKnotNum = max(min(o.trendMaxKnotNum, o.trendMinKnotNum), 0);
-	if (m.trendMaxKnotNum)                           o.trendMaxKnotNum = min(floor(N / (o.trendMinSepDist + 1) - 1.f), 10); o.trendMaxKnotNum = min(o.trendMaxKnotNum, floor(N / (o.trendMinSepDist + 1) - 1.f)); o.trendMaxKnotNum = max(o.trendMaxKnotNum, o.trendMinKnotNum);
-
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;      o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;    
+	o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
 	
-	if (m.K_MAX )            o.K_MAX            = 500;                  
+	if (m.K_MAX )            o.K_MAX            = 550;                  
 	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = max(o.sigFactor,        1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor = 2.5;            o.outlierSigFactor = max(o.outlierSigFactor, 1.5);
 

@@ -14,7 +14,7 @@
  
 // file externsion: .mexw64 for Matlab, .pyd for Pyhton
 
-#define R_INTERFACE  1
+#define R_INTERFACE   0
 #define M_INTERFACE   0
 #define P_INTERFACE    0
 /*------------------------------------------------------------*/
@@ -222,6 +222,28 @@
 #endif
 
  
+// CHeck if it is the MUSL-linux C library
+// https://stackoverflow.com/questions/58177815/how-to-actually-detect-musl-libc
+#if   defined(LINUX_OS) && ( defined(GCC_COMPILER) || defined(CLANG_COMPILER) )
+
+	#ifdef _GNU_SOURCE 
+		#include <features.h>
+		#ifndef __USE_GNU
+			#define __MUSL__ 
+		#endif
+	#else
+		#define _GNU_SOURCE
+		#include <features.h>
+		#ifndef __USE_GNU
+		#define __MUSL__ 
+		#endif
+		#undef _GNU_SOURCE /* don't contaminate other includes unnecessarily */
+	#endif
+
+#endif
+
+
+
 
 /* yes I know, the top of this file is quite ugly */
 #ifdef MSVC_COMPILER

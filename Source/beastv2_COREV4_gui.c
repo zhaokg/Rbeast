@@ -51,7 +51,7 @@ void beast2_main_corev4_gui(void)
 	// Do not use 'const MemPointers MEM' bcz Clang will asssume other fields as zeros (e.g., alloc, and alloc0).
 	MemPointers MEM = (MemPointers){.init = mem_init,};
 	MEM.init(&MEM);
-	MEM.checkHeader = 1;
+	//MEM.checkHeader = 1;
 	//mem = &MEM;
 
 	VSLStreamStatePtr stream;
@@ -744,7 +744,15 @@ void beast2_main_corev4_gui(void)
 					//Find the good positions of the proposed MOVE
 					//Then update the knotLists and order
 					/****************************************************/
-					basis->UpdateGoodVec(basis, &NEW, Npad16);
+
+					if (basis->type == OUTLIERID) {
+						basis->UpdateGoodVec_KnotList(basis, &NEW, Npad16);
+					} else {
+						basis->KNOT[-1] = basis->KNOT[INDEX_FakeStart];	basis->KNOT[basis->nKnot] = basis->KNOT[INDEX_FakeEnd];
+						basis->UpdateGoodVec_KnotList(basis, &NEW, Npad16);
+						basis->KNOT[-1] = 1; 	                      	basis->KNOT[basis->nKnot] = N + 1L;
+					}					
+
 					basis->CalcBasisKsKeK_TermType(basis);
 					UpdateBasisKbase(MODEL.b, MODEL.NUMBASIS, basis-MODEL.b);//basisIdx=basis-b Re-compute the K indices of the bases after the basisID 
 	
@@ -998,7 +1006,7 @@ void beast2_main_corev4_gui(void)
 				//
 				/**********************************************/
 
-				MEM.verify_header(&MEM);
+				//MEM.verify_header(&MEM);
 
 				sample++;
 
@@ -1020,6 +1028,7 @@ void beast2_main_corev4_gui(void)
 					r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, q, q, q, 1.f, MODEL.sig2, q, MODEL.sig2, q, 0.f, MEMBUF, q);
 					r_ippsAdd_32f_I(MEMBUF, resultChain.sig2,  q*q);
 				}
+
 
 				F32PTR BETA = (extra.useMeanOrRndBeta == 0) ? MODEL.curr.beta_mean : MODEL.beta;
 				{
@@ -1709,15 +1718,24 @@ void beast2_main_corev4_gui(void)
 			I32   oMAXNUMKNOT = MODEL.oid >= 0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
 
 			I32   sMINSEPDIST = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.minSepDist : -9999999;
-			I32   tMINSEPDIST = MODEL.tid >= 0 ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
-			I32   oMINSEPDIST = MODEL.oid >= 0 ? 0 : -9999999;  //changed from 1 to 0 to pick up consecutive outlier spikes.
+			I32   tMINSEPDIST = MODEL.tid >= 0                   ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
+			I32   oMINSEPDIST = MODEL.oid >= 0                   ? 0 : -9999999;  //changed from 1 to 0 to pick up consecutive outlier spikes.
+
+			I32   sLeftMargin = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.leftMargin : -9999999;
+			I32   tLeftMargin = MODEL.tid >= 0                   ? MODEL.b[MODEL.tid].prior.leftMargin : -9999999;
+			I32   oLeftMargin = MODEL.oid >= 0                   ? 0 : -9999999;  //changed from 1 to 0 to pick up consecutive outlier spikes.
+
+
+			I32   sRightMargin = MODEL.sid >= 0 || MODEL.vid >= 0 ? MODEL.b[0].prior.rightMargin : -9999999;
+			I32   tRightMargin = MODEL.tid >= 0                   ? MODEL.b[MODEL.tid].prior.rightMargin : -9999999;
+			I32   oRightMargin = MODEL.oid >= 0                   ? 0 : -9999999;  //changed from 1 to 0 to pick up consecutive outlier spikes.
 
 			//--------------Season----------------------------
 			if (extra.computeSeasonChngpt && (MODEL.sid >=0 || MODEL.vid>0 ))  	{
-				cptNumber      = sMAXNUMKNOT;
-				trueCptNumber = FindChangepoint((F32PTR)result.scpOccPr, mem, threshold, cptList, cptCIList, N, sMINSEPDIST, cptNumber);
-				//In the returned result, cptList is a list of detected changepoints, which are all zero-based indices.
-				//That is, a changepoint occurring at t1 has a value of 0.
+				cptNumber     = sMAXNUMKNOT;
+				trueCptNumber = FindChangepoint_LeftRightMargins((F32PTR)result.scpOccPr, mem, threshold, cptList, cptCIList, N, sMINSEPDIST, cptNumber,sLeftMargin, sRightMargin);
+				// In the returned result, cptList is a list of detected changepoints, which are all zero-based indices.
+				// That is, a changepoint occurring at t1 has a value of 0.
 
 				for (int i = 0; i < trueCptNumber; i++) {
 					*(result.scp + i)	  = (F32)(*(cptList + i)) * dT + T0;
@@ -1745,7 +1763,7 @@ void beast2_main_corev4_gui(void)
 			//--------------Trend----------------------------
 			if (extra.computeTrendChngpt) {
 				cptNumber     = tMAXNUMKNOT;
-				trueCptNumber = FindChangepoint((F32PTR)result.tcpOccPr, mem, threshold, cptList, cptCIList, N, tMINSEPDIST, cptNumber);
+				trueCptNumber = FindChangepoint_LeftRightMargins((F32PTR)result.tcpOccPr, mem, threshold, cptList, cptCIList, N, tMINSEPDIST, cptNumber, tLeftMargin, tRightMargin);
 				for (int i = 0; i < trueCptNumber; i++) {
 					*(result.tcp + i)          = (F32)(*(cptList + i)) * dT + T0,
 					*(result.tcpPr + i)         = (F32)mem[i];
@@ -1771,9 +1789,9 @@ void beast2_main_corev4_gui(void)
 	 
 
 			/**************************************************************************************************/
-			#define GET_CHANGPOINTS(NcpProb, KNOTNUM, MINSEP, MAX_KNOTNUM, Y, CpOccPr, CP, CPPROB, CP_CHANGE, CP_CI)    \
+			#define GET_CHANGPOINTS(NcpProb, KNOTNUM, MINSEP, LeftMargin, RightMargin, MAX_KNOTNUM, Y, CpOccPr, CP, CPPROB, CP_CHANGE, CP_CI)    \
 			cptNumber     = MAX_KNOTNUM;  \
-			trueCptNumber = FindChangepoint((F32PTR)CpOccPr, mem, threshold, cptList, cptCIList, N, MINSEP, cptNumber);\
+			trueCptNumber = FindChangepoint_LeftRightMargins((F32PTR)CpOccPr, mem, threshold, cptList, cptCIList, N, MINSEP, cptNumber, LeftMargin, RightMargin);\
 			for (int i = 0; i < trueCptNumber; i++) {\
 				*(CP + i)        = (F32) cptList[i]* dT + T0,\
 				*(CPPROB+ i)     = (F32) mem[i];\
@@ -1794,32 +1812,32 @@ void beast2_main_corev4_gui(void)
 			/**************************************************************************************************/
 
 			if (extra.tallyPosNegSeasonJump && MODEL.sid >= 0) {
-				GET_CHANGPOINTS(result.spos_ncpPr ,result.spos_ncp, sMINSEPDIST, sMAXNUMKNOT, result.samp,
+				GET_CHANGPOINTS(result.spos_ncpPr ,result.spos_ncp, sMINSEPDIST, sLeftMargin, sRightMargin, sMAXNUMKNOT, result.samp,
 					result.spos_cpOccPr, result.spos_cp, result.spos_cpPr, result.spos_cpAbruptChange, result.spos_cpCI);
 
-				GET_CHANGPOINTS(result.sneg_ncpPr,result.sneg_ncp, sMINSEPDIST, sMAXNUMKNOT, result.samp,
+				GET_CHANGPOINTS(result.sneg_ncpPr,result.sneg_ncp, sMINSEPDIST, sLeftMargin, sRightMargin, sMAXNUMKNOT, result.samp,
 					result.sneg_cpOccPr, result.sneg_cp, result.sneg_cpPr, result.sneg_cpAbruptChange, result.sneg_cpCI);
 			}			
 			if (extra.tallyPosNegTrendJump) {
-				GET_CHANGPOINTS(result.tpos_ncpPr, result.tpos_ncp, tMINSEPDIST, tMAXNUMKNOT, result.tY,
+				GET_CHANGPOINTS(result.tpos_ncpPr, result.tpos_ncp, tMINSEPDIST, tLeftMargin, tRightMargin, tMAXNUMKNOT, result.tY,
 					result.tpos_cpOccPr, result.tpos_cp, result.tpos_cpPr, result.tpos_cpAbruptChange, result.tpos_cpCI);
 
-				GET_CHANGPOINTS(result.tneg_ncpPr, result.tneg_ncp, tMINSEPDIST, tMAXNUMKNOT, result.tY,
+				GET_CHANGPOINTS(result.tneg_ncpPr, result.tneg_ncp, tMINSEPDIST, tLeftMargin, tRightMargin, tMAXNUMKNOT, result.tY,
 					result.tneg_cpOccPr, result.tneg_cp, result.tneg_cpPr, result.tneg_cpAbruptChange, result.tneg_cpCI);
 			}
 			if (extra.tallyIncDecTrendJump) {
-				GET_CHANGPOINTS(result.tinc_ncpPr,result.tinc_ncp, tMINSEPDIST, tMAXNUMKNOT, result.tslp,
+				GET_CHANGPOINTS(result.tinc_ncpPr,result.tinc_ncp, tMINSEPDIST, tLeftMargin, tRightMargin, tMAXNUMKNOT, result.tslp,
 					result.tinc_cpOccPr, result.tinc_cp, result.tinc_cpPr, result.tinc_cpAbruptChange, result.tinc_cpCI);
 
-				GET_CHANGPOINTS(result.tdec_ncpPr,result.tdec_ncp, tMINSEPDIST, tMAXNUMKNOT, result.tslp,
+				GET_CHANGPOINTS(result.tdec_ncpPr,result.tdec_ncp, tMINSEPDIST, tLeftMargin, tRightMargin, tMAXNUMKNOT, result.tslp,
 					result.tdec_cpOccPr, result.tdec_cp, result.tdec_cpPr, result.tdec_cpAbruptChange, result.tdec_cpCI);
 			}
 
-
+		
 			/**************************************************************************************************/
-			#define OGET_CHANGPOINTS(NcpProb, KNOTNUM,MINSEP, MAX_KNOTNUM, PROBCURVE, CP, CPPROB,CP_CI)    \
+			#define OGET_CHANGPOINTS(NcpProb, KNOTNUM,MINSEP,LeftMargin, RightMargin, MAX_KNOTNUM, PROBCURVE, CP, CPPROB,CP_CI)    \
 			cptNumber     = MAX_KNOTNUM;  \
-			trueCptNumber = FindChangepoint((F32PTR)PROBCURVE, mem, threshold, cptList, cptCIList, N, MINSEP, cptNumber);\
+			trueCptNumber = FindChangepoint_LeftRightMargins((F32PTR)PROBCURVE, mem, threshold, cptList, cptCIList, N, MINSEP, cptNumber, LeftMargin, RightMargin);\
 			for (int i = 0; i < trueCptNumber; i++) {\
 				*(CP + i)        = (F32) cptList[i]* dT + T0;\
 				*(CPPROB+ i)     = (F32) mem[i];\
@@ -1838,14 +1856,14 @@ void beast2_main_corev4_gui(void)
 			/**************************************************************************************************/
 
 			if (extra.computeOutlierChngpt) {
-				OGET_CHANGPOINTS(result.oncpPr,result.oncp, oMINSEPDIST, oMAXNUMKNOT, result.ocpOccPr, result.ocp, result.ocpPr, result.ocpCI);
+				OGET_CHANGPOINTS(result.oncpPr,result.oncp, oMINSEPDIST, oLeftMargin, oRightMargin, oMAXNUMKNOT, result.ocpOccPr, result.ocp, result.ocpPr, result.ocpCI);
 			}
 
 			if (extra.tallyPosNegOutliers && MODEL.oid >=0) {
-				OGET_CHANGPOINTS(result.opos_ncpPr,result.opos_ncp, oMINSEPDIST, oMAXNUMKNOT,
+				OGET_CHANGPOINTS(result.opos_ncpPr,result.opos_ncp, oMINSEPDIST, oLeftMargin, oRightMargin, oMAXNUMKNOT,
 					result.opos_cpOccPr, result.opos_cp, result.opos_cpPr, result.opos_cpCI);
 
-				OGET_CHANGPOINTS(result.oneg_ncpPr,result.oneg_ncp, oMINSEPDIST, oMAXNUMKNOT,
+				OGET_CHANGPOINTS(result.oneg_ncpPr,result.oneg_ncp, oMINSEPDIST, oLeftMargin, oRightMargin, oMAXNUMKNOT,
 					result.oneg_cpOccPr, result.oneg_cp, result.oneg_cpPr, result.oneg_cpCI);
 			}
 

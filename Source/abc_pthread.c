@@ -589,7 +589,7 @@ int sched_getcpu(void) {
     uint64_t  currentThreadAffinity = grpAffinity.Mask;
 }
 
-int GetCPUInfo() {
+int GetCPUInfo(void) {
 
     if (cpuInfo.logicalProcessorCount > 0) {
         // Have alrady been obtained previously
@@ -612,15 +612,15 @@ int GetCPUInfo() {
 void PrintCPUInfo() {
 
     r_printf("\nCPU Information:\n");
-    r_printf(" - Number of NUMA nodes: %d\n", cpuInfo.numaNodeCount);
-    r_printf((" - Number of physical processors (sockets): %d\n"), cpuInfo.processorPackageCount);
-    r_printf((" - Number of processor cores: %d\n"), cpuInfo.processorCoreCount);
-    r_printf((" - Number of logical processors: %d\n"), cpuInfo.logicalProcessorCount);
-    r_printf(" - Number of processor groups: %d\n", cpuInfo.processorGroupCount);
+    r_printf(" - Number of NUMA nodes: %d\n",  (int)cpuInfo.numaNodeCount);
+    r_printf((" - Number of physical processors (sockets): %d\n"), (int)cpuInfo.processorPackageCount);
+    r_printf((" - Number of processor cores: %d\n"), (int)cpuInfo.processorCoreCount);
+    r_printf((" - Number of logical processors: %d\n"), (int)cpuInfo.logicalProcessorCount);
+    r_printf(" - Number of processor groups: %d\n", (int)cpuInfo.processorGroupCount);
     for (int i = 0; i < cpuInfo.processorGroupCount; i++) {
-        r_printf(" -- Processor group #%d: %d cores\n", i, cpuInfo.coreCountPerGrp[i]);
+        r_printf(" -- Processor group #%d: %d cores\n", i, (int)cpuInfo.coreCountPerGrp[i]);
     }
-    r_printf((" - Number of processor L1/L2/L3 caches: %d/%d/%d\n"), cpuInfo.processorL1CacheCount, cpuInfo.processorL2CacheCount, cpuInfo.processorL3CacheCount);
+    r_printf((" - Number of processor L1/L2/L3 caches: %d/%d/%d\n"), (int)cpuInfo.processorL1CacheCount, (int)cpuInfo.processorL2CacheCount, (int)cpuInfo.processorL3CacheCount);
 
     //r_printf(" - Group ID of current thread: %d\n", cpuInfo.currentGroup);
     //r_printf(" - Core ID of current thread: %d\n", cpuInfo.currentCoreNumber);

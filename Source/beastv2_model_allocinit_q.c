@@ -15,7 +15,7 @@
 extern void* Get_Propose(I08, BEAST2_OPTIONS_PTR);
 extern pfnGenTerms * Get_GenTerms(I08 id, BEAST2_PRIOR_PTR prior);
 extern void* Get_CalcBasisKsKeK(I08 id, I08 precPriorType);
-extern void* Get_UpdateGoodVec(I08);
+extern void* Get_UpdateGoodVec_KnotList(I08);
 extern void* Get_ComputeY(I08, BEAST2_OPTIONS_PTR);
 extern void* Get_ModelPrior(I08);
 extern void* Get_GenRandomBasis(I08);
@@ -31,15 +31,15 @@ extern void PreCaclModelNumber(I32 minOrder, I32 maxOrder, I32 maxNumseg, I32 N,
 
 void  ReInit_PrecValues(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt) {
 // Called before running a new time series to make sure the existant values of precVec have no NAN
-	I32 hasNaNs = 0;
+	I32 hasNaNsInfs = 0;
 	for (int i = 0; i < MODEL.nPrec; i++) {
-			if (IsNaN(MODEL.precVec[i])) {
-				hasNaNs = 1L;
+			if (IsNaN(MODEL.precVec[i]) || IsInf(MODEL.precVec[i])) {
+				hasNaNsInfs = 1L;
 				break;
 			}				
 	}
 
-	if (hasNaNs) {
+	if (hasNaNsInfs) {
 			F32 precValue = opt->prior.precValue;
 			r_ippsSet_32f(precValue,       MODEL.precVec,    MODEL.nPrec);
 			r_ippsSet_32f(logf(precValue), MODEL.logPrecVec, MODEL.nPrec);
@@ -267,9 +267,11 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.trendMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.trendMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.trendMinSepDist;
+			basis->prior.leftMargin  = opt->prior.trendLeftMargin;
+			basis->prior.rightMargin = opt->prior.trendRightMargin;
 			basis->prior.minOrder   = opt->prior.trendMinOrder;
 			basis->prior.maxOrder   = opt->prior.trendMaxOrder;
-			isComponentFixed[i] = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
+			isComponentFixed[i]    = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
 
 			AllocInitBasisMEM(basis, N, K_MAX, MEM);
 
@@ -348,6 +350,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin = opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = opt->prior.seasonMaxOrder;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
@@ -425,6 +429,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
+			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin = opt->prior.seasonLeftMargin;
 			basis->prior.minOrder   = -1;//opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = -1;//opt->prior.seasonMaxOrder;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
@@ -508,6 +514,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
+			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin = opt->prior.seasonLeftMargin;
 			basis->prior.minOrder   = opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = opt->prior.seasonMaxOrder;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
@@ -615,7 +623,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 		}
 
 		basis->Propose			       = Get_Propose(type, opt);		
-		basis->UpdateGoodVec	       = Get_UpdateGoodVec(type);
+		basis->UpdateGoodVec_KnotList  = Get_UpdateGoodVec_KnotList(type);
 		basis->ComputeY			       = Get_ComputeY(type, opt);
 		basis->ModelPrior		       = Get_ModelPrior(opt->prior.modelPriorType);
 		basis->GenTerms				   = Get_GenTerms(type, &opt->prior);

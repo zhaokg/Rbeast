@@ -102,6 +102,7 @@ void BEAST2_EvaluateModel(
 				I32 k  = basis->GenTerms(Xt_mars + Npad * K, N, &seg, &(basis->bConst));
 				K += k;
 			}
+
 		} 	else	{
 			int         numOfSeg = basis->nKnot;
 			TKNOT_PTR   knotList = basis->KNOT;
@@ -256,8 +257,8 @@ I32  GetInfoBandList(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Klastcol)
 
 		BEAST2_BASIS_PTR b = model->b + basisID;
 
-		if (b->type != OUTLIERID)
-		{
+		if (b->type != OUTLIERID) {
+ 
 			I32 numSeg = b->nKnot + 1;
 			for (int j = 0; j < numSeg; j++) {
 				I32 Kbase = b->Kbase;
@@ -272,9 +273,9 @@ I32  GetInfoBandList(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Klastcol)
 					QUITFLAG = 1;	break;
 				}
 			}
-		}
-		else
-		{
+
+		} 
+		else {
 			I32 numSeg = b->nKnot;
 			for (int j = 0; j < numSeg; j++) {
 				I32 Kbase = b->Kbase;
@@ -296,13 +297,14 @@ I32  GetInfoBandList(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Klastcol)
 	}
 	return numBands;
 }
+
 I32  GetInfoBandList_post(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Kstartcol) {
 	I32 numBands = 0;
 	for (int basisID = 0; basisID < model->NUMBASIS; basisID++) {
 
 		BEAST2_BASIS_PTR b = model->b + basisID;
-		if (b->type != OUTLIERID)
-		{
+		if (b->type != OUTLIERID) {
+
 			for (int j = 0; j < b->nKnot + 1; j++) {
 				I32  Kbase = b->Kbase;
 				if (Kstartcol <= (Kbase + b->ke[j])) {
@@ -312,10 +314,11 @@ I32  GetInfoBandList_post(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Ksta
 					info++;
 					numBands++;
 				}
+			
 			}
+
 		}
-		else
-		{
+		else {
 			for (int j = 0; j < b->nKnot; j++) {
 				I32  Kbase = b->Kbase;
 				if (Kstartcol <= (Kbase + b->ke[j])) {
@@ -435,6 +438,7 @@ void MR_EvaluateModel(
 			TKNOT_PTR   KNOT	= basis->KNOT;
 			TORDER_PTR  ORDER   = basis->ORDER;
 
+
 			BEAST2_BASESEG seg;
 			seg.ORDER1 = basis->type == TRENDID ? 0 : 1;
 			//For season terms: 1..(1)....(2)...(|sSegNum-1)...N (|N+1)
@@ -448,6 +452,7 @@ void MR_EvaluateModel(
 				I32 k  = basis->GenTerms(Xt_mars + Npad * K, N, &seg, &(basis->bConst));
 				K += k;
 			}
+
 		} 	else	{
 			int         numOfSeg = basis->nKnot;
 			TKNOT_PTR   knotList = basis->KNOT;

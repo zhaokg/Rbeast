@@ -44,7 +44,8 @@
 
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
-#ifdef CLANG_COMPILER
+#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
+
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
     //https://stackoverflow.com/questions/46165752/does-clang-have-something-like-pragma-gcc-target
@@ -52,7 +53,8 @@
 	//#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq"))), apply_to=function)
     //#pragma clang attribute pop
 #endif
-#ifdef  GCC_COMPILER
+
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -369,17 +371,19 @@ void avx_pcg_random_vec8_slow(local_pcg32_random_t* rng,U32PTR rnd, I32 N) {
 
 
 void SetupPCG_AVX2(void){
+
 	 local_pcg_set_seed = avx_pcg_set_seed;
 	 //local_pcg_random = avx_pcg_random;
 	 local_pcg_random=avx_pcg_random_with_internalbuf;
 	 local_pcg_print_state = avx_pcg_print_state;
  
 }
+
 #endif
 
 
 ///////////////////////////////////////////////////////////////////////////
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     //pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

@@ -164,28 +164,28 @@ void i32_transpose_inplace_prev(I32PTR Mat, I32 NROW, I32 NCOL) {
 	}
 }
 
-void i32_transpose_inplace_prev_two_ends(I32PTR Mat, I32 NROW, I32 NCOL) {
+void i32_transpose_inplace_prev_two_ends(I32PTR Mat, U64 NROW, U64 NCOL) {
 	// rosettacode.org/wiki/Matrix_transposition#C
 	if (NROW == 1 || NCOL == 1) { return; }
 
 	I32 NfixedPoints = greatest_common_divsor(NROW - 1, NCOL - 1) + 1L;
 	I32 Nprocessed   = NfixedPoints;
 	I08 WORKED[Nwork + 1] = { 0, };
-	I32 K = NROW * NCOL - 1;
-	for (I32 start = 1; start <= K - 1; start++) {
+	U64 K            = NROW * NCOL - 1;        // use int64 t- avoid ovwerflow in PREV()
+	for (U64 start = 1; start <= K - 1; start++) {
 		if (start <= Nwork && WORKED[start]) 	continue; 		// has been already rotated		
 		if (Nprocessed > K)                     break;
 
-		int  curr = start;
-		int  prev = PREV(start);
+		U64  curr = start;
+		U64  prev = PREV(start);
 		if (prev <= start) continue; // it s a fixed point or has already been processed
 
 		if (start <= Nwork) {
 			// has never been rotrated and start should aslo be the smallest index because all the previous s have been procesed
 			// WORKED[start] = 1; // Not really needed bcz this element will never be visited 
-			int  startCompanion = K-start;
-			int  prevCompanion  = K - prev;
-			int  currCompanion = startCompanion;
+			U64  startCompanion = K-start;
+			U64  prevCompanion  = K - prev;
+			U64  currCompanion  = startCompanion;
 
 			WORKED[(currCompanion <= Nwork) * currCompanion] = 1;
 
@@ -220,7 +220,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat, I32 NROW, I32 NCOL) {
 			// Do know not whether or not s has been rotated
 			// No need to mark WORKED because it has already pass the tracked region of size Nwork
 
-			I32 next = start; // start is not a fixed point because it has already been checked above
+			U64 next = start; // start is not a fixed point because it has already been checked above
 			do {
 				next = NEXT(next);
 			} while (next > start);
@@ -243,7 +243,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat, I32 NROW, I32 NCOL) {
 	}
 }
  
-void i32_permute3d_inplace_abc123_acb132(I32PTR Mat, I32 NROW, I32 NCOL, int NZ) {
+void i32_permute3d_inplace_abc123_acb132(I32PTR Mat, U64  NROW, U64 NCOL, int NZ) {
    // THis is essentilly the 2D tranpose, except each element is the Nrow-elem vector.
    // Must allocate a temp buf to hold two such elmeents: one for the cycle from one end,
   // another for the cycle from the other end
@@ -270,25 +270,25 @@ void i32_permute3d_inplace_abc123_acb132(I32PTR Mat, I32 NROW, I32 NCOL, int NZ)
 	I32PTR tmpStartValueCompanion = tempbuf + ElemSize;
 
 	I32 NfixedPoints = greatest_common_divsor(NROW - 1, NCOL - 1) + 1L;
-	I32 Nprocessed = NfixedPoints;
+	I32 Nprocessed   = NfixedPoints;
 	I08 WORKED[Nwork + 1] = { 0, };
-	I32 K                 = NROW * NCOL - 1;
+	U64 K             = NROW * NCOL - 1;
 
-	for (I32 start = 1; start <= K - 1; start++) {
+	for (U64 start = 1; start <= K - 1; start++) {
 
 		if (start <= Nwork && WORKED[start]) 	continue; 		// has been already rotated		
 		if (Nprocessed > K)                     break;
 
-		int  curr = start;
-		int  prev = PREV(start);
+		U64  curr = start;
+		U64  prev = PREV(start);
 		if (prev <= start) continue; // it s a fixed point or has already been processed
 
 		if (start <= Nwork) {
 			// has never been rotrated and start should aslo be the smallest index because all the previous s have been procesed
 			// WORKED[start] = 1; // Not really needed bcz this element will never be visited 
-			int  startCompanion = K - start;
-			int  prevCompanion = K - prev;
-			int  currCompanion = startCompanion;
+			U64  startCompanion = K - start;
+			U64  prevCompanion  = K - prev;
+			U64  currCompanion  = startCompanion;
 
 			WORKED[(currCompanion <= Nwork) * currCompanion] = 1;
 
@@ -325,7 +325,7 @@ void i32_permute3d_inplace_abc123_acb132(I32PTR Mat, I32 NROW, I32 NCOL, int NZ)
 			// Do know not whether or not s has been rotated
 			// No need to mark WORKED because it has already pass the tracked region of size Nwork
 
-			I32 next = start; // start is not a fixed point because it has already been checked above
+			U64 next = start; // start is not a fixed point because it has already been checked above
 			do {
 				next = NEXT(next);
 			} while (next > start);

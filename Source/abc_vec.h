@@ -114,7 +114,7 @@ extern "C" {
 	extern void f32_transpose_inplace(F32PTR Mat, I32 ROW, I32 COL);
 	extern void i32_transpose_inplace(I32PTR Mat, I32 NROW, I32 NCOL);
 	void i32_transpose_inplace_prev(I32PTR Mat, I32 NROW, I32 NCOL);
-	void i32_transpose_inplace_prev_two_ends(I32PTR Mat, I32 NROW, I32 NCOL);
+	void i32_transpose_inplace_prev_two_ends(I32PTR Mat, U64 NROW, U64 NCOL);
 	extern void f32_fill_val_matrixdiag(F32PTR mat, const F32 value, I32 N);
 	extern void f32_add_val_matrixdiag(F32PTR mat, const F32 value, I32 N);
 	extern F32 f32_sum_matrixdiag(F32PTR mat, I32 N);

@@ -191,7 +191,7 @@ I32  tsAggegrationPrepare_Old(F32PTR oldTime, I32 Nold, F32 dT, I32PTR *SortedTi
 	/************************************************/
 	I32PTR  SORTED_IDX = malloc(sizeof(I32)*Nold);	
 	for (I32 i = 0; i < Nold; i++) SORTED_IDX[i] = i;
-	QuickSortA(oldTime, SORTED_IDX, 0, Nold - 1);	
+	f32_QuickSortA(oldTime, SORTED_IDX, 0, Nold - 1);	
 	*SortedTimeIdx = SORTED_IDX;
 	/************************************************/
 

@@ -44,13 +44,13 @@ typedef U08 TORDER, *_restrict TORDER_PTR;
 /*************************************************/
 
 typedef struct BEAST2_METADATA {
-	I08		 nrhs;
-	I08      detrend;
-	I08      deseasonalize;	
- 	I08      seasonForm;
-	I08      IsPeriodEstimated;
-	I08      hasSeasonCmpnt;	
-	I08      hasOutlierCmpnt;	
+	I08	    nrhs;
+	I08     detrend;
+	I08     deseasonalize;	
+ 	I08     seasonForm;
+	I08     IsPeriodEstimated;
+	I08     hasSeasonCmpnt;	
+	I08     hasOutlierCmpnt;	
 	
 	I08     whichDimIsTime;
 	F32     period;
@@ -82,7 +82,11 @@ typedef struct BEAST2_PRIOR {
 
 	I16   seasonMinOrder,   seasonMaxOrder;
 	I16   trendMinOrder,    trendMaxOrder;
+
 	I32   trendMinSepDist,  seasonMinSepDist;
+
+	I32   trendLeftMargin,  trendRightMargin;
+	I32   seasonLeftMargin, seasonRightMargin;
 
 	I16   trendMinKnotNum,  seasonMinKnotNum;
 	I16   trendMaxKnotNum,  seasonMaxKnotNum;
@@ -291,7 +295,7 @@ typedef struct PROPOSE_STRUCT {
 
  
 typedef struct BEAST2_BASESEG {
-	I32 R1, R2, K; 
+	I32 R1, R2, K;
 	union {
 		struct {I16 ORDER1, ORDER2;}; //for trend, harmonic, and SVD(??) only
 		I32     outlierKnot;          //used only for the outlier component
@@ -322,9 +326,9 @@ typedef struct _NEWTERM {
 //period is used as "basis->bConst.dummy.period" in the following functons: computeXY,Alloc_Init_PrecPrior,DD_CalcBasisKsKeK_prec0123
 //TERMS needed only if meta->io.deseasonlaized=TRUE
 typedef struct DUMMY_CONS { F32PTR TERMS; F32PTR SQRT_N_div_n; I32 period; }          DUMMY_CONST;
-typedef struct SVD_CONS     { F32PTR TERMS; F32PTR SQR_CSUM;}                            SVD_CONST;
+typedef struct SVD_CONS     { F32PTR TERMS; F32PTR SQR_CSUM;}                         SVD_CONST;
 typedef struct SEASON_CONST { F32PTR TERMS, SQR_CSUM, SCALE_FACTOR;}				    SEASON_CONST;
-typedef struct TREND_CONS   { F32PTR TERMS, COEFF_A, COEFF_B, INV_SQR;}	               TREND_CONST;
+typedef struct TREND_CONS   { F32PTR TERMS, COEFF_A, COEFF_B, INV_SQR;}	             TREND_CONST;
 typedef struct OUTLIER_CONS { F32    SQRTN, SQRTN_1; }		                           OUTLIER_CONST;
  
 typedef union  {
@@ -346,7 +350,7 @@ typedef struct BEAST2_BASIS {
 		void        (*Propose)(BEAST2_BASIS_PTR, NEWTERM_PTR, NEWCOLINFO_PTR, PROP_DATA*);
 		pfnGenTerms GenTerms;
 		int         (*CalcBasisKsKeK_TermType)(BEAST2_BASIS_PTR  basis);
-		void        (*UpdateGoodVec)(BEAST2_BASIS_PTR basis, NEWTERM_PTR new, I32 Npad16_not_used);
+		void        (*UpdateGoodVec_KnotList)(BEAST2_BASIS_PTR basis, NEWTERM_PTR new, I32 Npad16_not_used);
 		void        (*ComputeY)(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Npad);
 		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis, NEWCOLINFO_PTR newcol, NEWTERM_PTR new);
 	};	
@@ -356,7 +360,7 @@ typedef struct BEAST2_BASIS {
 	F64PTR   priorVec;
 
 	struct {
-		TKNOT  minSepDist;
+		TKNOT  minSepDist, leftMargin, rightMargin;
 		I16    minKnotNum;
 		I16    maxKnotNum;
 		TORDER minOrder, maxOrder;
@@ -394,7 +398,7 @@ typedef struct {
 	F32PTR precXtXDiag;
 	I16PTR nTermsPerPrecGrp;
 
-	F32PTR   alpha2Q_star;  // made to be a pointer for MRBEAST
+	F32PTR alpha2Q_star;  // made to be a pointer for MRBEAST
 
 	F32    marg_lik;
 	I32    K;
@@ -421,7 +425,7 @@ typedef struct BEAST2_MODEL {
 	
 	I16     nPrec;
 	F32PTR  precVec;
-	F32PTR  logPrecVec;	
+	F32PTR  logPrecVec;
  
 	/////////////////
 	/*
@@ -441,10 +445,13 @@ typedef struct BEAST2_MODEL {
 
 
 typedef struct {
-	I32              minSepDist;
+	I32              minSepDist, leftMargin, rightMargin;
 	BEAST2_YINFO_PTR yInfo;
 } KNOT2BINVEC, * _restrict KNOT2BINVEC_PTR;
 
+
+#define INDEX_FakeStart -3
+#define INDEX_FakeEnd   -2
  
 
 #elif defined(SOLARIS_COMPILER)

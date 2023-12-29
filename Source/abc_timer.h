@@ -16,20 +16,24 @@ extern "C" {
     #include <mach/mach_time.h>
 #endif
 
+
 //stackoverflow.com/questions/264350/is-there-an-alternative-for-sleep-in-c/264378#264378
 #ifdef _WIN32
     #include <windows.h>
-#elif _POSIX_C_SOURCE >= 199309L
-    #include <time.h>   // for nanosleep
+#elif _POSIX_C_SOURCE >= 199309L || defined (__MUSL__)  // MUSL library
+    #include <time.h>  // for  timespec
+    #include <time.h>    // for nanosleep
 #else
     #include <unistd.h> // for usleep
+    #include <sys/time.h>  // for timeval
 #endif
-
+ 
+//https://stackoverflow.com/questions/10918206/cross-platform-sleep-function-for-c
 static INLINE void Sleep_ms(int milliseconds) {
     // cross-platform sleep function
     #ifdef WIN32
         Sleep(milliseconds);
-    #elif _POSIX_C_SOURCE >= 199309L
+    #elif _POSIX_C_SOURCE >= 199309L || defined (__MUSL__)  // MUSL library
         struct timespec ts;
         ts.tv_sec  = milliseconds / 1000;
         ts.tv_nsec = (milliseconds % 1000) * 1000000;
@@ -46,6 +50,7 @@ static INLINE void Sleep_ms(int milliseconds) {
         select(0, NULL, NULL, NULL, &tv);
     #endif
 }
+
 
 //warning: function declaration isn't a prototype [-Wstrict-prototypes]
 //https://stackoverflow.com/questions/42125/warning-error-function-declaration-isnt-a-prototype

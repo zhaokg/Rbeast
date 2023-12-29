@@ -21,30 +21,50 @@ static void DSVT_AllocInitBasis(BEAST2_BASIS_PTR basis, I32 N, I32 K_MAX, MemPoi
 
 	// ks and ke:  local to the basis and they must be added with Kbase to get the true col idx
 
-	/// goodVec:  a N-element binary vector indicating the times/points available as potential knots*/
+	// goodVec:  a N-element binary vector indicating the times/points available as potential knots*/
 	//            its length is extended to a multiple of 16 bytes for use in i08_find_nth_onebyte_binvec; 
 	
 
 	 //termType:  Added for handling term-specific precisions
 	//            TODO: No need for the dummy basis, except for precType=3 (Orderwise, not imeplemented yet)
 
+	// Added to accomodate left and aright margsins
+	I32 leftMargin  = basis->prior.leftMargin;
+	I32 rightMargin = basis->prior.rightMargin;
+	I32 minSepDist  = basis->prior.minSepDist;
+
+	I32 extraElemLeft  = max(minSepDist - leftMargin, 0);
+	I32 extraElemRight = max(minSepDist - rightMargin, 0);
+
+	I32 extraLeft_pad8   = (extraElemLeft + 7) / 8 * 8;
+	I32 extraRight_pad16 = max(Npad16 - N, extraElemRight);
+
+	I32 NgoodVec = extraLeft_pad8 + N + extraRight_pad16;
+	// Added to accomodate left and aright margsins
+
 	MemNode nodes[] = {
-		{&basis->KNOT,     sizeof(TKNOT) * (1 + MAX_KNOTNUM + 1), .align = 64 },
+		{&basis->KNOT,     sizeof(TKNOT) * (1+1+1 + MAX_KNOTNUM + 1), .align = 64 },
 		{&basis->ORDER,    sizeof(TORDER) * MAX_NUM_SEG         , .align = 2  },
 		{&basis->ks,       sizeof(I16) * MAX_NUM_SEG            , .align = 2  },
 		{&basis->ke,       sizeof(I16) * MAX_NUM_SEG            , .align = 2  },
-		{&basis->goodvec,  sizeof(U08)* Npad16                  , .align = 8  }, // must be 8-aligned because the i08_sum_binvec
+		{&basis->goodvec,  sizeof(U08)* NgoodVec                , .align = 8  }, // must be 8-aligned because the i08_sum_binvec
 		{&basis->termType, sizeof(U08) * K_MAX                  , .align = 1  },
 		{NULL,}
 	};	 
  
 	MEM->alloclist(MEM, nodes, AggregatedMemAlloc, NULL);
-	 
+ 
+	//The first changepont is fixed at the ts start, and move the pointer one step foward,
+	//  so the fixed br has a index of -1. there is one extra chngpt fixed at N+1, so the skip lenghth here is MAX_KNOTNUM+1
+	basis->KNOT +=3L;  // the fake first ID will be assigned later in GenarateRandomBasis
+	// Three Extra Bytes" [fakestart, fakeend, firstStart]
 
-	 *basis->KNOT++ = 1L;							//The first changepont is fixed at the ts start, and move the pointer one step foward, so the fixed br has a index of -1.
-													//there is one extra chngpt fixed at N+1, so the skip lenghth here is MAX_KNOTNUM+1
+	 memset(basis->goodvec ,   0L, extraLeft_pad8);  // fill the leftmost extra bytes with zeros	
+	 memset(basis->goodvec + extraLeft_pad8 + N, 0L, extraRight_pad16);    //the extra padded bytes are zeroed out
 
-	 memset(basis->goodvec + N, 0L, Npad16 - N);    //the extra padded bytes are zeroed out
+	 basis->goodvec += extraLeft_pad8; // move to the first postion of the true time series
+
+	 // Added to accomodate left and aright margsins
 
 	/*??????????????????????????????????????*/
 	//termType is not used here and there is a problem with it
@@ -60,6 +80,7 @@ static void DSVT_AllocInitBasis(BEAST2_BASIS_PTR basis, I32 N, I32 K_MAX, MemPoi
 	//: K*a+(Knew-K)*a is not always equal to (K+x)*a +(Knew-(K+x))*a
 	/**************************************/
 }
+
 static void OO_AllocInitBasis(BEAST2_BASIS_PTR basis, I32 N, I32 K_MAX, MemPointers* MEM)
 {
 	//K_MAX is needed only for allocating termsType
@@ -77,12 +98,12 @@ static void OO_AllocInitBasis(BEAST2_BASIS_PTR basis, I32 N, I32 K_MAX, MemPoint
 	// bytes are zeroed out
 	
 	MemNode nodes[] = {
-		{&basis->KNOT,    sizeof(TKNOT) * MAX_KNOTNUM,          .align = 64 },
-		{&basis->ORDER,   sizeof(TORDER) * MAX_NUM_SEG*0      , .align = 2 },  // There is no ORDER needed for the outlier component
-		{&basis->ks,      sizeof(I16) * (1+MAX_NUM_SEG)        ,   .align = 2 },
-		{&basis->ke,      sizeof(I16) * (1+MAX_NUM_SEG) ,       .align = 2 },
-		{&basis->goodvec, sizeof(U08) * Npad16         ,         .align = 8 }, // must be 8-aligned because the i08_sum_binvec
-		{&basis->termType, sizeof(U08) * K_MAX*0       ,         .align = 1 },
+		{&basis->KNOT,    sizeof(TKNOT) * MAX_KNOTNUM,        .align = 64 },
+		{&basis->ORDER,   sizeof(TORDER) * MAX_NUM_SEG*0,     .align = 2 },  // There is no ORDER needed for the outlier component
+		{&basis->ks,      sizeof(I16) * (1+MAX_NUM_SEG),      .align = 2 },
+		{&basis->ke,      sizeof(I16) * (1+MAX_NUM_SEG) ,     .align = 2 },
+		{&basis->goodvec, sizeof(U08) * Npad16         ,      .align = 8 }, // must be 8-aligned because the i08_sum_binvec
+		{&basis->termType, sizeof(U08) * K_MAX*0       ,      .align = 1 },
 		{NULL,}
 	};
  

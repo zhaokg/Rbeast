@@ -29,6 +29,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	char* dateNumOriginStr = "0000-01-00";
 	char comment	= '%';
 	char filler		= '.';
+	char dashdot    = '_';
 	char* emptyList = "[]";
 	char* logicals[] = { "false", "true" };
 	char* nanstr = "NaN";
@@ -38,6 +39,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	char* dateNumOriginStr = "1970-01-01";
 	char comment = '#';
 	char filler  = '$';
+	char dashdot = '.';
 	char* emptyList = "list()";
 	char* logicals[] = {"FALSE", "TRUE" };
 	char* nanstr = "NaN";
@@ -47,6 +49,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	char* dateNumOriginStr = "0001-01-01";
 	char comment = '#';
 	char filler = '.';
+	char dashdot = '_';
 	char* emptyList  = " rb.args() ### or 'lambda: None': just get an empty object###";
 	char* logicals[] = { "False", "True" };
 	char* nanstr     ="float('nan')";
@@ -70,13 +73,14 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	#define Print2(fmtstr,hasComponent,...) if(hasComponent)  r_printf(fmtstr __VA_OPT__(,)  __VA_ARGS__);
 	#define Print(fmtstr,hasComponent,...) {if(hasComponent) r_printf(fmtstr,  __VA_ARGS__);}
 
-	Print("%s", hasAny, "\n");
-	Print("%sINFO%s: To supress printing the parameers in beast123(),   set extra%cprintOptions = 0  \n", hasAny,  em1, em2,filler);
-	Print("%sINFO%s: To supress printing the parameers in beast(),      set print.options = 0 \n", hasAny, em1, em2, filler);
-	Print("%sINFO%s: To supress printing the parameers in beast.irreg(),set print.options = 0 \n", hasAny, em1, em2, filler);
+	Print("%s", hasAny, "\n");	
+	Print("%sINFO%s: To supress printing the parameers in beast(),      set print.options = 0 \n", hasAny, em1, em2);
+	Print("%sINFO%s: To supress printing the parameers in beast%cirreg(),set print.options = 0 \n", hasAny, em1, em2, dashdot);
+	Print("%sINFO%s: To supress printing the parameers in beast123(),   set extra%cprintOptions = 0  \n", hasAny, em1, em2, filler);
+		
+	Print("%sINFO%s: To supress warning messages in beast(),            set quiet = 1 \n", hasAny, em1, em2);
+	Print("%sINFO%s: To supress warning messages in beast%cirreg(),      set quiet = 1 \n", hasAny, em1, em2, dashdot);
 	Print("%sINFO%s: To supress warning messages in beast123(),         set extra%cquiet = 1  \n", hasAny, em1, em2, filler);
-	Print("%sINFO%s: To supress warning messages in beast(),            set quiet = 1 \n", hasAny, em1, em2, filler);
-	Print("%sINFO%s: To supress warning messages in beast.irreg(),      set quiet = 1 \n", hasAny, em1, em2, filler);
 
 	Print("%s", hasAny, "\n");
 	Print("%c--------------------------------------------------%c\n", hasAny, comment, comment);
@@ -154,7 +158,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("%c--------------------------------------------------%c\n", hasAny, comment, comment);
 	Print("%s", hasAny, "\n");	
 	Print("%c......Start of displaying 'MetaData' ......\n", hasAny, comment); 
-	Print("metadata                = %-10s %c metadata is used to interpret the input data\n",	hasAny, emptyList,comment);
+	Print("metadata                = %-10s %c metadata is used to interpret the input data Y\n",	hasAny, emptyList,comment);
 	//Print("  metadata%cisRegular        = %s\n", hasAny, filler, logicals[!!meta->isRegular]);
 	//Print("  metadata%cisOrdered        = %s\n", hasAny, filler, logicals[!!meta->isOrdered]);
 	//Print("  metadata%cneedAggregate    = %s\n",	hasAny,		filler, logicals[!!meta->needAggregate]);
@@ -194,27 +198,34 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	//Print("  metadata%cmissingValue   = %s\n",   meta->missingValue!=meta->missingValue, filler, nanstr);
 	Print("metadata%cmaxMissingRate = %-10g %c if more than %g%% of data is missing, BEAST will skip it.\n", hasAny,	filler, meta->maxMissingRate, comment, meta->maxMissingRate * 100);
 
-	Print("metadata%cdeseasonalize  = %-10s %c If true,remove a global seasonal cmpnt before running BEAST & add it back later\n",   hasSeasonCmpnt, filler, logicals[!!meta->deseasonalize],comment);
-	Print("metadata%cdetrend        = %-10s %c If true,remove a global trend  cmpnt before running BEAST & add it back later\n",   hasAny,         filler, logicals[!!meta->detrend], comment);
+	Print("metadata%cdeseasonalize  = %-10s %c if true,remove a global seasonal cmpnt before running BEAST & add it back later\n",   hasSeasonCmpnt, filler, logicals[!!meta->deseasonalize],comment);
+	Print("metadata%cdetrend        = %-10s %c if true,remove a global trend  cmpnt before running BEAST & add it back later\n",   hasAny,         filler, logicals[!!meta->detrend], comment);
 	Print("%c........End of displaying MetaData ........\n\n",	hasAny,  comment);
 
 	A(PRIOR_PTR) prior = &(opt->prior);
 
 	Print("%c......Start of displaying 'prior' ......\n", hasAny, comment);
-	Print("prior                   = %-10s %c prior is the key model parameters of BEAST\n", hasAny, emptyList, comment);
+	Print("prior                   = %-10s %c prior is the true model parameters of BEAST\n", hasAny, emptyList, comment);
 	Print("prior%cseasonMinOrder    = %-10d %c sorder.minmax[1]: min harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMinOrder,comment );
 	Print("prior%cseasonMaxOrder    = %-10d %c sorder.minmax[2]: max harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMaxOrder,comment);
-	Print("prior%cseasonMinKnotNum  = %-10d %c scp.minmax[1]   : min num of seasonal chngpts\n", hasSeasonCmpnt, filler, prior->seasonMinKnotNum, comment);
-	Print("prior%cseasonMaxKnotNum  = %-10d %c scp.minmax[2]   : max num of seasonal chngpts\n", hasSeasonCmpnt, filler, prior->seasonMaxKnotNum, comment);
+	Print("prior%cseasonMinKnotNum  = %-10d %c scp.minmax[1]   : min num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMinKnotNum, comment);
+	Print("prior%cseasonMaxKnotNum  = %-10d %c scp.minmax[2]   : max num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMaxKnotNum, comment);
 	Print("prior%cseasonMinSepDist  = %-10d %c sseg.min        : min seasonal segment length in terms of datapoints\n", hasSeasonCmpnt, filler, prior->seasonMinSepDist,comment);
+	Print("prior%cseasonLeftMargin  = %-10d %c sseg.leftmargin : no season chngpts in the first %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonLeftMargin, comment,prior->seasonLeftMargin);
+	Print("prior%cseasonRightMargin = %-10d %c sseg.rightmargin: no seoson chngpts in the last %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonRightMargin, comment, prior->seasonRightMargin);
+
 	Print("prior%ctrendMinOrder     = %-10d %c torder.minmax[1]: min trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMinOrder, comment);
 	Print("prior%ctrendMaxOrder     = %-10d %c torder.minmax[2]: max trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMaxOrder, comment);
-	Print("prior%ctrendMinKnotNum   = %-10d %c tcp.minmax[1]   : min num of chngpts in trend\n", hasTrendCmpnt,  filler, prior->trendMinKnotNum, comment);
-	Print("prior%ctrendMaxKnotNum   = %-10d %c tcp.minmax[2]   : min num of chngpts in trend\n", hasTrendCmpnt,  filler, prior->trendMaxKnotNum, comment);
+	Print("prior%ctrendMinKnotNum   = %-10d %c tcp.minmax[1]   : min num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMinKnotNum, comment);
+	Print("prior%ctrendMaxKnotNum   = %-10d %c tcp.minmax[2]   : max num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMaxKnotNum, comment);
 	Print("prior%ctrendMinSepDist   = %-10d %c tseg.min        : min trend segment length in terms of datapoints\n", hasTrendCmpnt,  filler, prior->trendMinSepDist, comment);
+	Print("prior%ctrendLeftMargin   = %-10d %c tseg.leftmargin : no trend chngpts in the first %d datapoints\n", hasTrendCmpnt, filler, prior->trendLeftMargin, comment, prior->trendLeftMargin);
+	Print("prior%ctrendRightMargin  = %-10d %c tseg.rightmargin: no trend chngpts in the last %d datapoints\n", hasTrendCmpnt, filler, prior->trendRightMargin, comment, prior->trendRightMargin);
+
+
 	Print("prior%coutlierMaxKnotNum = %-10d %c ocp             : max num of datapoints treated as outliers\n", hasOutlierCmpnt, filler, prior->outlierMaxKnotNum, comment);
 	Print("prior%coutlierSigFactor  = %-10g %c above which datapoints considered outliers\n", hasOutlierCmpnt, filler, prior->outlierSigFactor, comment);
-	Print("prior%cK_MAX             = %-10d %c max number of terms in general linear model (useful only at small values)\n", hasAny,      filler, prior->K_MAX, comment);
+	Print("prior%cK_MAX             = %-10d %c max number of terms in general linear model (relevant only at small values)\n", hasAny,      filler, prior->K_MAX, comment);
 	Print("prior%cprecValue         = %-10g %c useful mainly when precPriorType='constant'\n", hasAny,      filler, prior->precValue, comment);
 	Print("prior%cmodelPriorType    = %-10d\n", hasAny, filler, prior->modelPriorType);
 	//Print("   prior%calpha1           = %f\n", hasAny,      filler, prior->alpha1 );
@@ -238,46 +249,46 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 
 	Print("%c......Start of displaying 'mcmc' ......\n", hasAny, comment);
 	Print("mcmc                           = %-10s %c mcmc is not BEAST parameters but MCMC sampler options\n",	 hasAny, emptyList,comment);
-	Print("mcmc%cseed                      = %-10d %c A nonzero seed to replicate among runs\n", hasAny, filler, mcmc->seed, comment);
+	Print("mcmc%cseed                      = %-10" PRIu64 " %c A nonzero seed to replicate among runs\n", hasAny, filler, mcmc->seed, comment);
 	Print("mcmc%csamples                   = %-10d %c Number of samples saved per chain: the larger, the better\n", hasAny, filler, mcmc->samples,comment);
 	Print("mcmc%cthinningFactor            = %-10d %c Thinning the chain: the larger, the better \n", hasAny, filler, mcmc->thinningFactor, comment);
-	Print("mcmc%cburnin                    = %-10d %c Number of inital samples discarded: the larger, the better\n", hasAny, filler, mcmc->burnin, comment);
-	Print("mcmc%cchainNumber               = %-10d %c Nunber of chains: the larger, the better\n", hasAny, filler, mcmc->chainNumber, comment);
+	Print("mcmc%cburnin                    = %-10d %c Number of initial samples discarded: the larger, the better\n", hasAny, filler, mcmc->burnin, comment);
+	Print("mcmc%cchainNumber               = %-10d %c Number of chains: the larger, the better\n", hasAny, filler, mcmc->chainNumber, comment);
 	Print("mcmc%cmaxMoveStepSize           = %-10d %c Max step of jumping from current changepoint: No need to change\n", hasAny, filler, mcmc->maxMoveStepSize,comment);
 	Print("mcmc%ctrendResamplingOrderProb  = %-10g %c Proposal probability of sampling trend polynominal order \n", hasTrendCmpnt, filler,  mcmc->trendResamplingOrderProb, comment);
 	Print("mcmc%cseasonResamplingOrderProb = %-10g %c Proposal probability of sampling seasoanl order \n", hasSeasonCmpnt,filler, mcmc->seasonResamplingOrderProb,comment);
 	Print("mcmc%ccredIntervalAlphaLevel    = %-10g %c The alphal level for Credible Intervals\n", hasAny, filler, mcmc->credIntervalAlphaLevel,comment);
-	Print("%c Total number of models randomly visited is (burnin+sampples*thinFactor)*chainNumber=%d\n", hasAny, comment, (mcmc->burnin+mcmc->thinningFactor*mcmc->samples)*mcmc->chainNumber);
+	Print("%c Total number of models randomly visited in BEAST is (burnin+sampples*thinFactor)*chainNumber=%d\n", hasAny, comment, (mcmc->burnin+mcmc->thinningFactor*mcmc->samples)*mcmc->chainNumber);
 	Print("%c......End of displaying mcmc ......\n\n", hasAny, comment);
 
  
 	A(EXTRA_PTR) extra = &(opt->extra);
 
 	Print("%c......Start of displaying 'extra' ......\n", hasAny, comment); 
-	Print("extra                      = %-10s %c extra is used to configure output/computing options\n", hasAny, emptyList,comment);
-	Print("extra%cdumpInputData        = %s\n", hasAny,      filler, logicals[!!extra->dumpInputData]);
-	Print("extra%cwhichOutputDimIsTime = %d\n", hasAny,	   filler, extra->whichOutputDimIsTime );
-	Print("extra%ccomputeCredible      = %s\n", hasAny,      filler, logicals[!!extra->computeCredible]);
-	Print("extra%cfastCIComputation    = %s\n", hasAny,      filler, logicals[!!extra->fastCIComputation] );
-	Print("extra%ccomputeSeasonOrder   = %s\n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonOrder]);
-	Print("extra%ccomputeTrendOrder    = %s\n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendOrder]  );
-	Print("extra%ccomputeSeasonChngpt  = %s\n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonChngpt]);
-	Print("extra%ccomputeTrendChngpt   = %s\n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendChngpt] );
-	Print("extra%ccomputeOutlierChngpt = %s\n", hasOutlierCmpnt,filler, logicals[!!extra->computeOutlierChngpt]  );
-	Print("extra%ccomputeSeasonAmp     = %s\n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonAmp]);
-	Print("extra%ccomputeTrendSlope    = %s\n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendSlope]);
+	Print("extra                      = %-5s %c extra is used to configure output/computing options\n", hasAny, emptyList,comment);
+	Print("extra%cdumpInputData        = %-5s %c if true, dump a copy of the input data as o%cdata \n", hasAny,      filler, logicals[!!extra->dumpInputData], comment, filler);
+	Print("extra%cwhichOutputDimIsTime = %-5d %c 1,2 or 3; which dim of the result is time; used for a 2D/3D input Y\n", hasAny,	   filler, extra->whichOutputDimIsTime,comment );
+	Print("extra%ccomputeCredible      = %-5s %c if true, compute  credibiel interval of estimated Y (e.g., o%ctrend%cCI)\n", hasAny,      filler, logicals[!!extra->computeCredible], comment,filler, filler);
+	Print("extra%cfastCIComputation    = %-5s %c if true, do not sort but approximiate CI \n", hasAny,      filler, logicals[!!extra->fastCIComputation], comment);
+	Print("extra%ccomputeSeasonOrder   = %-5s %c if true, dump the estimated time-varying seasonal order: o.season.order \n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonOrder], comment);
+	Print("extra%ccomputeTrendOrder    = %-5s %c if true, dump the estimated trend polynomial order \n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendOrder], comment);
+	Print("extra%ccomputeSeasonChngpt  = %-5s %c if true, dump the seasoanl changepoints (scp) in the output \n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonChngpt], comment);
+	Print("extra%ccomputeTrendChngpt   = %-5s %c if true, dump the trend changepoints (tcp) in the output \n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendChngpt], comment);
+	Print("extra%ccomputeOutlierChngpt = %-5s %c if true, dump the outliers cangepoints (ocp) in the output \n", hasOutlierCmpnt,filler, logicals[!!extra->computeOutlierChngpt], comment);
+	Print("extra%ccomputeSeasonAmp     = %-5s %c  compute time-varying seasonal mangitude if season=harmonic  \n", hasSeasonCmpnt, filler, logicals[!!extra->computeSeasonAmp], comment);
+	Print("extra%ccomputeTrendSlope    = %-5s %c if true, dump the time-varying slope in trend\n", hasTrendCmpnt,  filler, logicals[!!extra->computeTrendSlope], comment);
 	
-	Print("extra%ctallyPosNegSeasonJump= %s\n", hasSeasonCmpnt, filler, logicals[!!extra->tallyPosNegSeasonJump]);
-	Print("extra%ctallyPosNegTrendJump = %s\n", hasTrendCmpnt,  filler, logicals[!!extra->tallyPosNegTrendJump]);
-	Print("extra%ctallyIncDecTrendJump = %s\n", hasTrendCmpnt,  filler, logicals[!!extra->tallyIncDecTrendJump]);
-	Print("extra%ctallyPosNegOutliers  = %s\n", hasOutlierCmpnt,filler, logicals[!!extra->tallyPosNegOutliers] );
+	Print("extra%ctallyPosNegSeasonJump= %-5s %c differentiate postive/negative jumps at scp\n", hasSeasonCmpnt, filler, logicals[!!extra->tallyPosNegSeasonJump], comment);
+	Print("extra%ctallyPosNegTrendJump = %-5s %c differentiate postive/negative jumps at tcp\n", hasTrendCmpnt,  filler, logicals[!!extra->tallyPosNegTrendJump], comment);
+	Print("extra%ctallyIncDecTrendJump = %-5s %c differentiate increased/decreased slopes at tcp\n", hasTrendCmpnt,  filler, logicals[!!extra->tallyIncDecTrendJump], comment);
+	Print("extra%ctallyPosNegOutliers  = %-5s %c differentiate postive/negative outliers\n", hasOutlierCmpnt,filler, logicals[!!extra->tallyPosNegOutliers], comment);
 
-	Print("extra%cprintProgressBar     = %s\n", hasAny, filler, logicals[!!extra->printProgressBar]);
-	Print("extra%cprintOptions         = %s\n", hasAny, filler, logicals[!!extra->printOptions]);
-	Print("extra%cconsoleWidth         = %d\n", hasAny, filler, extra->consoleWidth);
+	Print("extra%cprintProgressBar     = %-5s %c if true, show an ascii progressbar\n", hasAny, filler, logicals[!!extra->printProgressBar], comment);
+	Print("extra%cprintOptions         = %-5s %c if true, print the option of the BEAST run\n", hasAny, filler, logicals[!!extra->printOptions], comment);
+	Print("extra%cconsoleWidth         = %-5d %c an integer specifying the console width for printing\n", hasAny, filler, extra->consoleWidth, comment);
 	//Print("  extra%cnumCPUCoresToUse     = %d\n", filler, extra->numCPUCoresToUse, hasAny);
-	Print("extra%cnumThreadsPerCPU     = %d\n", hasAny, filler, extra->numThreadsPerCPU);
-	Print("extra%cnumParThreads        = %d\n", hasAny, filler, extra->numParThreads);
+	Print("extra%cnumThreadsPerCPU     = %-5d %c each cpu core spawns %d concurrent threads (for beast123())\n", hasAny, filler, extra->numThreadsPerCPU, comment, extra->numThreadsPerCPU);
+	Print("extra%cnumParThreads        = %-5d %c total number of threads (for beast123() only)\n", hasAny, filler, extra->numParThreads, comment);
 	Print("%c......End of displaying extra ......\n\n", hasAny, comment);
  
 #if M_INTERFACE==1

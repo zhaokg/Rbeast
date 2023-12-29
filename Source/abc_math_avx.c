@@ -21,7 +21,7 @@
 
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
 
@@ -29,7 +29,8 @@
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))), apply_to=function)
     //#pragma clang attribute pop
 #endif
-#ifdef  GCC_COMPILER
+
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -49,7 +50,6 @@
     
 #endif
 ///////////////////////////////////////////////////////////////////////////
-
 
 
 #define NF         8
@@ -74,6 +74,7 @@
 #define addi32      _mm256_add_epi32
 
 #if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+
 #include <immintrin.h>
 #include "abc_vec.h"
 #include "abc_math_avx.h"
@@ -1135,7 +1136,7 @@ void  pow256_ps_ptr(F32PTR px, float n, F32PTR out) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     //3pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

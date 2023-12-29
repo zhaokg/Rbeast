@@ -18,7 +18,7 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new
 	if (flag == BIRTH) 
 		r_ippsSet_8u(0, goodVec + (newKnot - MINSEP) - 1, 2 * MINSEP + 1);	
 	else if (flag == DEATH) {//death						
-		I32 oldKnot = knotList[newIdx - 1]; //If flag=death, oldKnot was not assgined before until now
+		I32 oldKnot = knotList[newIdx - 1];         //If flag=death, oldKnot was not assgined before until now
 		I32 r1      = knotList[(newIdx - 1) - 1];
 		I32 r2      = knotList[(newIdx + 1) - 1] - 1;
 
@@ -130,7 +130,7 @@ static void OO_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new, 
 		basis->goodNum++;
 	}
 	else if (flag == MOVE) {//move
-		I32 newIdx = new->newIdx;
+		I32 newIdx  = new->newIdx;
 		I32 oldKnot = basis->KNOT[newIdx - 1];
 		goodVec[oldKnot - 1] = 1;
 		goodVec[newKnot - 1] = 0;
@@ -164,7 +164,7 @@ static void OO_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new, 
 	basis->nKnot = new->nKnot_new;
 }
 
-void* Get_UpdateGoodVec(I08 id) {
+void* Get_UpdateGoodVec_KnotList(I08 id) {
 	if      (id == SEASONID)    return DSVT_UpdateGoodVecForNewTerm;
 	else if (id == SVDID)       return DSVT_UpdateGoodVecForNewTerm;
 	else if (id == DUMMYID)     return DSVT_UpdateGoodVecForNewTerm;

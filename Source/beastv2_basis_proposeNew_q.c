@@ -220,6 +220,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	TKNOT_PTR  knotList  = basis->KNOT;
 	TORDER_PTR orderList = basis->ORDER; //DUMMY: Not used for the dummy basis
 
+	
 	I32 newIdx, endIdx;
 	switch (flag)
 	{
@@ -283,7 +284,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	
 		endIdx            = newIdx;
 		new->newIdx       = newIdx;
-		new->nKnot_new = nKnot + 1;		
+		new->nKnot_new    = nKnot + 1;		
 		break;
 	}
 	case DEATH:
@@ -343,10 +344,10 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 		newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
 
 		I32 oldKnot = knotList[newIdx - 1];
-		I32 r1 = knotList[(newIdx - 1) - 1];
-		I32 r2 = knotList[(newIdx + 1) - 1];
+		I32 r1      = newIdx==1     ?  knotList[INDEX_FakeStart]: knotList[(newIdx - 1) - 1];
+		I32 r2      = newIdx==nKnot ?  knotList[INDEX_FakeEnd]  : knotList[(newIdx + 1) - 1];
 
-		I32 minSepDist = basis->prior.minSepDist;
+		I32 minSepDist           = basis->prior.minSepDist;
 		I32 MCMC_maxMoveStepSize = basis->mcmc_MoveStep;
 		r1 = max(r1 + minSepDist + 1, oldKnot - MCMC_maxMoveStepSize);
 		r2 = min(r2 - minSepDist - 1, oldKnot + MCMC_maxMoveStepSize);
@@ -381,8 +382,8 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 		new->SEG[1].ORDER2 = orderList[newIdx + 1L - 1L];
 
 		//endIdx = newIdx + 1;
-		endIdx = newIdx + 1L;
-		new->newIdx       = newIdx;
+		endIdx         = newIdx + 1L;
+		new->newIdx    = newIdx;
 		new->nKnot_new = nKnot;
 
 		break;
@@ -446,6 +447,8 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	} // flag == 5//f
 
 	}
+
+ 
 
 
 	if (flag != ChORDER) {
@@ -576,7 +579,6 @@ static void OO_ReAdjustGoodVec(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 */
 
 
-
 static int __OO_NewKnot_BirthMove_old(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 		
 	I32 N                   = info->N;
@@ -667,6 +669,7 @@ static int __OO_NewKnot_BirthMove_old(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info
 	}
 	return maxIdx + 1;
 }
+
 static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info, I32PTR maxIndex) {
 		
 	I32 N                   = info->N;
@@ -731,7 +734,9 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info, I3
 	}
 	*maxIndex = maxIdx+1L;
 	return newKnot+1L;
+
 }
+
 static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 		
 	I32 N                  = info->N;
@@ -759,6 +764,7 @@ static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis, PROP_DATA_PTR info) {
 	}
 	return minIdx + 1;
 }
+
 static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
 {	
 	I32  goodNum = basis->goodNum; // not used in this function
@@ -897,6 +903,7 @@ static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLIN
 
 	new->jumpType = flag;
 }
+
 static void OO_Propose_01(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
 {	
 	I32  goodNum = basis->goodNum; // not used in this function
@@ -1049,6 +1056,7 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_P
 
 	new->jumpType = flag;
 }
+
 static void OO_Propose_2(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
 {	
 	I32  goodNum = basis->goodNum; // not used in this function
@@ -1189,7 +1197,9 @@ static void OO_Propose_2(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 
 	new->jumpType = flag;
 }
+
 void * Get_Propose(I08 id, BEAST2_OPTIONS_PTR opt) {
+
 	switch (id) {
 	case SVDID:
 	case DUMMYID:

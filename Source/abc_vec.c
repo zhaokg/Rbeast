@@ -80,68 +80,74 @@ void  (*f32_step_pos)(const F32PTR X, const F32PTR Y, const F32PTR Z, const F32 
 void  (*f32_axpy_inplace)(const F32 a, const F32PTR x, F32PTR y, const int N);
 
 void print_funcs(void) {
+	
+	// stackoverflow.com/questions/34705680/warning-format-x-expects-argument-of-type-unsigned-int
+	// stackoverflow.com/questions/14733761/printf-formatting-for-hexadecimal
+	// warning: format ‘%x’ expects argument of type ‘unsigned int’ (-Wformat=)
+	// "%#x": # will print a 0x, but this won't work if the value is 0 (e.g., print("%#x", 0))
+	// Note that if i = 0;, the versions using %# will not include the 0x prefix.
 
 	r_printf("\n\n"  );
-	r_printf("%s:%05x\n",  "i32_add_val_inplace", i32_add_val_inplace);
-	r_printf("%s:%05x\n",  "i32_sum", i32_sum);
-	r_printf("%s:%05x\n", "f32_fill_val", f32_fill_val);
-	r_printf("%s:%05x\n" ,"f32_sum", f32_sum);
-	r_printf("%s:%05x\n","f32_add_vec", f32_add_vec);
-	r_printf("%s:%05x\n", "f32_sub_vec", f32_sub_vec);
-	r_printf("%s:%05x\n", "f32_add_vec_inplace", f32_add_vec_inplace);
-	r_printf("%s:%05x\n", "f32_sub_vec_inplace", f32_sub_vec_inplace);
-	r_printf("%s:%05x\n", "f32_subrev_val_inplace", f32_subrev_val_inplace);
-	r_printf("%s:%05x\n", "f32_add_val_inplace", f32_add_val_inplace);
-	r_printf("%s:%05x\n", "f32_mul_val_inplace", f32_mul_val_inplace);
-	r_printf("%s:%05x\n", "f32_mul_vec_inplace", f32_mul_vec_inplace);
-	r_printf("%s:%05x\n", "f32_mul_vec", f32_mul_vec);
-	r_printf("%s:%05x\n", "f32_dot", f32_dot);
+	r_printf("%s:%8p\n", "i32_add_val_inplace", (void *) i32_add_val_inplace);
+	r_printf("%s:%8p\n", "i32_sum", (void*)i32_sum);
+	r_printf("%s:%8p\n", "f32_fill_val", (void*)f32_fill_val);
+	r_printf("%s:%8p\n", "f32_sum", (void*)f32_sum);
+	r_printf("%s:%8p\n", "f32_add_vec", (void*)f32_add_vec);
+	r_printf("%s:%8p\n", "f32_sub_vec", (void*)f32_sub_vec);
+	r_printf("%s:%8p\n", "f32_add_vec_inplace", (void*)f32_add_vec_inplace);
+	r_printf("%s:%8p\n", "f32_sub_vec_inplace", (void*)f32_sub_vec_inplace);
+	r_printf("%s:%8p\n", "f32_subrev_val_inplace", (void*)f32_subrev_val_inplace);
+	r_printf("%s:%8p\n", "f32_add_val_inplace", (void*)f32_add_val_inplace);
+	r_printf("%s:%8p\n", "f32_mul_val_inplace", (void*)f32_mul_val_inplace);
+	r_printf("%s:%8p\n", "f32_mul_vec_inplace", (void*)f32_mul_vec_inplace);
+	r_printf("%s:%8p\n", "f32_mul_vec", (void*)f32_mul_vec);
+	r_printf("%s:%8p\n", "f32_dot", (void*)f32_dot);
 
-	r_printf("%s:%05x\n", "*f32_dot2x1", f32_dot2x1);
+	r_printf("%s:%8p\n", "*f32_dot2x1", (void*)f32_dot2x1);
 
-	r_printf("%s:%05x\n", "f32_dot2x2", f32_dot2x2);
-	r_printf("%s:%05x\n", "f32_add_v_v2_vec_inplace", f32_add_v_v2_vec_inplace);
-	r_printf("%s:%05x\n", "f32_cos_vec_inplace", f32_cos_vec_inplace);
-	r_printf("%s:%05x\n", "f32_sin_vec_inplace", f32_sin_vec_inplace);
-	r_printf("%s:%05x\n", "f32_sincos_vec_inplace", f32_sincos_vec_inplace);
-	r_printf("%s:%05x\n", "f32_pow_vec_inplace", f32_pow_vec_inplace);
-	r_printf("%s:%05x\n", "f32_log_vec_inplace", f32_log_vec_inplace);
-	r_printf("%s:%05x\n", "f32_exp_vec_inplace", f32_exp_vec_inplace);
-	r_printf("%s:%05x\n", "f32_sqrt_vec_inplace", f32_sqrt_vec_inplace);
-	r_printf("%s:%05x\n", "f32_sqrt_vec", f32_sqrt_vec);
+	r_printf("%s:%8p\n", "f32_dot2x2", (void*)f32_dot2x2);
+	r_printf("%s:%8p\n", "f32_add_v_v2_vec_inplace", (void*)f32_add_v_v2_vec_inplace);
+	r_printf("%s:%8p\n", "f32_cos_vec_inplace", (void*)f32_cos_vec_inplace);
+	r_printf("%s:%8p\n", "f32_sin_vec_inplace", (void*)f32_sin_vec_inplace);
+	r_printf("%s:%8p\n", "f32_sincos_vec_inplace", (void*)f32_sincos_vec_inplace);
+	r_printf("%s:%8p\n", "f32_pow_vec_inplace", (void*)f32_pow_vec_inplace);
+	r_printf("%s:%8p\n", "f32_log_vec_inplace", (void*)f32_log_vec_inplace);
+	r_printf("%s:%8p\n", "f32_exp_vec_inplace", (void*)f32_exp_vec_inplace);
+	r_printf("%s:%8p\n", "f32_sqrt_vec_inplace", (void*)f32_sqrt_vec_inplace);
+	r_printf("%s:%8p\n", "f32_sqrt_vec", (void*)f32_sqrt_vec);
 	//F32 (*f32_sumlog_slow)(const F32PTR  X, const int N);
 	//F32 (*f32_sumlog)(const F32PTR  X, const int N);
-	r_printf("%s:%05x\n", "f32_avgstd", f32_avgstd);
-	r_printf("%s:%05x\n", "f32_sx_sxx_to_avgstd_inplace", f32_sx_sxx_to_avgstd_inplace);
+	r_printf("%s:%8p\n", "f32_avgstd", (void*)f32_avgstd);
+	r_printf("%s:%8p\n", "f32_sx_sxx_to_avgstd_inplace", (void*)f32_sx_sxx_to_avgstd_inplace);
 	// the index is zero-based
-	r_printf("%s:%05x\n", "f32_maxidx_slow", f32_maxidx_slow);
+	r_printf("%s:%8p\n", "f32_maxidx_slow", (void*)f32_maxidx_slow);
 	// the index is zero-based
-	r_printf("%s:%05x\n", "f32_maxidx", f32_maxidx);
-	r_printf("%s:%05x\n", "f32_minidx", f32_minidx);
-	r_printf("%s:%05x\n", "f32_diff_back", f32_diff_back);
-	r_printf("%s:%05x\n", "f32_seq", f32_seq);
-	r_printf("%s:%05x\n", "f32_to_f64_inplace", f32_to_f64_inplace);
-	r_printf("%s:%05x\n", "f64_to_f32_inplace", f64_to_f32_inplace);
-	r_printf("%s:%05x\n", "i32_to_f32_scaleby_inplace", i32_to_f32_scaleby_inplace);
-	r_printf("%s:%05x\n", "i32_increment_bycond_inplace", i32_increment_bycond_inplace);
-	r_printf("%s:%05x\n", "i32_increment_vec2_bycond_inplace", i32_increment_vec2_bycond_inplace);
+	r_printf("%s:%8p\n", "f32_maxidx", (void*)f32_maxidx);
+	r_printf("%s:%8p\n", "f32_minidx", (void*)f32_minidx);
+	r_printf("%s:%8p\n", "f32_diff_back", (void*)f32_diff_back);
+	r_printf("%s:%8p\n", "f32_seq", (void*)f32_seq);
+	r_printf("%s:%8p\n", "f32_to_f64_inplace", (void*)f32_to_f64_inplace);
+	r_printf("%s:%8p\n", "f64_to_f32_inplace", (void*)f64_to_f32_inplace);
+	r_printf("%s:%8p\n", "i32_to_f32_scaleby_inplace", (void*)i32_to_f32_scaleby_inplace);
+	r_printf("%s:%8p\n", "i32_increment_bycond_inplace", (void*)i32_increment_bycond_inplace);
+	r_printf("%s:%8p\n", "i32_increment_vec2_bycond_inplace", (void*)i32_increment_vec2_bycond_inplace);
 	//I32  (*i08_find_nth_onebyte_binvec)(U08PTR binvec, I32 N, I32 nth);
 	//I32  (*i08_find_nth_onebyte_binvec_v2)(U08PTR binvec, I32 N, I32 numOneBytes, U32 rnd);
-	r_printf("%s:%05x\n", "i08_sum_binvec", i08_sum_binvec);
+	r_printf("%s:%8p\n", "i08_sum_binvec", (void*)i08_sum_binvec);
 
-	r_printf("%s:%05x\n", "f32_gemm_XtY2x1", f32_gemm_XtY2x1);
-	r_printf("%s:%05x\n", "f32_gemm_XtY2x2", f32_gemm_XtY2x2);
-	r_printf("%s:%05x\n", "f32_gemm_XY1x2", f32_gemm_XY1x2);
-	r_printf("%s:%05x\n", "f32_gemm_XY2x2", f32_gemm_XY2x2);
-	r_printf("%s:%05x\n", "f32_gemm_XtYt2x2", f32_gemm_XtYt2x2);
-	r_printf("%s:%05x\n", "f32_gemm_XYt2x1", f32_gemm_XYt2x1);
+	r_printf("%s:%8p\n", "f32_gemm_XtY2x1", (void*)f32_gemm_XtY2x1);
+	r_printf("%s:%8p\n", "f32_gemm_XtY2x2", (void*)f32_gemm_XtY2x2);
+	r_printf("%s:%8p\n", "f32_gemm_XY1x2", (void*)f32_gemm_XY1x2);
+	r_printf("%s:%8p\n", "f32_gemm_XY2x2", (void*)f32_gemm_XY2x2);
+	r_printf("%s:%8p\n", "f32_gemm_XtYt2x2", (void*)f32_gemm_XtYt2x2);
+	r_printf("%s:%8p\n", "f32_gemm_XYt2x1", (void*)f32_gemm_XYt2x1);
 
-	r_printf("%s:%05x\n", "f32_gemv_Xb", f32_gemv_Xb);
+	r_printf("%s:%8p\n", "f32_gemv_Xb", (void*)f32_gemv_Xb);
 
-	r_printf("%s:%05x\n", "f32_findindex", f32_findindex);
-	r_printf("%s:%05x\n", "f32_scatter_vec_byindex", f32_scatter_vec_byindex);
-	r_printf("%s:%05x\n", "f32_gatherVec_scatterVal_byindex", f32_gatherVec_scatterVal_byindex);
-	r_printf("%s:%05x\n", "f32_gather2Vec_scatterVal_byindex", f32_gather2Vec_scatterVal_byindex);
+	r_printf("%s:%8p\n", "f32_findindex", (void*)f32_findindex);
+	r_printf("%s:%8p\n", "f32_scatter_vec_byindex", (void*)f32_scatter_vec_byindex);
+	r_printf("%s:%8p\n", "f32_gatherVec_scatterVal_byindex", (void*)f32_gatherVec_scatterVal_byindex);
+	r_printf("%s:%8p\n", "f32_gather2Vec_scatterVal_byindex", (void*)f32_gather2Vec_scatterVal_byindex);
  
 
 }
@@ -183,6 +189,7 @@ void f32_cumsumsqr_inplace(const F32PTR X, int N) {
 	}
 }
 void f32_sumfilter(const F32PTR X,  F32PTR Y, int N, int winSize) {
+
 	if (winSize <= 1) {
 		memcpy(Y, X, sizeof(F32) * N);
 		return;
@@ -193,30 +200,37 @@ void f32_sumfilter(const F32PTR X,  F32PTR Y, int N, int winSize) {
 	I32 wRight = (winSize - wLeft)-1;  // rightside half
 	//there is an extra midpoint between wLeft and wRight
 
-	F32 csumLeftEnd = 0;
+	F32 csumRIghtSide = 0;
+	I32 Nadj          = min(wRight, N-1);
+	for (int i = 1; i <= Nadj; ++i) {
+		csumRIghtSide += X[i];
+	}
+
+
+	F32 csumLeftSide_Mid = 0;
 	//0,1,.. wLeft-1, (Wleft=midpoint), 
-	for (int i=0; i< wLeft;++i){
-		csumLeftEnd +=X[i];
-		Y[i]        = csumLeftEnd;
+	for (int i=0; i<= wLeft;++i){
+		csumLeftSide_Mid  += X[i];
+		Y[i]               = csumLeftSide_Mid + csumRIghtSide ;
+
+		F32  newRightPoint = (i + wRight + 1) >= N ? 0 : X[i + wRight + 1];
+		F32  oldRightPoint = (i +  1)         >= N ? 0 : X[i + 1];
+		csumRIghtSide      +=  newRightPoint - oldRightPoint;
 	}
 
-	I32 Nadj    = min(winSize, N);
-	F32 csumAll = csumLeftEnd;
-	for (int i = wLeft; i < Nadj; ++i) 
-		csumAll += X[i];
- 
-	for (int i = wLeft; i < N-wRight; ++i) {
-		Y[i] = csumAll;
-		csumAll += X[i + wRight + 1] - X[i - wLeft]; //TODO:buggy when i=N-wRIght bcz  i+wRight+1=N is out of bound
+	 F32 csumAll = Y[wLeft]; 
+	for (int i = wLeft+1; i < N-wRight; ++i) {
+		csumAll += X[i + wRight] - X[i-1 -  wLeft]; 
+		Y[i]    = csumAll;		
 	}
 
-	F32 csumRightEnd = 0;
-	for (int i = N - 1; i >= N - wRight; --i) {
-		Y[i]          = X[i]+ csumRightEnd;
-		csumRightEnd += X[i];
+	csumAll = csumAll;
+	for (int i = N - wRight; i < N; ++i) {
+		csumAll -= X[i-wLeft-1];
+		Y[i]     = csumAll;		
 	}
  
-		#undef UNROLL_NUMBER
+	#undef UNROLL_NUMBER
 }
 F32  f32_corr_rmse_nan(const F32PTR X,  const F32PTR Y, int N, F32PTR rmse) {
 

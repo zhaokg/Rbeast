@@ -161,9 +161,9 @@ extern "C" {
 #elif P_INTERFACE==1
 	//stackoverflow.com/questions/37206118/va-args-not-swallowing-comma-when-zero-args-under-c99
 	//#define  mexPrintf(output, ...) Rprintf(output, ##__VA_ARGS__) //"##" is used to swallow the preceding comma if it is empty!
-#define  r_printf(...)   printf(__VA_ARGS__)
+//#define  r_printf(...)   printf(__VA_ARGS__)
 #define  r_printf(...)   PySys_WriteStdout(__VA_ARGS__)
-#define  r_error(...)    printf(__VA_ARGS__)
+#define  r_error(...)    PySys_WriteStderr(__VA_ARGS__)    // printf(__VA_ARGS__)
 //#define  q_warning(...)  warning(__VA_ARGS__)
 #define  r_warning(...)  printf(__VA_ARGS__)
 #define  r_malloc(x)     PyMem_RawMalloc(x, char)  //from header file R_ext\RS.h

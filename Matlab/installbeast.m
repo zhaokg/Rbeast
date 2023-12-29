@@ -1,10 +1,17 @@
 %
-% <strong>rbeast_install:</strong> Download and install the BEAST matlab scripts
+% <strong>rbeast_install/installbeast:</strong> Download and install the BEAST matlab scripts
+%                                      
+%  'rbeast_install.m' and 'installbeast.m' are exaclty the same. installbeast.m is an online version of
+%   rbeast_install.m.
 %
-% Download the Matlab scripts and example datasets of BEAST  from Github to a local folder
+%  'http://b.link/beast'  points to an online version of installbeast.m.
+%
+% Download the Matlab scripts and example datasets of BEAST from Github to a local folder
 % specified by the variable "beastPath". If beastPath doesn't exist, a temporary folder will be 
 % used. This is essentially the same as running:
-%   eval( webread('http://b.link/rbeast',  weboptions('Cert','')) )
+%
+%  <strong>eval( webread('http://b.link/rbeast',  weboptions('Cert','')) ) </strong>
+%
 
 %% 
 % system("gcc -c -fPIC -pthread -DNDEBUG -DM_RELEASE -DMATLAB_DEFAULT_RELEASE=R2017b -I/MATLAB/extern/include -O2 -Wall  -std=gnu99 -mfpmath=sse -msse2 -mstackrealign  *.c")
@@ -34,7 +41,7 @@
 %
 % mex -v : get the compiler option and include and lib paths
 %
-% the src files must precded the libraries (otherwise, mexPrintf etc. is
+% the src files must preceded the libraries (otherwise, mexPrintf etc. is
 % not found) https://stackoverflow.com/questions/45135/why-does-the-order-in-which-libraries-are-linked-sometimes-cause-errors-in-gcc
 %
 % gcc -shared -fPIC -pthread -O2 -DM_RELEASE -DO_INTERFACE -I"C:\Program Files\GNU Octave\Octave-8.2.0\mingw64\include\octave-8.2.0\octave"    f:/rpk/src/*.c -LC:\PROGRA~1\GNUOCT~1\OCTAVE~1.0\mingw64\lib\octave\8.2.0  -Wl,--export-all-symbols   -loctinterp -loctave -lkernel32 -lgdi32 -luser32  -o Rbeast.mex
@@ -45,7 +52,7 @@
 % beastPath='a:\xx\'
 % eval( webread('https://go.osu.edu/rbeast',weboptions('Cert','')) )
 % eval( webread('http://bit.ly/loadbeast',  weboptions('Cert','')) )
-% eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/installbeast.m', weboptions('Cert','')) )
+% eval( webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/installbeast.m', weboptions('Cert','')) )
 
 %%
 clear Rbeast % just in case that an exisitng version has been loaded 
@@ -104,9 +111,10 @@ for i=1:numel(datalist)
 end
 
 %% on the safe side, get all the mx library for all file systems
-codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', 'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m' ...
-           'plotbeast.m',   'printbeast.m',  'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', ...
-           'rbeast_version.m','rbeast_path.m', 'rbeast_src_compile.m','rbeast_src_download.m','readme.txt'};
+codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', ...
+           'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m', 'plotbeast.m',   'printbeast.m', ...
+		   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', 'rbeast_version.m','rbeast_path.m', ...
+		   'rbeast_src_compile.m','rbeast_src_download.m','readme.md'};
        
 % 'installrbeast.m' is only available online and not downloaded to local paths     
 

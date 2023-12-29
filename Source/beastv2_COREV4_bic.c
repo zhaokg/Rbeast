@@ -31,14 +31,226 @@
 #include "beastv2_xxyy_allocmem.h" 
 #include "beastv2_io.h" 
 
+static int whichCriteria;
+
+static void BEAST2_EvaluateModel_BIC(	BEAST2_MODELDATA* curmodel, BEAST2_BASIS_PTR b, F32PTR Xt_mars, I32 N, I32 NUMBASIS,
+	                            BEAST2_YINFO_PTR  yInfo, BEAST2_HyperPar* hyperPar, F32PTR precVec, VOID_PTR stream)
+{
+	//TO RUN THIS FUNCTION, MUST FIRST RUN CONVERTBAIS so to GET NUMBERS OF BASIS TERMS	
+
+	I32 Npad = (I32)ceil((F32)N / 8.0f) * 8; Npad = N;//Correct for the inconsitency of X and Y in gemm and gemv
+	I32 K    = 0;
+	for (I32 basisID = 0; basisID < NUMBASIS; basisID++) {
+		BEAST2_BASIS_PTR basis = b + basisID;
+		if (basis->type != OUTLIERID) {
+			int         NUM_SEG = basis->nKnot + 1;
+			TKNOT_PTR   KNOT    = basis->KNOT;
+			TORDER_PTR  ORDER   = basis->ORDER;
+
+			BEAST2_BASESEG seg;
+			seg.ORDER1 = basis->type == TRENDID ? 0 : 1;
+			//For season terms: 1..(1)....(2)...(|sSegNum-1)...N (|N+1)
+			for (int i = 1; i <= NUM_SEG; i++) {
+				///The first segment starts from 1; other segments start one interval after the previous segment
+				//The last segment ends at N'; others end exactly at the current breakpoint minus one;
+				//the last bk is (N+1)
+				seg.R1     = KNOT[(i - 1) - 1L];
+				seg.R2     = KNOT[i - 1L] - 1L;
+				seg.ORDER2 = basis->type == DUMMYID ? 0 : ORDER[i - 1L];
+				I32 k = basis->GenTerms(Xt_mars + Npad * K, N, &seg, &(basis->bConst));
+				K += k;
+			}
+
+		}
+		else {
+			int         numOfSeg = basis->nKnot;
+			TKNOT_PTR   knotList = basis->KNOT;
+
+			BEAST2_BASESEG seg;
+			seg.ORDER1 = seg.ORDER2 = 0; // orders are not used at all
+			//For season terms: 1..(1)....(2)...(|sSegNum-1)...N (|N+1)
+			for (int i = 1; i <= numOfSeg; i++) {
+				///The first segment starts from 1; other segments start one interval after the previous segment
+				//The last segment ends at N'; others end exactly at the current breakpoint minus one;
+				//the last bk is (N+1)
+				seg.R1 = knotList[(i)-1L];
+				seg.R2 = knotList[(i)-1L];
+				I32 k = basis->GenTerms(Xt_mars + Npad * K, N, &seg, &(basis->bConst));
+				K += k;
+			}
+		}
+
+
+	}
+	curmodel->K = K;
+
+	//--------------------------------------------------------------------------------------------------
+	// Set those rows of X_mars specfied by rowsMissing  to zeros 
+	//	TODO: this could be buggy: Xt_mars may be not large enough to backup the X values at the missing rows
+	// for the full initial model
+	F32PTR	GlobalMEMBuf = Xt_mars + K * Npad;
+	F32PTR	Xt_zeroBackup = GlobalMEMBuf;
+	if (yInfo->nMissing > 0) {
+		F32 fillvalue = 0.f;
+		f32_mat_multirows_extract_set_by_scalar(Xt_mars, Npad, K, Xt_zeroBackup, yInfo->rowsMissing, yInfo->nMissing, fillvalue);
+	}
+
+	//Calcuate X'*X and Calcuate X'*Y
+	//DGEMM('T', 'N', &m, &n, &K, &alpha, X_mars, &K, X_mars, &K, &beta, XtX, &m);	
+	//cblas_dgemm(const CBLAS_LAYOUT Layout, const CBLAS_TRANSPOSE transa, const CBLAS_TRANSPOSE transb, const MKL_INT m, const MKL_INT n, const MKL_INT k, const double alpha, const double *a, const MKL_INT lda, const double *b, const MKL_INT ldb, const double beta, double *c, const MKL_INT ldc);
+
+
+	F32PTR XtX = curmodel->XtX;
+	r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K, K, N, 1.f, Xt_mars, Npad, Xt_mars, Npad, 0.f, XtX, K);
+	//cblas_dgemmt (const CBLAS_LAYOUT Layout, const CBLAS_UPLO uplo, const CBLAS_TRANSPOSE transa, const CBLAS_TRANSPOSE transb, const MKL_INT n, const MKL_INT k, const double alpha, const double *a, const MKL_INT lda, const double *b, const MKL_INT ldb, const double beta, double *c, const MKL_INT ldc);
+	//cblas_dgemmt(CblasColMajor, CblasLower, CblasTrans, CblasNoTrans, k, N, 1, X_mars, N, X_mars, N, 0, XtY, k);				
+
+	F32PTR XtY = curmodel->XtY;
+	//cblas_dgemv(const CBLAS_LAYOUT Layout, const CBLAS_TRANSPOSE trans, const MKL_INT m, const MKL_INT n, const double alpha, const double *a, const MKL_INT lda, const double *x, const MKL_INT incx, const double beta, double *y, const MKL_INT incy);
+	r_cblas_sgemv(CblasColMajor, CblasTrans, Npad, K, 1, Xt_mars, Npad, yInfo->Y, 1, 0, XtY, 1);
+
+	// Restore the backuped zeros at the missing rows
+	if (yInfo->nMissing > 0) {
+		f32_mat_multirows_set_by_submat(Xt_mars, Npad, K, Xt_zeroBackup, yInfo->rowsMissing, yInfo->nMissing);
+	}
+	// Now GlobalMEMBuf_1st is free to use;
+
+	//X_mars has been constructed. Now use it to calcuate its margin likelihood
+	//Add precison values to the diagonal of XtX: post_P=XtX +diag(prec)	
+	F32PTR cholXtX = curmodel->cholXtX;
+	//f32_copy( XtX,  cholXtX, K * K);
+	//f32_add_val_matrixdiag(cholXtX, precVec[0], K);
+
+	//Solve inv(Post_P)*XtY using  Post_P*b=XtY to get beta_mean
+	F32PTR beta_mean = curmodel->beta_mean;
+	///////////////////////////////////////////////////////////////
+	/*
+		//lapack_int LAPACKE_spotrf(int matrix_layout, char uplo, lapack_int n, double * a, lapack_int lda);
+		r_LAPACKE_spotrf(LAPACK_COL_MAJOR, 'U', K, cholXtX, K); // Choleskey decomposition; only the upper triagnle elements are used
+		//LAPACKE_spotrs (int matrix_layout , char uplo , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );
+		r_cblas_scopy(K, XtY, 1, beta_mean, 1);
+		r_LAPACKE_spotrs(LAPACK_COL_MAJOR, 'U', K, 1, cholXtX, K, beta_mean, K);
+	*/
+
+	precVec[0] = 0.0;
+
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX, cholXtX, precVec, K, 1, K);
+	solve_U_as_LU_invdiag_sqrmat(cholXtX, XtY, beta_mean, K);
+	//////////////////////////////////////////////////////////////////
+
+
+	//Compute beta = beta_mean + Rsig2 * randn(p, 1);
+	//Usig2 = (1 / sqrt(sig2)) * U; 		beta = beta_mean + linsolve(Usig2, randn(p, 1), opts);
+	//status = vdRngGaussian( method, stream, n, r, a, sigma );
+
+	/**********************************************************/
+	// Sample beta from beta_mean and cholXtX
+	/********************************************************/
+	/*
+	F32PTR beta = model->beta;
+	r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF, (*(VSLStreamStatePtr *)stream), K, beta, 0, 1);
+
+	// LAPACKE_strtrs (int matrix_layout , char uplo , char trans , char diag , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );
+	{
+		//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', K, 1, post_P_U, K, beta, K);
+		solve_U_as_U_invdiag(cholXtX, beta, K, K);
+	}
+	r_ippsMulC_32f_I(sqrtf(model->sig2), beta, K);
+	r_ippsAdd_32f_I(beta_mean, beta, K);
+	*/
+	/**********************************************************/
+	// Sample beta from beta_mean and cholXtX
+	/********************************************************/
+
+	//Compute alpha2_star	 
+	/*
+	r_cblas_scopy(K, beta_mean, 1, GlobalMEMBuf_1st, 1);
+	//cblas_dtrmv(const CBLAS_LAYOUT Layout, const CBLAS_UPLO uplo, const CBLAS_TRANSPOSE trans, const CBLAS_DIAG diag, const MKL_INT n, const double *a, const MKL_INT lda, double *x, const MKL_INT incx);
+	r_cblas_strmv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, K, cholXtX, K, GlobalMEMBuf_1st, 1);
+	F32 alpha2_star = pyInfo->YtY - DOT(K, GlobalMEMBuf_1st, GlobalMEMBuf_1st);
+	 */
+	F32 alpha2_star      = (yInfo->YtY_plus_alpha2Q[0] - DOT(K, XtY, beta_mean)) * 0.5;
+
+	//half_log_det_post; = sum(log(1. / diag(U)))
+	F32 half_log_det_post = sum_log_diagv2(cholXtX, K);
+
+	//half_log_det_prior = -0.5 * (k_SN * log(prec(1)) + length(k_const_terms) * log(prec(2)) + length(linear_terms) * log(prec(3)));		
+	F32 half_log_det_prior = -.5f * K * logf(precVec[0]);
+
+	//log_ML    = half_log_det_post - half_log_det_prior - (n / 2 + b) * log(a + a_star / 2);
+	F32 marg_lik = half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
+
+	curmodel->alpha2Q_star[0] = alpha2_star;
+
+	F32 sig2 = curmodel->alpha2Q_star[0] / yInfo->alpha1_star;
+
+	if (whichCriteria==1)        //bic
+		curmodel->marg_lik = yInfo->n*logf(sig2) + K*logf(yInfo->n);
+	else if (whichCriteria == 2) //aic
+		curmodel->marg_lik = yInfo->n * logf(sig2) + K * 2;
+	else if (whichCriteria == 3) //aicc
+		curmodel->marg_lik = yInfo->n * logf(sig2) + K * 2 + 2.*(K*K+K)/(yInfo->n-K-1);
+	else if (whichCriteria == 4) //HQIC
+		curmodel->marg_lik = yInfo->n * logf(sig2) + K * 2* logf( logf(yInfo->n)+0.0001);
+	return;
+}
+
+
+static  void ComputeMargLik_prec01_BIC(BEAST2_MODELDATA_PTR data, BEAST2_MODEL_PTR model, BEAST2_YINFO_PTR yInfo, BEAST2_HyperPar_PTR hyperPar)
+{
+	I32 K = data->K;
+	solve_U_as_LU_invdiag_sqrmat(data->cholXtX, data->XtY, data->beta_mean, K);
+	//Compute alpha2_star: Two ways to compute alpha2_star: YtY-m*V*m
+	/* ---THE FIRST WAY---
+			//GlobalMEMBuf_1st = Xnewterm + K_newTerm*Npad;
+			r_cblas_scopy(KNEW, beta_mean_prop, 1, GlobalMEMBuf_2nd, 1);
+			//cblas_dtrmv(const CBLAS_LAYOUT Layout, const CBLAS_UPLO uplo, const CBLAS_TRANSPOSE trans, const CBLAS_DIAG diag, const MKL_INT n, const double *a, const MKL_INT lda, double *x, const MKL_INT incx);
+			r_cblas_strmv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, KNEW, cholXtX_prop, KNEW, GlobalMEMBuf_2nd, 1);
+			//double cblas_ddot (const MKL_INT n, const double *x, const MKL_INT incx, const double *y, const MKL_INT incy);
+			basis_prop->alpha2_star = yInfo.YtY - DOT(KNEW, GlobalMEMBuf_2nd, GlobalMEMBuf_2nd);
+	*/
+	/*---THE SECOND WAY-- */
+	F32 alpha2_star = (yInfo->YtY_plus_alpha2Q[0] - DOT(K, data->XtY, data->beta_mean)) * 0.5;
+
+	//half_log_det_post  = sum(log(1. / diag(U)))	 
+	//half_log_det_post  = -sum_log_diagv2(MODEL.prop.cholXtX, KNEW);
+	F32 half_log_det_post = sum_log_diagv2(data->cholXtX, K);
+
+	////Copy the diagonal of P_U to buf
+	// vmsLn(KNEW, GlobalMEMBuf_1st, GlobalMEMBuf_1st, VML_HA);
+	// ippsSum_32f(GlobalMEMBuf_1st, KNEW, &FLOAT_SHARE.half_log_det_post, ippAlgHintFast);
+	// r_ippsSumLn_32f(GlobalMEMBuf_2nd, KNEW, &half_log_det_post);	
+
+	//half_log_det_prior = -0.5 * (k_SN * log(prec(1)) + length(k_const_terms) * log(prec(2)) + length(linear_terms) * log(prec(3)));
+	// F32 half_log_det_prior = -0.5f * KNEW * *modelPar.LOG_PREC[0]
+
+	F32 half_log_det_prior = -0.5f * model->logPrecVec[0] * K;
+
+	//log_ML = half_log_det_post - half_log_det_prior - (n / 2 + b) * log(a + a_star / 2);
+	F32 marg_lik = half_log_det_post - half_log_det_prior - yInfo->alpha1_star * fastlog(alpha2_star);
+
+	data->alpha2Q_star[0] = alpha2_star;
+
+	F32 sig2 = data->alpha2Q_star[0] / yInfo->alpha1_star;
+
+	if (whichCriteria == 1)        //bic
+		data->marg_lik = yInfo->n * logf(sig2) + K * logf(yInfo->n);
+	else if (whichCriteria == 2) //aic
+		data->marg_lik = yInfo->n * logf(sig2) + K * 2;
+	else if (whichCriteria == 3) //aicc
+		data->marg_lik = yInfo->n * logf(sig2) + K * 2 + 2. * (K * K + K) / (yInfo->n - K - 1);
+	else if (whichCriteria == 4) //HQIC
+		data->marg_lik = yInfo->n * logf(sig2) + K * 2 * logf(logf(yInfo->n) + 0.0001);
+	return;
+}
+
 #define LOCAL(...) do{ __VA_ARGS__ } while(0);
 //extern MemPointers* mem;
 //time_t start, end; 
-/***********MULTITHREAD*******************/
-int beast2_main_corev4_mthrd(void* dummy)
-/***********MULTITHREAD*******************/
-{
-	
+int beast2_main_corev4_bic(int _whichCritia_)   {
+
+	whichCriteria = _whichCritia_;
+
 	// A struct to track allocated pointers   
 	// Do not use 'const MemPointers MEM' bcz Clang will asssume other fields as zeros (e.g., alloc, and alloc0).
 	MemPointers MEM = (MemPointers){.init = mem_init,};
@@ -57,7 +269,6 @@ int beast2_main_corev4_mthrd(void* dummy)
 	//const   QINT  q = 1L;
 	const QINT  q   = opt->io.q;
 	
-
 	// Pre-allocate memory to save samples for calculating credibile intervals	
 	CI_PARAM     ciParam = {0,};
 	CI_RESULT    ci[MAX_NUM_BASIS];
@@ -125,6 +336,11 @@ int beast2_main_corev4_mthrd(void* dummy)
 	const CORESULT coreResults[MAX_NUM_BASIS];
 	SetupPointersForCoreResults(coreResults, MODEL.b, MODEL.NUMBASIS, &resultChain);
 		 
+
+	// Added for BIC/AIC
+	opt->prior.alpha1 = 0.;
+	opt->prior.alpha2 = 0.;
+
 	const BEAST2_HyperPar  hyperPar = {.alpha_1=opt->prior.alpha1,.alpha_2=opt->prior.alpha2,.del_1=opt->prior.delta1,  .del_2=opt->prior.delta2};
 
 	/****************************************************************************/
@@ -141,10 +357,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 	// Print a blank line to be backspaced by the follow
 	if (extra.printProgressBar) {
 		F32 frac = 0.0; I32 firstTimeRun = 1;
-        /***********MULTITHREAD*******************/
-		//printProgress(frac,     extra.consoleWidth, Xnewterm, firstTimeRun);
-		//printProgress2(frac, 0, extra.consoleWidth, Xnewterm, firstTimeRun);
-		/***********MULTITHREAD*******************/
+		printProgress(frac, extra.consoleWidth, Xnewterm, firstTimeRun);
 	}
 
 	//#define __DEBUG__
@@ -175,24 +388,12 @@ int beast2_main_corev4_mthrd(void* dummy)
 							   && (MODEL.tid<0  || opt->prior.trendBasisFuncType!=2)
 		                       && ( MODEL.oid<0 || opt->prior.outlierBasisFuncType!=2);
 
-	/***********MULTITHREAD*******************/
-	//The next two global variables will be set in the main thread
-	//because if kept here, they can be wrongly initialized multiple times
-	//NUM_OF_PROCESSED_GOOD_PIXELS = 0; //this is a global variable.
-	//NUM_OF_PROCESSED_PIXELS = 0;  //this is also a global variable.
-	/***********MULTITHREAD*******************/
+	NUM_OF_PROCESSED_GOOD_PIXELS  = 0; //this is a global variable.
+	NUM_OF_PROCESSED_PIXELS       = 0;  //this is also a global variable.
 	for (U32 pixelIndex = 1; pixelIndex <= NUM_PIXELS; pixelIndex++)
 	{
-		/***********MULTITHREAD*******************/
-		pthread_mutex_lock(&mutex);
-		pixelIndex = NEXT_PIXEL_INDEX++;
-		if (pixelIndex > NUM_PIXELS) 	{
-			pthread_mutex_unlock(&mutex);
-			continue;
-		}
-		pthread_mutex_unlock(&mutex);
-		/***********MULTITHREAD*******************/
-		// Fecth a new time-series: set up Y, nMissing,  n, rowsMissing		
+		// Fecth a new time-series: set up Y, nMissing,  n, rowsMissing	
+
 		F32PTR MEMBUF           = Xnewterm; // Xnewterm is a temp mem buf.
 		BEAST2_fetch_timeSeries(&yInfo, pixelIndex,  MEMBUF, &(opt->io));
 
@@ -214,12 +415,14 @@ int beast2_main_corev4_mthrd(void* dummy)
 		__START_IF_NOT_SKIP_TIMESESIRIES__  
 		if (!skipCurrentPixel) {
 
+		 
 		if (q == 1) {  // for BEASTV4
-
+		
+			    
 				// alpha2_star  = alpha_2 + 0.5(YtY-beta*X'Y) = 0.5* (  [YtY+2*alpha_2] - beta*X'Y  )
 				// YtY+2*alpha_2  is pre-cacluated here. THe "2" before alpha_2 is to undo the division
 				// later in the calcution of alpha2_star
-				yInfo.YtY_plus_alpha2Q[0] = yInfo.YtY_plus_alpha2Q[0] + 2 * hyperPar.alpha_2;
+				yInfo.YtY_plus_alpha2Q[0] = yInfo.YtY_plus_alpha2Q[0] + 2 * hyperPar.alpha_2; 
 				
 				//Pre-compute alpha1_start, which depends only on n.
 				yInfo.alpha1_star = yInfo.n * 0.5 + hyperPar.alpha_1;    
@@ -310,7 +513,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				// larger  mem due to the many terms of the inital random model	
 				// basis->K won't be updated inside the function and the old values from CalcBasisKsKeK is kept
 				if (q == 1) {
-					BEAST2_EvaluateModel(&MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, &opt->prior.precValue, &stream); 
+					BEAST2_EvaluateModel_BIC(&MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, &opt->prior.precValue, &stream); 
 				} else 	{
 					MR_EvaluateModel(    &MODEL.curr, MODEL.b, Xt_mars, N, MODEL.NUMBASIS, &yInfo, &hyperPar, &opt->prior.precValue, &stream);
 				}
@@ -587,31 +790,11 @@ int beast2_main_corev4_mthrd(void* dummy)
 					// In MODEL, basis's K is still the old ones. They will be updated only if the proposal is accetped
 					// via basis->CalcBasisKsKeK_TermType(basis). The Ks of the proposed bases are stored in MODEL.prop.ntermP				   
 				   MODEL.prop.K = KNEW;
-				   precFunc.ComputeMargLik(&MODEL.prop, &MODEL, &yInfo, &hyperPar);
+				   ComputeMargLik_prec01_BIC(&MODEL.prop, &MODEL, &yInfo, &hyperPar);
 				   //if (MODEL.prop.marg_lik != MODEL.prop.marg_lik || fabs(MODEL.prop.marg_lik )>FLOAT_MAX || MODEL.prop.alpha2_star <0.f) {					   				  
 
-				   if ( IsNaN(MODEL.prop.marg_lik) || IsInf(MODEL.prop.marg_lik ) ) {
-					   if (++numBadIterations < 15) {
-					    	   
-						   precFunc.IncreasePrecValues(&MODEL);
-						   precFunc.GetXtXPrecDiag(&MODEL);
-						   precFunc.chol_addCol(MODEL.curr.XtX, MODEL.curr.cholXtX, MODEL.curr.precXtXDiag, MODEL.curr.K, 1L, MODEL.curr.K);
-						   precFunc.ComputeMargLik(&MODEL.curr, &MODEL, &yInfo, &hyperPar);
-
-						   /***********MULTITHREAD*******************/
-						   //r_printf is not thread-safe.
-						   //#if !(defined(R_RELEASE) || defined(M_RELEASE))
-						   //r_printf("prec: %.4f| marg_lik_prop: %.4f | marg_like_curr: %.4f \n", MODEL.precVec[0], MODEL.prop.marg_lik, MODEL.curr.marg_lik);
-						   //#endif
-                           			   /***********MULTITHREAD*******************/
-
-						   continue;
-					   }  else {
-						   skipCurrentPixel = 2;
-						   break;
-					   }					   
-				   }  else {
-					   numBadIterations = 0;
+				   if ( IsNaN(MODEL.prop.marg_lik) || IsInf(MODEL.prop.marg_lik ) ) {					  
+						   continue;				 
 				   } //if (marg_lik_prop != marg_lik_prop || alpha2_star_prop <0.f) 
 
 				   if (q == 1) {// added for MRBEAST
@@ -624,11 +807,9 @@ int beast2_main_corev4_mthrd(void* dummy)
 			   /****************************************************************************************/
 			
 				// First, calcuate a factor adjusting the likelihood change
-				F32  factor;				
-				if   ( NEW.jumpType ==MOVE || basis->type ==OUTLIERID) 	factor = 0.;
-				else { factor = basis->ModelPrior(basis, &NewCol, &NEW); }
+			 
 
-				F32 delta_lik = MODEL.prop.marg_lik - MODEL.curr.marg_lik + factor;
+				F32 delta_lik = (- MODEL.prop.marg_lik + MODEL.curr.marg_lik  )/2.0;
 				
 				//acceptTheProposal = *(RND.rnd16)++ < fastexp(delta_lik) * 65535.0f;				
 				I08     acceptTheProposal;
@@ -641,19 +822,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 					else						acceptTheProposal = *(RND.rnd32)++ < expValue * 4.294967296e+09;
 					 
 				}
-		 
-				#ifdef __DEBUG__
-					if (basisIdx == 0) ++(flagS[NEW.jumpType]);
-					else 		       ++(flagT[NEW.jumpType]);
-				#endif
+	 
 
-				if(acceptTheProposal)
+				if(acceptTheProposal) 
 				{
-					#ifdef __DEBUG__
-						if (basisIdx == 0) ++(accS[NEW.jumpType]);
-						else 		       ++(accT[NEW.jumpType]);
-					#endif
-
 					//Recover the orignal vaules for those rows corresponding to missing Y values
 					if (yInfo.nMissing > 0 && Knewterm > 0 /*&& basis->type != OUTLIERID*/)  //needed for basisFunction_OUliter=1						
 						f32_mat_multirows_set_by_submat(Xnewterm, Npad, Knewterm, Xt_zeroBackup, yInfo.rowsMissing, yInfo.nMissing);
@@ -744,6 +916,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 					#endif
 
+				    #ifdef __DEBUG__
+						if (basisIdx == 0) ++(accS[NEW.jumpType]);
+						else 		       ++(accT[NEW.jumpType]);
+					#endif
 
 				} //(*rnd32++ < exp(marg_lik_prop - basis->marg_lik))
 				
@@ -762,9 +938,8 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 					if (q == 1) {
 						//vdRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, &sig2, (alpha_1+n/2), 0, 1.0/(alpha_1+basis->alpha2_star *0.5));
-						F32 sig2      = (*RND.rndgamma++) * 1.f / MODEL.curr.alpha2Q_star[0];
-						sig2          = 1.0f / sig2;					 
-						MODEL.sig2[0] = sig2 > MIN_SIG2_VALUE ? sig2 : MODEL.sig2[0];
+				 
+						MODEL.sig2[0] = MODEL.curr.alpha2Q_star[0] / (yInfo.alpha1_star);
 						//r_printf("ite-%d SIG %f %f\n", ite, MODEL.sig2,  MODEL.sig2*yInfo.sd*yInfo.sd);
 					}	else {
 						// For MRBEAST
@@ -812,111 +987,8 @@ int beast2_main_corev4_mthrd(void* dummy)
 				/**********************/
 				// Re-sample the precison parameters and re-calcuate marg_lik and beta
 				/**********************/
-				if (bResampleParameter && q==1) 
-				{
-				   /*
-					I32   K     = MODEL.K;
-					F32   sumq  = DOT(K, MODEL.curr.beta, MODEL.curr.beta);
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (hyperPar.del_1 + K * 0.5f), 0, 1.f);
-					modelPar.prec[2]     = modelPar.prec[1] = modelPar.prec[0] = (*modelPar.prec) / (hyperPar.del_2 + 0.5f * sumq / MODEL.sig2);
-					modelPar.LOG_PREC[2] = modelPar.LOG_PREC[1] = modelPar.LOG_PREC[0] = logf(modelPar.prec[0]);				
-					 
-					*/
-		   
-					/*
-					//X_mars_prop has been constructed. Now use it to calcuate its marginal likelihood
-					//Add precison values to the diagonal of XtX: post_P=XtX +diag(prec)				
-					SCPY(K * K, MODEL.curr.XtX, MODEL.curr.cholXtX);
-
-					{//Add precison values to the SEASONAL diagonal compoents		
-						//rU08PTR termType = MODEL.termType;			
-						for (rI32 i = 1, j = 0; i <= K; i++)						{
-							//MODEL.curr.cholXtX[j + (i)-1] += modelPar.prec[*termType++];
-							MODEL.curr.cholXtX[j + (i)-1] += modelPar.prec[0];
-							j += K;
-						}
-					}//Add precison values to the SEASONAL diagonal compoents
-
-					//Solve inv(Post_P)*XtY using  Post_P*b=XtY to get beta_mean
-					//lapack_int LAPACKE_spotrf(int matrix_layout, char uplo, lapack_int n, double * a, lapack_int lda);
-					r_LAPACKE_spotrf(LAPACK_COL_MAJOR, 'U', K, MODEL.curr.cholXtX, K); // Choleskey decomposition; only the upper triagnle elements are used
-					//chol_addCol(MODEL.curr.cholXtX, MODEL.curr.cholXtX, K, 1, K);
-
-					//LAPACKE_spotrs (int matrix_layout , char uplo , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );			
-					SCPY(K, MODEL.curr.XtY, MODEL.curr.beta_mean);
-					r_LAPACKE_spotrs(LAPACK_COL_MAJOR, 'U', K, 1, MODEL.curr.cholXtX, K, MODEL.curr.beta_mean, K);
-					*/
-
-					I32 ntries = 0;
-					do {
-						if (ntries++ == 0)	precFunc.ResamplePrecValues(&MODEL, &hyperPar, &stream);							
-						else				precFunc.IncreasePrecValues(&MODEL);											
-						precFunc.GetXtXPrecDiag( &MODEL);
-						precFunc.chol_addCol(    MODEL.curr.XtX, MODEL.curr.cholXtX, MODEL.curr.precXtXDiag, MODEL.curr.K, 1L, MODEL.curr.K);		
-						precFunc.ComputeMargLik( &MODEL.curr, &MODEL, &yInfo, &hyperPar);
-
-					} while (  IsNaN(MODEL.curr.marg_lik) && ntries < 20 );
-
-					if ( IsNaN(MODEL.curr.marg_lik) ) {
-						#if !(defined(R_RELEASE) || defined(M_RELEASE) ||  defined(P_RELEASE)) 
-						r_printf("skip3 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVec[0], MODEL.curr.marg_lik);
-						#endif
-						skipCurrentPixel = 3;
-						break;
-					} 
-
-					/* No need to re-sample beta because it is not really used
-					r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF, stream, K, beta, 0, 1);
-					// LAPACKE_strtrs (int matrix_layout , char uplo , char trans , char diag , lapack_int n , lapack_int nrhs , const double * a , lapack_int lda , double * b , lapack_int ldb );
-					r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', K, 1, cholXtX, K, beta, K);
-					r_ippsMulC_32f_I(sqrtf(modelPar.sig2), beta, K);
-					r_ippsAdd_32f_I(beta_mean, beta, K);
-					*/
-					/* /FInally, re-sample sig2 based on the lastest alpha2_star
-					//vdRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, &sig2, (alpha_2+n/2), 0, 1.0/(alpha_1+basis->alpha2_star *0.5));
-					modelPar.sig2 = (*rndgamma++)*1.0f / (modelPar.alpha_1 + basis->alpha2_star *0.5f);
-					modelPar.sig2 = 1.f / modelPar.sig2;
-					*/
-				}
-
-				if (bResampleParameter && q>1) 
-				{
-					F32PTR MEMBUF = Xnewterm;					
-					I32    K      = MODEL.curr.K;
-					//FLOAT_SHARE.sumq = DOT(K, basis->beta, basis->beta);
-					//r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1, modelPar.prec, (modelPar.alpha_2 + K *0.5f), 0, 1.f);
-					//modelPar.prec[2] = modelPar.prec[1] = (*modelPar.prec) / (modelPar.alpha_1 + 0.5f*FLOAT_SHARE.sumq / modelPar.sig2);
-
-					
-					I32 ntries = 0;
-					do {
-						if (ntries++ == 0) {
-							// Get trace( B*inv(SIG2)*B')						
-							//r_LAPACKE_strtrs(LAPACK_COL_MAJOR, 'U', 'N', 'N', q, q, basis->alpha_Q_star, q, W_L, q);	
-							r_cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, K, q, q, 1.0, MODEL.beta, K, MODEL.sig2+q*q, q, 0.f, MEMBUF, K);
-							F32 sumq = DOT(K * q, MEMBUF, MEMBUF);
-							r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE, stream, 1L, MODEL.precVec, (hyperPar.del_1 + K * q * 0.5f), 0.f, 1.f);
-							MODEL.precVec[0]     = MODEL.precVec[0] / (hyperPar.del_2 + 0.5f * sumq);
-							MODEL.logPrecVec[0]  = logf(MODEL.precVec[0]);
-						} else {
-							precFunc.IncreasePrecValues(&MODEL);
-						}
-						//precFunc.ResamplePrecValues( &MODEL, &hyperPar,&stream);
-						precFunc.GetXtXPrecDiag(&MODEL);
-						precFunc.chol_addCol(MODEL.curr.XtX, MODEL.curr.cholXtX, MODEL.curr.precXtXDiag, K, 1, K);
-						precFunc.ComputeMargLik(&MODEL.curr, &MODEL, &yInfo, &hyperPar);
-					} while (IsNaN(MODEL.curr.marg_lik) && ntries < 20);
-
-					
-					if ( IsNaN(MODEL.curr.marg_lik) ) {
-						#if !(defined(R_RELEASE) || defined(M_RELEASE)) 
-							r_printf("skip4 | prec: %.4f| marg_lik_cur: %.4f \n",  MODEL.precVec[0], MODEL.curr.marg_lik);
-						#endif
-						skipCurrentPixel = 3;
-						break;
-					}  
-
-				}
+		 
+ 
  
 				if (!bStoreCurrentSample) continue;
 				
@@ -927,12 +999,12 @@ int beast2_main_corev4_mthrd(void* dummy)
 				/**********************************************/
 
 				sample++;
-				/***********MULTITHREAD*******************/
-				//if (extra.printProgressBar && NUM_PIXELS == 1 && sample % 1000 == 0) {
-				//	F32 frac = (F32)(chainNumber * MCMC_SAMPLES + sample) / (MCMC_SAMPLES * MCMC_CHAINNUM);
-				//	printProgress(frac, extra.consoleWidth, Xnewterm, 0);
-				//}
-				/***********MULTITHREAD*******************/	
+
+				if (extra.printProgressBar && NUM_PIXELS == 1 && sample % 1000 == 0) {
+					F32 frac = (F32)(chainNumber * MCMC_SAMPLES + sample) / (MCMC_SAMPLES * MCMC_CHAINNUM);
+					printProgress(frac, extra.consoleWidth, Xnewterm, 0);
+				}
+
 
 				*resultChain.marg_lik += MODEL.curr.marg_lik;
 
@@ -946,7 +1018,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				}
 
 
-				F32PTR BETA = (extra.useMeanOrRndBeta == 0) ? MODEL.curr.beta_mean : MODEL.beta;
+				F32PTR BETA = (extra.useMeanOrRndBeta == 0) || 1L /*BIC*/ ? MODEL.curr.beta_mean : MODEL.beta;
 				{
 					F32PTR MEMBUF1 = Xnewterm;					
 
@@ -1418,14 +1490,11 @@ int beast2_main_corev4_mthrd(void* dummy)
 			    #undef _okn_1
 			}
 
-			/***********MULTITHREAD*******************/
 			// Jump out of the chainumber loop
 			if (skipCurrentPixel) {
-				//q_warning("WARNING(#%d):The max number of bad iterations exceeded. "
-				//	     "Can't decompose the current time series\n", skipCurrentPixel);
+				q_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n", skipCurrentPixel);
 				break;
 			}
-			/***********MULTITHREAD*******************/
 		}
 		/*********************************/
 		// WHILE(chainNumber<chainNumber)
@@ -1826,50 +1895,17 @@ int beast2_main_corev4_mthrd(void* dummy)
 		 
 		  
 
-		/***********MULTITHREAD*******************/
-		pthread_mutex_lock(&mutex);
 		//if (!skipCurrentPixel)	NUM_OF_PROCESSED_GOOD_PIXELS++; //avoid the branch
 		NUM_OF_PROCESSED_GOOD_PIXELS += !skipCurrentPixel;  //this is a global variable.
 		NUM_OF_PROCESSED_PIXELS++;							//this is also a global variable.
-		pthread_mutex_unlock(&mutex);
-		/***********MULTITHREAD*******************/
 
 
-
-		/***********MULTITHREAD*******************/
-		/*
 		F64 elaspedTime = GetElaspedTimeFromBreakPoint();
 		if (NUM_OF_PROCESSED_GOOD_PIXELS > 0 && NUM_PIXELS > 1 && (pixelIndex % 50 == 0 || elaspedTime > 1)) 		{
 			F64 estTimeForCompletion = GetElapsedSecondsSinceStart()/NUM_OF_PROCESSED_GOOD_PIXELS * (NUM_PIXELS - pixelIndex);
 			printProgress2((F32)pixelIndex / NUM_PIXELS, estTimeForCompletion, extra.consoleWidth, Xnewterm, 0);
 			if (elaspedTime > 1) SetBreakPointForStartedTimer();
 		}
-		*/
-		F32 elaspedTime = GetElaspedTimeFromBreakPoint();
-		if (NUM_OF_PROCESSED_GOOD_PIXELS > 0 && NUM_PIXELS > 1 && (pixelIndex % 50 == 0 || elaspedTime > 1))  {
-			PERCENT_COMPLETED = (F32)NUM_OF_PROCESSED_PIXELS / NUM_PIXELS;
-			REMAINING_TIME    = GetElapsedSecondsSinceStart()/NUM_OF_PROCESSED_GOOD_PIXELS * (NUM_PIXELS- NUM_OF_PROCESSED_PIXELS);
-			if (elaspedTime > 1) {
-				SetBreakPointForStartedTimer();
-			}
-		}
-		/***********MULTITHREAD*******************/
-		
-		
-		/***********MULTITHREAD*******************/
-		/*
-		pthread_mutex_lock(&mutex);
-		if (USER_INTERRUPT == 0) {
-			USER_INTERRUPT = CheckInterrupt();
-		}
-		pthread_mutex_unlock(&mutex);
-		*/
-
-		if (IDE_USER_INTERRUPT)		{
-			break;
-		}
-
-		/***********MULTITHREAD*******************/
 
 		#ifdef __DEBUG__
 		r_printf("TREND: birth%4d/%-5d|death%4d/%-5d|merge%4d/%-5d|move%4d/%-5d|chorder%4d/%-5d\n", 
@@ -1887,12 +1923,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 
 	r_vslDeleteStream(&stream);
 	MEM.free_all(&MEM);
-	/***********MULTITHREAD*******************/
-	pthread_t  id = pthread_self();
-	pthread_mutex_lock(&mutex);
-	//r_printf("\n\nThread %p is quitting...\n", id);
-	pthread_mutex_unlock(&mutex);
-	/***********MULTITHREAD*******************/
+ 
 	return 1;
 } /* End of beastST() */
 

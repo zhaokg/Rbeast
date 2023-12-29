@@ -19,6 +19,7 @@ static void ST(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Npad
 	X    += basis->Kbase * Npad;
 	beta += basis->Kbase;
 	TKNOT_PTR KNOT = basis->KNOT;
+ 
 	for (I32 i = 0; i < basis->nKnot + 1; i++) {
 		I32 order = basis->ORDER[i];
 		I32 Kseg  = (basis->type == TRENDID) ? order + 1 : order * 2;
@@ -33,6 +34,7 @@ static void ST(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Npad
 	}
 
 }
+
 static void DD_0(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Npad)
 {
 
@@ -47,7 +49,7 @@ static void DD_0(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Np
 	I16PTR     KS       = basis->ks;
 	I16PTR     KE       = basis->ke;
 
-	int NUM_OF_SEG = basis->nKnot + 1L; // Number of seasonal segment		
+	int NUM_OF_SEG = basis->nKnot + 1L;  // Number of seasonal segment		
 	int kCounter   = 1L;                  // A counter for basis terms
 	for (I32 i = 1; i <= NUM_OF_SEG; i++) {
 	 
@@ -68,8 +70,8 @@ static void DD_0(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Np
 
 	} //Loop through individual segments
  
-
 }
+
 static void OO_0(F32PTR X, F32PTR beta, F32PTR Y, BEAST2_BASIS_PTR basis, I32 Npad)
 {
 	memset(Y, 0, sizeof(F32) * Npad);

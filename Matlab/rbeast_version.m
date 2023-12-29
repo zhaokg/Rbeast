@@ -1,5 +1,7 @@
-% July 12, 2023: Offically added the rbeast_mex_compile.m: not always working but
-% may be usefulf or some users
+% Dec 12, 2023: Added the the sseg.leftmargin, sseg.rightmargin, tseg.leftmargin, and
+%   tseg.rightmargin argumentst upon the requst of Racine Nassau from University of Washington
+% July 12, 2023: Added the rbeast_mex_compile.m: not always working but
+%    may be usefulf or some users
 % July 10, 2023: Fix a silly typo (toder -> torder):  Thanks to michalk vasnicka.
 % July 8, 2023: Add the support for Octave:  Thanks to Mario Rossi
 % Dec 8, 2002: Fixed the num_samples_per_period error for beast_irreg
@@ -14,5 +16,5 @@
 %   model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.9465;
+rbeastGitHubVersion = 0.9466;
 disp(strcat('  matlab-beast v', num2str(rbeastGitHubVersion)));
