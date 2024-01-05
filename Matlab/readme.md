@@ -66,7 +66,7 @@ Many choices are possible; given below are the options I used.
   # Use brew to install clang
   brew install llvm  
   ```
-### Step 3a. Use Matlab's mex to compile
+### Step 3a. Use Matlab's mex to compile and build
 If the mex command is apropriately set up in Matlab, here are two ways to build the Rbeast.mex binary file:
 * **Method 1**: Run `rbeast_src_download` first to download the C files, and then run `rbeast_src_compile` to compile using `mex`.
 * **Method 2**: Call `mex` manually in Matlab using the following command, assuming that Matlab's current directory is the source folder:
@@ -78,7 +78,7 @@ If the mex command is apropriately set up in Matlab, here are two ways to build 
       ```
       mex -v CFLAGS='-pthread -DM_RELEASE -UUSE_MEX_CMD -fPIC -O2 -Wall -std=gnu99 -mfpmath=sse -msse2 -mstackrealign' -lmwservices -lut  -lpthread  -lkernel32 -lgdi32 -luser32  *.c -output Rbeast
       ```
-### Step 3b. Build the mex binary using gcc or clang
+### Step 3b. Use gcc or clang to build the mex binary 
 If your matlab's mex doesn't work or Step3a fails for some reason, we can circument mex to explicity build the binary using gcc and clang.  Matlab's mex file is nothing but 
 a dynamic libray (e.g., a .dll file on Windows, and shared object file on Linux). 
 
