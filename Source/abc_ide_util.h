@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+	extern void StdouFlush(void);
+
 	extern I08 IDE_USER_INTERRUPT;
 
 	typedef enum   IO_TYPE { MEM_IO, DISK_IO } IO_TYPE;
@@ -15,15 +17,15 @@ extern "C" {
 		DATA_TYPE type;
 		int       ndim;
 		int       dims[5];
-		void** ptr;
+		void**   ptr;
 		int       extra; //added for extension to multivariate ts for mrbeast
 	} FIELD_ITEM;
 
 	VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind);
-	void    GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char* str, int buflen);
-	void*   CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr);
-	void  * CreateNumVector(DATA_TYPE dtype, int length, VOIDPTR* data_ptr);
-	void  * CreateNumMatrix(DATA_TYPE dtype, int Nrow, int Ncol, VOIDPTR* data_ptr);
+	void  GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char* str, int buflen);
+	void* CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr);
+	void* CreateNumVector(DATA_TYPE dtype, int length, VOIDPTR* data_ptr);
+	void* CreateNumMatrix(DATA_TYPE dtype, int Nrow, int Ncol, VOIDPTR* data_ptr);
 	void* CreateF32NumVector(int length, VOIDPTR* data_ptr);
 	void* CreateF32NumMatrix(int Nrow, int Ncol, VOIDPTR* data_ptr);
 	void* CreateF64NumVector(int length, VOIDPTR* data_ptr);
@@ -43,7 +45,7 @@ extern "C" {
 	void RemoveAttribute(VOID_PTR listVar, const char* field);
 
 	extern  I32   GetConsoleWidth(void);
-	extern  void  printProgress(F32 pct, I32 width, char* buf, I32 firstTimeRun);
+	extern  void  printProgress1(F32 pct, I32 width, char* buf, I32 firstTimeRun);
 	extern  void  printProgress2(F32 pct, F64 time, I32 width, char* buf, I32 firstTimeRun);
 
 	I32 GetCharArray(void* ptr, char* dst, int n);

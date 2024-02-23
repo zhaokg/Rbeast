@@ -1,7 +1,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#if (defined(WIN64_OS) || defined(WIN32_OS)) && R_INTERFACE==1
+#if (defined(OS_WIN64) || defined(OS_WIN32)) && R_INTERFACE==1
 #include "abc_001_config.h"
 #include "abc_ide_util.h"
 

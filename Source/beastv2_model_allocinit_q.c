@@ -429,8 +429,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
-			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
 			basis->prior.leftMargin = opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = -1;//opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = -1;//opt->prior.seasonMaxOrder;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
@@ -514,8 +514,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.minKnotNum = opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
-			basis->prior.minSepDist = opt->prior.seasonMinSepDist;
 			basis->prior.leftMargin = opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = opt->prior.seasonMaxOrder;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;

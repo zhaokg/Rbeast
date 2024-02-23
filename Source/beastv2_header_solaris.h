@@ -31,7 +31,7 @@
 #define SVDID      4
 #define A(xxx)     BEAST2_##xxx
 
-typedef U32 TKNOT, * _restrict TKNOT_PTR;
+typedef I32 TKNOT, * _restrict TKNOT_PTR;
 typedef U08 TORDER, * _restrict TORDER_PTR;
 #define rTKNOT_PTR   register  TKNOT_PTR
 #define rTORDER_PTR  register  TORDER_PTR
@@ -206,7 +206,7 @@ typedef struct BEAST2_RESULT {
 	F32PTR  tY, tSD;
 	F32PTR  tCI;            //computeCI
 	I32PTR  torder;         //computeOrder
-	F32PTR  tslp, tslpSD;   //computeSlp
+	F32PTR  tslp, tslpSD, tslpCI;   //computeSlp
 	I32PTR  tslpSgnPosPr;   //computeSlp
 	I32PTR  tslpSgnZeroPr;   //computeSlp: THere is a sizable probability that slp ==0.
 

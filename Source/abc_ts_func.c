@@ -243,7 +243,7 @@ I32  tsAggegrationPrepare(TimeVecInfo* tvec) {
 
 	// Sanity check: 
    if (tvec->isStartDeltaOnly==1 && tvec->isConvertedFromStartDeltaOnly==1) {
-		r_printf("Error: there must be someting wrong in TsAggegrationPrepare\n ");
+		r_printf("Error: there must be something wrong in TsAggegrationPrepare\n ");
 		return 0;
 	}
 

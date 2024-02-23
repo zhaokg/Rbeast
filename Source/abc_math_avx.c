@@ -4,13 +4,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             //do something////
     #pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             //do something////
@@ -21,7 +21,7 @@
 
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
 
@@ -30,7 +30,7 @@
     //#pragma clang attribute pop
 #endif
 
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -73,14 +73,14 @@
 #define sub         _mm256_sub_ps
 #define addi32      _mm256_add_epi32
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 
 #include <immintrin.h>
 #include "abc_vec.h"
 #include "abc_math_avx.h"
 
 /* yes I know, the top of this file is quite ugly */
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     # define ALIGN32_BEG __declspec(align(32))
     # define ALIGN32_END 
 #else
@@ -156,7 +156,7 @@ _PS256_CONST(cephes_log_q2, 0.693359375);
 #define avx2_mm256_add_epi32 _mm256_add_epi32
  
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 
 /* natural logarithm computed for 8 simultaneous float
    return NaN for x <= 0
@@ -1136,7 +1136,7 @@ void  pow256_ps_ptr(F32PTR px, float n, F32PTR out) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //3pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

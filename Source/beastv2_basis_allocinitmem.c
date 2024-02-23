@@ -40,7 +40,7 @@ static void DSVT_AllocInitBasis(BEAST2_BASIS_PTR basis, I32 N, I32 K_MAX, MemPoi
 	I32 extraRight_pad16 = max(Npad16 - N, extraElemRight);
 
 	I32 NgoodVec = extraLeft_pad8 + N + extraRight_pad16;
-	// Added to accomodate left and aright margsins
+	// Added to accommodate left and aright margsins
 
 	MemNode nodes[] = {
 		{&basis->KNOT,     sizeof(TKNOT) * (1+1+1 + MAX_KNOTNUM + 1), .align = 64 },

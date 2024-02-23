@@ -6,6 +6,11 @@
 #include "abc_ide_util.h"
 #include "abc_common.h"
 #include "abc_date.h"
+#include "inttypes.h"  // Possibly needed for StdoutFlush()
+// #include "mex.h"
+
+////https://stackoverflow.com/questions/10529500/what-does-this-mean-int-a
+// in C++, (int &) is a type punning that can force converstion of a variable to int
 
 #if M_INTERFACE==1  
 
@@ -13,6 +18,51 @@
 int  JDN_to_DateNum(int jdn) {
 	return jdn - 1721059;
 }
+
+
+void StdouFlush(void) {
+
+// https://stackoverflow.com/questions/26271154/how-can-i-make-a-mex-function-printf-while-its-running/26271557
+// isoFlush is  an undocumented C++ function that resides in libmwservices.dll
+
+// https://blog.csdn.net/saddlesad/article/details/119322795
+// https://github.com/gchatelet/gcc_cpp_mangling_documentation
+// Name mangling starts with __Z in MacOS and _Z in Linux
+
+#if defined(OS_WIN32) || defined(OS_WIN64)
+ #if defined(COMPILER_MSVC)
+    // https://stackoverflow.com/questions/53381461/does-visual-c-provide-a-language-construct-with-the-same-functionality-as-a
+    #pragma comment(linker, "/alternatename:ioFlush=?ioFlush@@YA_NXZ")
+ #else
+    extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
+ #endif
+#elif defined(OS_MAC)
+   extern Bool ioFlush(void)  asm("__Z7ioFlushv");
+#elif defined(OS_LINUX)   
+   extern Bool ioFlush(void)  asm("_Z7ioFlushv");
+#else
+   // Do nothing
+#endif
+
+//  https://stackoverflow.com/questions/35837694/how-to-manually-mangle-names-in-visual-c
+//  https://gcc.gnu.org/onlinedocs/gcc/Asm-Labels.html
+//  ON Windows, for MSVC C++ only, use the __identififer macro to give an alias
+//  Using gcc, use int a asm("xxx")
+
+ // ioFlush is not available in Octave
+ #ifndef O_INTERFACE
+	ioFlush();
+ #endif
+
+}
+
+
+
+ 
+
+
+
+
 
 I32 GetConsoleWidth() {
 	mxArray *pOut[1], *pIn[2];

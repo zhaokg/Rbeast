@@ -5,13 +5,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             //do something////
     #pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             //do something////
@@ -23,7 +23,7 @@
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
  
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64)  
 
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
@@ -33,7 +33,7 @@
     //#pragma clang attribute pop
 #endif
 
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
 
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
@@ -59,12 +59,12 @@
 
 
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_vec.h"
 
 /* yes I know, the top of this file is quite ugly */
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     # define ALIGN64_BEG __declspec(align(64))
     # define ALIGN64_END 
 #else
@@ -610,7 +610,7 @@ v16sf pow512_ps(v16sf x, float n) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

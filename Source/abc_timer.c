@@ -1,12 +1,29 @@
 #include "abc_000_warning.h"
+
+
+// Need to be placed before time.h
+#if ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
+ // stackoverflow.com/questions/40515557/compilation-error-on-clock-gettime-and-clock-monotonic
+
+	#ifndef  _GNU_SOURCE
+		#define _GNU_SOURCE
+	#endif
+
+	#ifndef  _POSIX_C_SOURCE
+       #define _POSIX_C_SOURCE 199309L
+	#endif
+
+#endif
+
 #include "abc_timer.h"
+
 
  
 static F64 conversionFactor;
 static F64 elapsedTimeAtBreakpoint;
-#if defined(MSVC_COMPILER)	
+#if defined(COMPILER_MSVC)	
 	static LARGE_INTEGER T0;
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	static struct timespec T0;
 	#include "time.h" //define CLOCK_REAL_TIME
 #elif defined(__MACH__)
@@ -16,7 +33,7 @@ static F64 elapsedTimeAtBreakpoint;
 
 void InitTimerFunc()
 {
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	LARGE_INTEGER Frequency;
 	QueryPerformanceFrequency(&Frequency); 
 	conversionFactor = 1. / (double)Frequency.QuadPart;
@@ -32,9 +49,9 @@ void InitTimerFunc()
 
 void StartTimer()
 {
-#if defined(MSVC_COMPILER)  //http: //forums.codeguru.com/showthread.php?261134-QueryPerformanceCounter-to-milliseconds
+#if defined(COMPILER_MSVC)  //http: //forums.codeguru.com/showthread.php?261134-QueryPerformanceCounter-to-milliseconds
 	QueryPerformanceCounter(&T0);	
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	//CLOCK_MONOTONIC vs CLOCK_REALTIME //http: //linuxmogeb.blogspot.com/2013/10/how-does-clockgettime-work.html
 	clock_gettime(CLOCK_MONOTONIC, &T0);	
 #elif defined(__MACH__) // https: //stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x
@@ -45,12 +62,12 @@ void StartTimer()
 F64 GetElapsedSecondsSinceStart()
 {	
 	F64 elapsedTime;
-#if defined(MSVC_COMPILER)  
+#if defined(COMPILER_MSVC)  
 //http: //forums.codeguru.com/showthread.php?261134-QueryPerformanceCounter-to-milliseconds
 	LARGE_INTEGER T;
 	QueryPerformanceCounter(&T);	
 	elapsedTime = (double)(T.QuadPart-T0.QuadPart)* conversionFactor;
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 //CLOCK_MONOTONIC vs CLOCK_REALTIME //http: //linuxmogeb.blogspot.com/2013/10/how-does-clockgettime-work.html
 	struct timespec T;
 	clock_gettime(CLOCK_MONOTONIC, &T);
@@ -74,9 +91,9 @@ F64 GetElaspedTimeFromBreakPoint() {
 U64 TimerGetTickCount() {
 
 	U64 tick;
-#if	defined(MSVC_COMPILER) 
+#if	defined(COMPILER_MSVC) 
 	tick = GetTickCount64();
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	// https:// stackoverflow.com/questions/17432730/precedence-of-over
 	struct timespec T;
 	clock_gettime(CLOCK_REALTIME, &T);

@@ -1,7 +1,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 #include "abc_timer.h"
 #include "abc_win32_demo.h"
 
@@ -345,7 +345,7 @@ HWND GetConsoleHwnd(void)
 	return(hwndFound);
 }
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 #include <io.h> //'_open_osfhandle '_dup2
 void SetupConsole()
 {//https: //stackoverflow.com/questions/30098229/win32-application-write-output-to-console-using-printf

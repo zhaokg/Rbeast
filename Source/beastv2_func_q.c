@@ -2,7 +2,6 @@
 #include "abc_000_warning.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "abc_001_config.h"
@@ -11,6 +10,8 @@
 #include "abc_math.h"  //sum_log_diag_v2
 #include "abc_vec.h"  //sum_log_diag_v2
 #include "beastv2_func.h"
+
+#include <stdio.h>	               //fprintf fopen FILE #include<stdio.h>  // Need _GNU_SOURCE for manylinux; otherwise report /usr/include/stdio.h:316:6: error: unknown type name '_IO_cookie_io_functions_t'
 
 /*
 F32  GetPercentileNcp_old(F32PTR prob, I32 N, F32 pctile) {

@@ -9,13 +9,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             //do something////
     #pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             //do something////
@@ -27,7 +27,7 @@
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
  
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64) 
     #pragma clang optimize on
     //https://stackoverflow.com/questions/46165752/does-clang-have-something-like-pragma-gcc-target
    // #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2"))), apply_to=function)
@@ -35,7 +35,7 @@
     //#pragma clang attribute pop
 #endif
 
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64) 
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -63,13 +63,13 @@
 
 #include "abc_vec.h"
 
-#if defined(WIN64_OS) || defined(WIN32_OS)
+#if defined(OS_WIN64) || defined(OS_WIN32)
     #include <malloc.h> //alloca
 #else
     #include <alloca.h> //alloca
 #endif
 
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #define __attribute__(x)
 #endif
 
@@ -96,7 +96,7 @@
 #define sub         _mm512_sub_ps
 #define addi32      _mm512_add_epi32
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_math_avx512.h"
 
@@ -606,7 +606,7 @@ STATIC void avx512_f32_sqrt_vec(const F32PTR x, const F32PTR y, const int N)
 }
 
 
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 STATIC void avx512_f32_sin_vec_inplace_MSVC(const F32PTR x, const int N)
 {
     //https://github.com/reyoung/avx_mathfun/blob/master/avx_mathfun.h
@@ -919,7 +919,7 @@ STATIC void avx512_f32_sx_sxx_to_avgstd_inplace(F32PTR SX, F32PTR SXX, I32 Nsamp
 }
 
 
-#ifdef WIN64_OS 
+#ifdef OS_WIN64 
     #define WIN32_LEAN_AND_MEAN
     #include "windows.h"
 #endif
@@ -2460,7 +2460,7 @@ static char a = 'a';
 
 
 ///////////////////////////////////////////////////////////////////////////
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

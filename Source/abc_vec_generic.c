@@ -32,7 +32,7 @@ F77__iaddc(const int C, int* X, const int N);
  
   
 
-#if defined(WIN64_OS) || defined(WIN32_OS)
+#if defined(OS_WIN64) || defined(OS_WIN32)
     #include <malloc.h> //alloca
 #else
     #include <alloca.h> //alloca

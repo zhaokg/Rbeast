@@ -120,7 +120,7 @@ enum { _False_ = 0, _True_ = 1 };
 
 
 //static INLINE F32 getNaN(void) { F32 nan = 1e38f;	nan = nan * nan * 0.f;	return nan;}
-#if defined (MSVC_COMPILER)
+#if defined (COMPILER_MSVC)
 	static INLINE float  getNaN(void) { return (float)1e38f * (float)1e38f * (float)0.f; }
 #else
 	static INLINE float  getNaN(void) { return (float)(0.0 / 0.0); }

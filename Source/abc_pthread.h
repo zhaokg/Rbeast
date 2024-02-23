@@ -6,7 +6,7 @@
 extern int GetNumCores(void);
 
 ////////////////////////////////////////////////////////////////////
-#if defined(_WIN32) || defined(WIN64_OS) ||  defined(MAC_OS)   
+#if defined(_WIN32) || defined(OS_WIN64) ||  defined(OS_MAC)   
 
 typedef struct cpu_set { 
         int        core_count; 
@@ -21,7 +21,7 @@ extern int   CPU_get_first_bit_id(cpu_set_t* cs);
 #endif
 ////////////////////////////////////////////////////////////////////
  
-#if defined(WIN64_OS) || defined(WIN32_OS)
+#if defined(OS_WIN64) || defined(OS_WIN32)
 
 #include "stdlib.h"  // needed for free() in pthread_attr_destroy()
 
@@ -87,7 +87,7 @@ extern int   CPU_get_first_bit_id(cpu_set_t* cs);
 
 #endif
 
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     #include "Processthreadsapi.h"   // InitializeProcThreadAttributeList DeleteProcThreadAttributeList
 #endif
 
@@ -96,7 +96,7 @@ typedef struct {
          SIZE_T                       sizeAttributeList;
          PPROC_THREAD_ATTRIBUTE_LIST  lpAttributeList;
 	     SIZE_T                       dwStackSize;    
-    #ifdef WIN64_OS
+    #ifdef OS_WIN64
 	    PROCESSOR_NUMBER ProcNumber;
     #else
          void * ProcNumber;
@@ -117,7 +117,7 @@ static INLINE int pthread_attr_init(pthread_attr_t * attr) {
     attr->lpAttributeList   = NULL;
     attr->sizeAttributeList = 0;
 
-    #ifdef WIN64_OS    
+    #ifdef OS_WIN64    
         // stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads
         DWORD  attributeCounts = 1L;
         SIZE_T size;
@@ -133,7 +133,7 @@ static INLINE int pthread_attr_init(pthread_attr_t * attr) {
 
 static INLINE  int pthread_attr_destroy(pthread_attr_t* attr) {
 // This function was defined in Rtools' : C:/RBuildTools/4.2/x86_64-w64-mingw32.static.posix/lib/libpthread.a(libwinpthread_la-thread.o
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     if (attr->lpAttributeList != NULL) {
         DeleteProcThreadAttributeList(attr->lpAttributeList);
         free(attr->lpAttributeList);
@@ -191,19 +191,19 @@ static INLINE int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, vo
     return  pthread_create0(tid, attr, start, arg);
 }
 
-#elif   defined(LINUX_OS)
+#elif   defined(OS_LINUX)
     
         //you have to define_GNU_SOURCE before anything else
         //https://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
         //https://stackoverflow.com/questions/7296963/gnu-source-and-use-gnu/7297011#7297011
         //https://stackoverflow.com/questions/24034631/error-message-undefined-reference-for-cpu-zero/24034698
 	    #ifndef _GNU_SOURCE
-		    #define _GNU_SOURCE
+		    #define _GNU_SOURCE  // for including CPU_ZERO in sched.h
 	    #endif
-        #include <sched.h>  ////cpu_set_t , CPU_SET
+        #include <sched.h>       //cpu_set_t , CPU_SET
 	    #include <pthread.h>
 
-#elif    defined(MAC_OS) 
+#elif    defined(OS_MAC) 
  
     #include <mach/thread_policy.h> // for thread_port_t etc. ( see github.com/xoreaxeaxeax/sandsifter/issues/3)
 
@@ -273,13 +273,8 @@ static INLINE int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, vo
             return 0;
         }
 
-#elif  defined(SOLARIS_OS)
-    //you have to define_GNU_SOURCE before anything else
-    //https://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
-    //https://stackoverflow.com/questions/7296963/gnu-source-and-use-gnu/7297011#7297011
-    //https://stackoverflow.com/questions/24034631/error-message-undefined-reference-for-cpu-zero/24034698
-  
-    #include <sched.h>  ////cpu_set_t , CPU_SET
+#elif  defined(OS_SOLARIS)
+    #include <sched.h>   // Seems that CPU_ZERO not defined for OS_SOLARIS
     #include <pthread.h>
 
     #include <sys/types.h> //https://github.com/atom-zju/NUMA-aware-hpc-kernels/blob/e4dee686acf4a3dae49a363edf22ac3966a68d10/mosbench/micro/bench.c
@@ -288,7 +283,7 @@ static INLINE int  pthread_create(pthread_t* tid, const pthread_attr_t* attr, vo
      
     typedef  int cpu_set_t;
     static inline void   CPU_ZERO(cpu_set_t* cs) { *cs = 0; }
-   static inline void   CPU_SET(int num, cpu_set_t* cs) { num = num % GetNumCores(); *cs = num; }
+    static inline void   CPU_SET(int num, cpu_set_t* cs) { num = num % GetNumCores(); *cs = num; }
 
     static int sched_getaffinity(pthread_t pid, size_t cpu_size, cpu_set_t* cpu_set) {
        //https://github.com/tpapagian/mosbench/blob/c250c395fab356ab83413db43bf9844cb4f63d4f/micro/bench.c

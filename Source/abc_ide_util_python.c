@@ -14,6 +14,32 @@ int  JDN_to_DateNum(int jdn) {
     return jdn - JulianDayNum_from_civil_ag1(1, 1, 1);
 }
 
+void StdouFlush(void) {
+ // https://stackoverflow.com/questions/69247396/python-c-api-how-to-flush-stdout-and-stderr
+
+    // Two ways to get the sys.stdout.flush
+
+    /*
+    PyObject* sysModule = PyImport_AddModule("sys");  //borrowedf
+    if (sysModule == NULL) {
+        PySys_WriteStdout("Not loaded yet\n ");
+        sysModule = PyImport_ImportModule("sys");         // new ref: We don't decref it because we want to re-use it if beast is called again
+    }
+    PyObject* sout  = PyObject_GetAttrString(sysModule, "stdout");  //new ref
+    PyObject* flush = PyObject_GetAttrString(sout, "flush");  //new ref
+    */
+
+    PyObject* sysout   = PySys_GetObject("__stdout__");           //borrowedf
+    PyObject* pfflush  = PyObject_GetAttrString(sysout, "flush");  //new ref
+
+    int       ok  = PyCallable_Check(pfflush); 
+    PyObject* out = PyObject_CallObject(pfflush, NULL);		 //new ref
+     
+    Py_XDECREF(pfflush);
+    Py_XDECREF(out);
+}
+
+
 PyObject* currentModule;
 PyObject* classOutput  = NULL;
 
@@ -464,11 +490,11 @@ I32   GetConsoleWidth() {
 
     PyObject* get_console_size = PyObject_GetAttrString(osModule, "get_terminal_size"); //new ref
 
-    Pob result; 
-    //result     = PyObject_CallObject(get_console_size, 0);                               // new ref
-    //result     = PyObject_CallFunction(get_console_size, NULL);
-    result     = PyObject_CallMethod(osModule, "get_terminal_size",NULL);
-    Pob col    = PyObject_GetAttrString(result,"columns");  // new ref
+ 
+    // Pob result     = PyObject_CallObject(get_console_size, 0);                               // new ref
+    // Pob result     = PyObject_CallFunction(get_console_size, NULL);
+    Pob result     = PyObject_CallMethod(osModule, "get_terminal_size",NULL);                    // new ref
+    Pob col        = PyObject_GetAttrString(result,"columns");  // new ref
     
     int width = PyLong_AsLong(col);
 
@@ -967,7 +993,9 @@ static PyObject * BarObject_new(PyTypeObject* type, PyObject* args, PyObject* kw
        Py_INCREF(Py_None);
     }   
 
-    r_printf("New called...%#x  inst_dict %#x \n", self, self->inst_dict);
+    // abc_ide_util_python.c:996 : 14 : warning : format ‘ % x’ expects argument of type ‘unsigned int’, but argument 3 has type ‘PyObject *
+    //r_printf("New called...%#x  inst_dict %#x \n", self, self->inst_dict);
+    r_printf("New called...%p  inst_dict %p \n", self, self->inst_dict);
     
     return self;
 }
@@ -978,7 +1006,8 @@ static int BarObject_init(BarObject* self, PyObject* args, PyObject* kwds) {
 
     // !PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, &first, &last,   &self->number))
 
-    r_printf("Init called... %#x\n", self);
+    //r_printf("Init called... %#x\n", self);
+    r_printf("Init called... %p\n", self);
     return 0;
 }
 

@@ -54,16 +54,16 @@ static void DSVT(BEAST2_BASIS_PTR basis, I32 N, BEAST2_RNDSTREAM* PRAND)
 	basis->ORDER[basis->nKnot] = rndOrder;
 
 	// Added to accomodate left and aright margsins
-	I32 fakeStart =  1L + (leftMargin - minSepDist);
-	I32 fakeEnd   = (N + 1) - rightargin + minSepDist;
+	I32 fakeStart =  1L     + (leftMargin - minSepDist);
+	I32 fakeEnd   = (N + 1) -  rightargin + minSepDist;
 	//The first changepont is fixed at the ts start, and the pt has been moved forward by 1
 	//  so the fixed brk has a index of -1. there is one extra chngpt fixed at N+1, so the skip lenghth here is MAX_KNOTNUM+1
 		
 	basis->KNOT[INDEX_FakeStart]  = fakeStart;
 	basis->KNOT[INDEX_FakeEnd]    = fakeEnd;	 
  
-	basis->KNOT[-1]           = 1L;	    
-	basis->KNOT[basis->nKnot] = N + 1L;
+	basis->KNOT[-1]              = 1L;	    
+	basis->KNOT[basis->nKnot]    = N + 1L;
 
 	//basis->Kbase = 0; // It must be re-calcuated in UpdateKbase
 	// Get Ks andKe for individula segments of each components AND the total number of terms K

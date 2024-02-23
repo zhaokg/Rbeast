@@ -7,16 +7,17 @@
 
 // https://social.msdn.microsoft.com/Forums/vstudio/en-US/355ed7af-4037-4587-8614-34d51d865f03/missing-prototype-warning?forum=vclanguage
 // In MSVC, set the warning level to Level 3 to get warnings of unfctions without prototypes
-//ERROR: function returning a value
-//ERROR: undefined; assuming extern returning int
+// ERROR: function returning a value
+// ERROR: undefined; assuming extern returning int
 
 //gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
  
 // file externsion: .mexw64 for Matlab, .pyd for Pyhton
 
-#define R_INTERFACE   0
-#define M_INTERFACE   0
+#define R_INTERFACE    0
+#define M_INTERFACE    0
 #define P_INTERFACE    0
+
 /*------------------------------------------------------------*/
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
@@ -114,46 +115,39 @@
 //https:// blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
 
 #ifdef _MSC_VER
-	#define MSVC_COMPILER
+	#define COMPILER_MSVC
 //#elif defined(__GNUC__) || defined(__clang__)  || defined(__APPLE__) || defined(__linux__) || defined(__MINGW32__) || defined(__MINGW64__) ||defined(__MACH__)||defined(__SUNPRO_C)||defined(__SUNPRO_CC)
 #elif defined(__clang__)
-	#define CLANG_COMPILER
+	#define COMPILER_CLANG
 #elif (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__) || defined(__INTEL_COMPILER))
-	#define GCC_COMPILER
+	#define COMPILER_GCC
 #elif defined(__SUNPRO_C)||defined(__SUNPRO_CC)
-	#define SOLARIS_COMPILER
+	#define COMPILER_SOLARIS
 #endif
 
 
 //nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system
 #if defined(_WIN64) || defined (__MINGW64__) && defined(_WIN32) && !defined(__i386)  && !defined(__i686) && !defined(i386) && !defined(__i686)
-	#define WIN64_OS
+	#define OS_WIN64
 #elif defined(_WIN32) && !defined(_WIN64)
-	#define WIN32_OS
+	#define OS_WIN32
 #endif
 
 #if defined(__APPLE__ ) && defined (__MACH__) 
-	#define MAC_OS
+	#define OS_MAC
 #endif
 
 #if defined(__linux__) 
 	//https://stackoverflow.com/questions/142508/how-do-i-check-os-with-a-preprocessor-directive
-	#define LINUX_OS
-    #ifndef _GNU_SOURCE
-		#define _GNU_SOURCE // for including CPU_ZERO in sched.h
-    #endif
+	#define OS_LINUX
 #endif
 
 #if (defined(unix) || defined(__unix__) || defined(__unix) ) && !defined(__APPLE__)
-	#define UNIX_OS
-	#ifndef _GNU_SOURCE
-		#define _GNU_SOURCE // for including CPU_ZERO in sched.h
-	#endif
+	#define OS_UNIX	
 #endif
 
 #if defined(sun) && defined(__sun) && defined(__SVR4) 
-	#define SOLARIS_OS
-	
+	#define OS_SOLARIS
 	//https://web.archive.org/web/20191012035921/http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system#Solaris
 #endif
 
@@ -175,21 +169,61 @@
 	#endif
 #endif
 
-#if defined(__aarch64__)
-	//https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
-    //https://stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
+ 
 
-    #define  ARM64_OS
+/*
+   stackoverflow.com/questions/152016/detecting-cpu-architecture-compile-time
+   stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
+   stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
+   sourceforge.net/p/predef/wiki/Architectures/
+*/ 
+
+
+#if defined(__x86_64__) || defined(_M_X64)
+	#define  cpu_x86_64
+#elif defined(i386) || defined(__i386__) || defined(__i386) || defined(_M_IX86)
+	#define  cpu_x86_32 
+#elif defined(__aarch64__) || defined(_M_ARM64)
+	#define   cpu_ARM64
+#elif defined(mips) || defined(__mips__) || defined(__mips)
+	#define   cpu_MIPS
+#elif defined(__sh__)
+	#define   cpu_SUPERH
+#elif defined(__powerpc) || defined(__powerpc__) || defined(__powerpc64__) || defined(__POWERPC__) || defined(__ppc__) || defined(__PPC__) || defined(_ARCH_PPC)
+	#define   cpu_POWERPC
+#elif defined(__PPC64__) || defined(__ppc64__) || defined(_ARCH_PPC64)
+	#define   cpu_POWERPC64
+#elif defined(__sparc__) || defined(__sparc)
+	#define   cpu_SPARC	
+#elif defined(__ARM_ARCH_2__)
+	#define   cpu_ARM2
+#elif defined(__ARM_ARCH_3__) || defined(__ARM_ARCH_3M__)
+	#define   cpu_ARM3
+#elif defined(__ARM_ARCH_4T__) || defined(__TARGET_ARM_4T)
+	#define   cpu_ARM4T
+#elif defined(__ARM_ARCH_5_) || defined(__ARM_ARCH_5E_)
+	#define   cpu_ARM5
+#elif defined(__ARM_ARCH_6T2_) || defined(__ARM_ARCH_6T2_)
+	#define   cpu_ARM6T2
+#elif defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_6J__) || defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) || 	defined(__ARM_ARCH_6ZK__)
+	#define   cpu_ARM6
+#elif defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
+	#define   cpu_ARM7
+#elif defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
+	#define   cpu_ARM7A
+#elif defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
+	#define   cpu_ARM7R
+#elif defined(__ARM_ARCH_7M__)
+	#define   cpu_ARM7M
+#elif defined(__ARM_ARCH_7S__)
+	#define   cpu_ARM7S
+#elif defined(__m68k__)
+	#define   cpu_M68K 
 #endif
 
 
-//https://stackoverflow.com/questions/152016/detecting-cpu-architecture-compile-time
-#if defined(__powerpc) || defined(__powerpc__) || defined(__powerpc64__)  || defined(__POWERPC__) || defined(__ppc__) || defined(__PPC__) || defined(_ARCH_PPC) \
-     || defined(__PPC64__) || defined(__ppc64__) || defined(_ARCH_PPC64)
-	#define POWERPC_OS
-#endif
 
-#if defined(TARGET_32) && defined (MSVC_COMPILER)
+#if defined(TARGET_32) && defined (COMPILER_MSVC)
     //'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNING
 	#define _CRT_SECURE_NO_WARNINGS
 	#pragma warning (disable: 4703) //potentially uninitialized local pointer variable
@@ -205,17 +239,17 @@
 
 
 /*------------------------------------------------------------*/
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 		#define INLINE    __inline
 		#define _restrict __restrict
         #define UNUSED_DECORATOR 
-#elif defined(SOLARIS_COMPILER) 
+#elif defined(COMPILER_SOLARIS) 
 	//#if defined(__SUNPRO_C)||defined(__SUNPRO_CC)
     //https: //docs.oracle.com/cd/E24457_01/html/E21990/gipgw.html
 		#define INLINE     inline // __inline__
 		#define _restrict _Restrict //available for both -xc99=none and -xc99=all
         #define UNUSED_DECORATOR 
-#elif defined(GCC_COMPILER) || defined(CLANG_COMPILER)
+#elif defined(COMPILER_GCC) || defined(COMPILER_CLANG)
 		#define INLINE     inline
 		#define _restrict __restrict__		
         #define UNUSED_DECORATOR  __attribute__((unused))
@@ -224,7 +258,7 @@
  
 // CHeck if it is the MUSL-linux C library
 // https://stackoverflow.com/questions/58177815/how-to-actually-detect-musl-libc
-#if   defined(LINUX_OS) && ( defined(GCC_COMPILER) || defined(CLANG_COMPILER) )
+#if   defined(OS_LINUX) && ( defined(COMPILER_GCC) || defined(COMPILER_CLANG) )
 
 	#ifdef _GNU_SOURCE 
 		#include <features.h>
@@ -246,7 +280,7 @@
 
 
 /* yes I know, the top of this file is quite ugly */
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     # define ALIGN32_BEG __declspec(align(32))
     # define ALIGN32_END 
 	//https://stackoverflow.com/questions/4750880/can-i-treat-a-specific-warning-as-an-error
@@ -260,7 +294,7 @@
 /*------------------------------------------------------------*/
 	#define DIAG_STR(s) #s
 	#define DIAG_JOINSTR(x,y) DIAG_STR(x ## y)
-	#ifdef MSVC_COMPILER
+	#ifdef COMPILER_MSVC
 		#define DIAG_DO_PRAGMA(x) __pragma (#x)
 		#define DIAG_PRAGMA(compiler,x) DIAG_DO_PRAGMA(warning(x))
 	#else
@@ -268,13 +302,13 @@
 		#define DIAG_PRAGMA(compiler,x) DIAG_DO_PRAGMA(compiler diagnostic x)
 	#endif
 
-	#if defined(CLANG_COMPILER)
+	#if defined(COMPILER_CLANG)
 		# define DISABLE_WARNING(gcc_unused,clang_option,msvc_unused) DIAG_PRAGMA(clang,push) DIAG_PRAGMA(clang,ignored DIAG_JOINSTR(-W,clang_option))
 		# define ENABLE_WARNING(gcc_unused,clang_option,msvc_unused) DIAG_PRAGMA(clang,pop)
-	#elif defined(MSVC_COMPILER)
+	#elif defined(COMPILER_MSVC)
 		# define DISABLE_WARNING(gcc_unused,clang_unused,msvc_errorcode) DIAG_PRAGMA(msvc,push) DIAG_DO_PRAGMA(warning(disable:##msvc_errorcode))
 		# define ENABLE_WARNING(gcc_unused,clang_unused,msvc_errorcode) DIAG_PRAGMA(msvc,pop)
-	#elif defined(GCC_COMPILER)
+	#elif defined(COMPILER_GCC)
 		#if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
 			# define DISABLE_WARNING(gcc_option,clang_unused,msvc_unused) DIAG_PRAGMA(GCC,push) DIAG_PRAGMA(GCC,ignored DIAG_JOINSTR(-W,gcc_option))
 			# define ENABLE_WARNING(gcc_option,clang_unused,msvc_unused) DIAG_PRAGMA(GCC,pop)
@@ -288,7 +322,7 @@
 
 //https: //stackoverflow.com/questions/39821164/how-do-you-define-a-multiline-macro-in-c
 //https: //www.geeksforgeeks.org/multiline-macros-in-c/
-#if defined(GCC_COMPILER)  
+#if defined(COMPILER_GCC)  
 
 //https: //github.com/BioMedIA/MIRTK/issues/230
 	#define  DISABLE_MANY_WARNINGS   \
@@ -345,7 +379,7 @@
 	ENABLE_WARNING(pragmas, pragmas, NOT_USED) \
 	ENABLE_WARNING(unknown-pragmas,unknown-pragmas, NOT_USED) 
 
-#elif defined(CLANG_COMPILER)  
+#elif defined(COMPILER_CLANG)  
 //https://stackoverflow.com/questions/14261534/temporarily-overwrite-a-macro-in-c-preprocessor
 //https://clang.llvm.org/doxygen/classclang_1_1Preprocessor.html#a04dec9fbfa220dfea433bcbeffa270c3
 //https://gcc.gnu.org/onlinedocs/gcc-5.4.0/gcc/Push_002fPop-Macro-Pragmas.html

@@ -444,11 +444,11 @@ function out = beast(y, varargin)
    prior = [];
    prior.modelPriorType	  = 1;
    if ~strcmp(metadata.season, 'none')              
-       prior.seasonMinOrder   = sorder_minmax(1);
-       prior.seasonMaxOrder   = sorder_minmax(2);
-       prior.seasonMinKnotNum = scp_minmax(1);
-       prior.seasonMaxKnotNum = scp_minmax(2);   
-       prior.seasonMinSepDist = sseg_min;
+       prior.seasonMinOrder    = sorder_minmax(1);
+       prior.seasonMaxOrder    = sorder_minmax(2);
+       prior.seasonMinKnotNum  = scp_minmax(1);
+       prior.seasonMaxKnotNum  = scp_minmax(2);   
+       prior.seasonMinSepDist  = sseg_min;
 	   prior.seasonLeftMargin  = sseg_leftmargin;
 	   prior.seasonRightMargin = sseg_rightmargin;
    end   

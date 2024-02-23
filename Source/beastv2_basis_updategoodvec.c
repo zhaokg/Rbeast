@@ -60,16 +60,26 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis, NEWTERM_PTR new
 		basis->goodNum = i08_sum_binvec(goodVec, Npad16);
 	}
 
+	/*
+	Feb 19: this is a tricky bug that  literally took me 70+ hrs to figure out, thanks to Michael Faran at Tel aviv university
+	for the resources to identify the bug.
+	Even though mempcy can handle overlapping memory if moving data forward (e.g., arr[i]=arr[i+1]), this may not be honored on 
+	some systems (e.g., avx512). So it is better to just use memmove.
+	https://stackoverflow.com/questions/25629736/memcpy-of-overlapping-buffers
+	https://sourceware.org/bugzilla/show_bug.cgi?id=12518
 
-#define InsertNewElem(dst,n,newIdx, newValue, T)                       \
-         for(rI32 i=(n); i>=(newIdx);i--) *((T*)dst+i)=*((T*)dst+i-1); \
-           *((T*)dst+newIdx-1)=newValue;
-#define RepeatElem(dst,n,newIdx, T)                 for(I32 i=(n); i>=(newIdx); i--) *((T*)dst+i)=*((T*)dst+i-1); 
-#define ReplaceElem(dst,n,newIdx, newValue, T)      *((T*)dst+newIdx-1)=newValue;
-#define DeleteElem(dst,n,newIdx, T)                 memcpy((T*)dst+newIdx-1,(T*)dst+newIdx+1-1,sizeof(T)*(n-(newIdx)));
-#define MergeTwoElemWithNewValue(dst,n,newIdx,newValue, T)  \
-            *((T*)dst+newIdx-1)=newValue;\
-			memcpy((T*)dst+(newIdx+1) - 1, (T*)dst + (newIdx +2) - 1, sizeof(T)* (n - (newIdx+2L)+1L));
+	A comment from Linus: 
+	And now applications will randomly do different things depending on the phase of the moon (technically, depending on which CPU 
+	they have and what particular version of memcpy() glibc happens to choose).	
+	*/
+
+#define InsertNewElem(dst,n,newIdx, newValue, T)            for(I32 i=(n); i>=(newIdx);i--) *((T*)dst+i)=*((T*)dst+i-1); \
+                                                                 *((T*)dst+newIdx-1)=newValue;
+#define RepeatElem(dst, n,newIdx, T)                        for(I32 i=(n); i>=(newIdx); i--) *((T*)dst+i)=*((T*)dst+i-1); 
+#define ReplaceElem(dst,n,newIdx, newValue, T)              *((T*)dst+newIdx-1)=newValue;
+#define DeleteElem(dst,n,newIdx, T)                          memmove((T*)dst+newIdx-1,(T*)dst+newIdx+1-1,sizeof(T)*(n-(newIdx)));
+#define MergeTwoElemWithNewValue(dst,n,newIdx,newValue, T)   *((T*)dst+newIdx-1)=newValue;\
+			                                                      memmove((T*)dst+(newIdx+1) - 1, (T*)dst + (newIdx +2) - 1, sizeof(T)* (n - (newIdx+2L)+1L));
 #define DoNothing(dst,n, T) ;
 
 

@@ -1,11 +1,11 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_001_config.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
-#include "abc_001_config.h"
 #include "abc_rand.h"
 #include "abc_mat.h"
 #include "beastv2_func.h"
@@ -81,10 +81,10 @@ void AllocateXXXMEM( F32PTR * Xt_mars, F32PTR*  Xnewterm, F32PTR*  Xt_zeroBackup
 	                 BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointers * MEM) 
 {	
 
-	I32 N         = opt->io.N;
-	I32 Npad      = RoundTo8(N);
-	I32 K_MAX     = opt->prior.K_MAX;
-	I64 SIZE_Xtmars  = Npad * K_MAX;
+	I32 N           = opt->io.N;
+	I32 Npad        = RoundTo8(N);
+	I32 K_MAX       = opt->prior.K_MAX;
+	I64 SIZE_Xtmars = Npad * K_MAX;
 
 	I32 XNEW_MAX_NUMCOL;
 	I32 XNEW_TOTAL_NUM    = __GetNumElem_of_XnewTerm(model, opt, &XNEW_MAX_NUMCOL);

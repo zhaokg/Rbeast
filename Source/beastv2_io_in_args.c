@@ -3,7 +3,6 @@
 #include "abc_001_config.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -15,6 +14,9 @@
 #include "abc_date.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
+
+#include <stdio.h>	               //fprintf fopen FILE #include<stdio.h>  // Need _GNU_SOURCE for manylinux; otherwise report /usr/include/stdio.h:316:6: error: unknown type name '_IO_cookie_io_functions_t'
+
  
 #define CondErrMsgRet0(cond, ...)   if(cond) { r_error(__VA_ARGS__); return 0;}
 #define CondErrActionRet0(cond, Action, ...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
@@ -316,15 +318,16 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[], int nrhs, BEAST2_IO_PTR _OUT_ io
 	// Sanity check
 	CondErrMsgRet0(meta->hasSeasonCmpnt == UnknownStatus, "ERROR: Cnnot determine whether the input time series has a seasonal/periodic componnet or net.\n");
 	if (meta->hasSeasonCmpnt == 0) PERIOD = 0;        //just double check to make sure it is the case that period=0 for trend-only data
-	if (DT  < 0.)      DT     = getNaN(); //dT should never < 0 at this point, but just double check.
+	if (DT  < 0.)                  DT     = getNaN(); //dT should never < 0 at this point, but just double check.
 	////////////////////////////////////////////////////////////////////////////////
 
-	/**********************************/
-    // If there is a time object suppiked
-	/**********************************/
+
 	TimeVecInfo tvec = { 0 };
 	TimeVec_init(&tvec);
 
+	/**********************************/
+	// If there is a time object suppiked
+	/**********************************/
      if (TIMEobj) { 
 		//  Allocated mem that needs to be freeed explicilty for tvec.fyear, but noo mem allocated if TIMEObj
 		//  is NULL, which means that the ts is regular/ordered, as dertermined by start and dt only
@@ -886,7 +889,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;    
 	o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
 	
-	if (m.K_MAX )            o.K_MAX            = 550;                  
+	if (m.K_MAX )            o.K_MAX            = 0;    // exact value of K_max to be determined later if Kmax = 0              
 	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = max(o.sigFactor,        1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor = 2.5;            o.outlierSigFactor = max(o.outlierSigFactor, 1.5);
 
@@ -1199,9 +1202,25 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		if (type == TRENDID)			KMAX += (PRIOR->trendMaxOrder +1) * (PRIOR->trendMaxKnotNum + 1);
 		if (type == OUTLIERID)			KMAX += PRIOR->outlierMaxKnotNum;
 	}
-	PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
-
+	if (PRIOR->K_MAX <= 0) {  // Not set yet, so takt the max number of terms as dertermined by the knots
+		PRIOR->K_MAX =  KMAX;
+	} else {
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
 	
+	if (opt->io.N < 5000)
+		PRIOR->K_MAX = min(PRIOR->K_MAX, opt->io.N);
+	else if (opt->io.N < 15000) {
+		int KMAX = min(5000, opt->io.N / 2);
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
+	else  {
+		int KMAX = 7500;
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
+	
+ 
+
 	// The initial model is generated in "basis_genrandombasis". We cacluat the number of terms for it
 	// so KMAX must be larger than it
 	I32 K_INITIAL_MODEL = 0;

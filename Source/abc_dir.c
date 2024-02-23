@@ -10,7 +10,7 @@
 #endif
 
 
-#if defined(WIN64_OS) || defined (WIN32_OS)
+#if defined(OS_WIN64) || defined (OS_WIN32)
 
 #include "abc_dir.h"
 #include "abc_ide_util.h" //r_printf

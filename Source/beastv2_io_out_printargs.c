@@ -292,8 +292,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("%c......End of displaying extra ......\n\n", hasAny, comment);
  
 #if M_INTERFACE==1
-	extern void matlab_IOflush(void);
-	matlab_IOflush();
+	StdouFlush();
 #endif
 }
 

@@ -8,10 +8,9 @@
 //#include <io.h>
  
 
-
 #define QUOTE_IT(x) #x
 
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 
 	#if R_INTERFACE==1
 		#define DllExport   __declspec( dllexport ) 
@@ -53,7 +52,7 @@
 		#pragma comment( lib , LIB_R(Rlapack.lib) )
 	#endif
 
-#elif defined(CLANG_COMPILER)|| defined(GCC_COMPILER) ||defined(SOLARIS_COMPILER)
+#elif defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS)
  //GNU ==1 ##############################
 	#define  DllExport   
 #endif
@@ -95,7 +94,7 @@
 #endif
 
 
-#if (MYMAT_LIBRARY ==1) && defined(MSVC_COMPILER) && 0
+#if (MYMAT_LIBRARY ==1) && defined(COMPILER_MSVC) && 0
 	#pragma comment(lib , LIB_MyLIB(blas_oneAPI.lib))
 
      /* 
@@ -150,6 +149,16 @@
        #undef ERROR  //ERROR is defined in both windwos.h/wingdi.h and R.h
    #endif
 
+// For R only, This must appear before R.h: on the Redhat linux, if not,  report /usr/include/stdio.h:316:6: error: 
+// unknown type name '_IO_cookie_io_functions_t' because R.h includes "stdio.h".
+
+#if defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS)
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE 1
+	#endif
+#endif
+
+
 	#include <R.h>
 	#include <Rinternals.h>
 	#include <Rdefines.h>
@@ -180,6 +189,9 @@
 //https://stackoverflow.com/questions/32899621/numpy-capi-error-with-import-array-when-compiling-multiple-modules
 //https://docs.scipy.org/doc/numpy-1.10.1/reference/c-api.array.html#miscellaneous
 
+
+#define  NPY_NO_DEPRECATED_API   NPY_1_7_API_VERSION  //suppress the warning "Using deprecated NumPy API, disable it with"
+
 /*
 Suppose I have two files coolmodule.c and coolhelper.c which need to be compiled and linked into a
 single extension module. Suppose coolmodule.c contains the required initcool module initialization 
@@ -204,12 +216,14 @@ sure that NO_IMPORT_ARRAY is #defined before #including that file.
 		#define PY_ARRAY_UNIQUE_SYMBOL NumpyAPIList
 		#include "numpy/arrayobject.h"
 	#endif
-    //#pragma comment(lib , LIB_Python(python37_msvc.lib) ) 
+   
 
   /*********************/
+  // #pragma comment(lib , LIB_Python(python37_msvc.lib) ) 
+  //
   // No need to set up the lib explicitly 
   // (1) pynconfig.h has a pragma line to add python.lib
-  //  pragma comment(lib,"python37.lib")  //: #pragma comment(lib , LIB_MATLAB(libmx.lib) )
+  //  pragma comment(lib,"python37.lib")   
   // (2) Numpy usss the import_array to load the (np.core._multiarray_umath._ARRAY_API) variable
   //    to fill the api arrays
 
@@ -235,14 +249,14 @@ sure that NO_IMPORT_ARRAY is #defined before #including that file.
 
 
 // This must appear after the inclusion of R.h
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
 	#undef sign    // In R, 'sign' is  defined as Rf_sign
 	#undef warning // In R 'warning' is defined as Rf_warning; warnng is also a C++ keyword
 #endif
 
 
 // This must appear after the inclusion of Python.h to avoid redefining _GNU_SOURCE
-#if defined(CLANG_COMPILER)|| defined(GCC_COMPILER) ||defined(SOLARIS_COMPILER)
+#if defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS)
 	//GNU ==1 ############################## 
 	#ifndef _GNU_SOURCE
 		#define _GNU_SOURCE 1

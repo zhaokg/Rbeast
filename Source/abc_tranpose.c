@@ -169,7 +169,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat, U64 NROW, U64 NCOL) {
 	if (NROW == 1 || NCOL == 1) { return; }
 
 	I32 NfixedPoints = greatest_common_divsor(NROW - 1, NCOL - 1) + 1L;
-	I32 Nprocessed   = NfixedPoints;
+	U64 Nprocessed   = NfixedPoints;
 	I08 WORKED[Nwork + 1] = { 0, };
 	U64 K            = NROW * NCOL - 1;        // use int64 t- avoid ovwerflow in PREV()
 	for (U64 start = 1; start <= K - 1; start++) {
@@ -270,7 +270,7 @@ void i32_permute3d_inplace_abc123_acb132(I32PTR Mat, U64  NROW, U64 NCOL, int NZ
 	I32PTR tmpStartValueCompanion = tempbuf + ElemSize;
 
 	I32 NfixedPoints = greatest_common_divsor(NROW - 1, NCOL - 1) + 1L;
-	I32 Nprocessed   = NfixedPoints;
+	U64 Nprocessed   = NfixedPoints;
 	I08 WORKED[Nwork + 1] = { 0, };
 	U64 K             = NROW * NCOL - 1;
 

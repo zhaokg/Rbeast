@@ -28,6 +28,8 @@ static void __RemoveFieldsGivenFlags_Trend(A(OPTIONS_PTR)  opt, FIELD_ITEM * fie
 		RemoveField(fieldList, nfields, "slpSD"),			mat->tslpSD		= NULL,
 		RemoveField(fieldList, nfields, "slpSgnPosPr"),		mat->tslpSgnPosPr	= NULL,
 	    RemoveField(fieldList, nfields, "slpSgnZeroPr"),	mat->tslpSgnPosPr	= NULL;	
+	if (!flag->computeTrendSlope || !flag->computeCredible)
+		RemoveField(fieldList, nfields, "slpCI"), mat->tslpCI = NULL;
 	if (!flag->computeTrendChngpt)
 		RemoveField(fieldList, nfields, "cp"),				mat->tcp = NULL,
 		RemoveField(fieldList, nfields, "cpPr"),			mat->tcpPr = NULL,
@@ -315,7 +317,10 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 			_q2(Y, SD,   N),
 			_q(CI,       N,2),
 
-			 _q4(slp, slpSD, slpSgnPosPr,  slpSgnZeroPr, N),
+			 _q2(slp, slpSD, N),
+			 _q1(slpCI,      N,2),
+			 _q2(slpSgnPosPr,  slpSgnZeroPr, N),
+
 
 			 // tpos_ncp, tneg_ncp, tinc_ncp, tdec_ncp,
 			 _q2(pos_ncp,    neg_ncp,      1),
@@ -755,9 +760,10 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 
 	/////////////////////////////////////////////////////////////
 	if (opt->extra.computeCredible){
-		if (hasSeasonCmpnt)  nodes[nid++] = (MemNode){ &result->sCI,    sizeof(F32) * Nq * 2,      .align = 4 };
-		if (hasTrendCmpnt)   nodes[nid++] = (MemNode){ &result->tCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
-		if (hasOutlierCmpnt) nodes[nid++] = (MemNode){ &result->oCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (hasSeasonCmpnt)                 nodes[nid++] = (MemNode){ &result->sCI,    sizeof(F32) * Nq * 2,      .align = 4 };
+		if (hasTrendCmpnt)                  nodes[nid++] = (MemNode){ &result->tCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (hasOutlierCmpnt)                nodes[nid++] = (MemNode){ &result->oCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (opt->extra.computeTrendSlope)	nodes[nid++] = (MemNode){ &result->tslpCI,    sizeof(F32) * Nq * 2,   .align = 4 };		 
 	}
 
 
@@ -945,9 +951,10 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
 
 	////////////////////////////////////////////
 	if (flag->computeCredible) 	{
-		if (hasSeasonCmpnt)  f32_fill_val(nan, result->sCI, 2*Nq);
-		if (hasTrendCmpnt)   f32_fill_val(nan, result->tCI, 2*Nq);
-		if (hasOutlierCmpnt) f32_fill_val(nan, result->oCI, 2*Nq);
+		if ( hasSeasonCmpnt )               f32_fill_val(nan, result->sCI,    2*Nq);
+		if ( hasTrendCmpnt  )               f32_fill_val(nan, result->tCI,    2*Nq);
+		if ( hasOutlierCmpnt)               f32_fill_val(nan, result->oCI,    2*Nq);
+		if ( opt->extra.computeTrendSlope)	f32_fill_val(nan, result->tslpCI, 2*Nq);
 	}
 
 	if (flag->computeSeasonChngpt && hasSeasonCmpnt) 	{

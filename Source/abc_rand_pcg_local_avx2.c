@@ -16,7 +16,7 @@
  
 #include "assert.h"
 
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 #define __attribute__(x)
 //https://stackoverflow.com/questions/21116270/gcc-attributes-with-c-methods
 // In a function definition, the attribute field should go before the function name
@@ -27,13 +27,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 			//do something////
 	#pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 			//do something////
@@ -44,7 +44,7 @@
 
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64)  
 
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
@@ -54,7 +54,7 @@
     //#pragma clang attribute pop
 #endif
 
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -77,7 +77,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 
 #include "abc_math_avx.h"
 // LCG  X  = X * Multiplier + Shift(plus/state.inc) MOD 2^64
@@ -137,7 +137,7 @@ void avx_pcg_print_state(local_pcg32_random_t* rng) {
     return maskmov;
 }
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 
  // replace hadd -> shuffle (4 uops) with shift/add/and (3 uops)
 // The constant takes 2 insns to generate outside a loop.
@@ -383,7 +383,7 @@ void SetupPCG_AVX2(void){
 
 
 ///////////////////////////////////////////////////////////////////////////
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

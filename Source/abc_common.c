@@ -1296,16 +1296,16 @@ int NormalizeF32ArrayWithNaNOmitted(F32PTR Y, U32PTR rowsMissing, I32 N,F32PTR m
 }
 */
 
-#if defined(WIN64_OS) || defined(WIN32_OS) 
+#if defined(OS_WIN64) || defined(OS_WIN32) 
 	#include "float.h"
-	#if defined(MSVC_COMPILER)
+	#if defined(COMPILER_MSVC)
 	void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_UNDERFLOW | EM_ZERODIVIDE | EM_DENORMAL | EM_INVALID, MCW_EM);
 		//errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_ZERODIVIDE | EM_DENORMAL | EM_INVALID, MCW_EM);
 		//errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_ZERODIVIDE | EM_INVALID, MCW_EM); 
 	}
-	#elif defined(GCC_COMPILER)
+	#elif defined(COMPILER_GCC)
 void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err = _controlfp_s(&_oldState, _EM_OVERFLOW | _EM_UNDERFLOW | _EM_ZERODIVIDE | _EM_DENORMAL | _EM_INVALID, _MCW_EM);
@@ -1323,7 +1323,7 @@ void EnableFloatExcetion(void) {
 
 	//stackoverflow.com/questions/37819235/how-do-you-enable-floating-point-exceptions-for-clang-in-os-x
 	//https://gitlab.ikp.kit.edu/AirShowerPhysics/corsika/-/issues/415
-	#if defined(LINUX_OS) 
+	#if defined(OS_LINUX) 
 	   // Not availalbe in C23 for clang16
 	   //feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW); 
 	#endif
@@ -1386,7 +1386,7 @@ void SetupRoutines_AutoByCPU(Bool quite) {
 	 if (!quite) print_cpuinfo(&cpuinfo);
 	 i386_cpuid_caches(quite);
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 	if (cpuinfo.HW_AVX512_F /*Foundation*/ && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
 		 SetupVectorFunction_AVX512();
 		 SetupPCG_AVX512();
@@ -1414,7 +1414,7 @@ void SetupRoutines_AutoByCPU(Bool quite) {
 
 void SetupRoutines_UserChoice(int avxOption) {
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 
 	if (avxOption == 0) {
 		SetupVectorFunction_Generic();

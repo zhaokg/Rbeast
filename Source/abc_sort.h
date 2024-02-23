@@ -17,6 +17,8 @@ extern  void VOIDPTR_InsertionSort(void* arr[], char* index, int n);
 
 
 extern void i32_sort_d_iterative(I32PTR  arr, int* idx, int* stack, int l, int h);
+extern int  i32_find_majority_fast(I32PTR arr, int n, int* status);
+extern int i32_find_unique_occurrance_inplace(I32PTR arr, int n, I32PTR counts);
 #ifdef __cplusplus
 }
 #endif

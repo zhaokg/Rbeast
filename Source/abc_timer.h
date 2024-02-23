@@ -9,7 +9,7 @@ extern "C" {
 
 
 
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>          //QueryPerformanceFrequency QueryPerformanceCounter
 #elif defined( __MACH__)
@@ -63,9 +63,9 @@ extern U64  TimerGetTickCount(void);
 
 
 // stackoverflow.com/questions/9887839/how-to-count-clock-cycles-with-rdtsc-in-gcc-x86
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #include <intrin.h>    // __rdtsc
-#elif defined(SOLARIS_COMPILER)
+#elif defined(COMPILER_SOLARIS)
     //https://docs.oracle.com/cd/E24457_01/html/E21991/gliwk.html
     //#include <mmintrin.h> // __rdtsc for some reason, mmintrinc.h deson't contain rdtsc
     
@@ -89,7 +89,7 @@ extern U64  TimerGetTickCount(void);
     __asm__ __volatile__("rd %%tick, %0" : "=r" (t));
     return t;
     */
-#elif defined(ARM64_OS)
+#elif defined(cpu_ARM64)
     /*
     https://stackoverflow.com/questions/44349757/rdtsc-equivalent-for-ios
     There appears to be a clang builtin for this, __builtin_readcyclecounter(). 

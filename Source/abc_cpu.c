@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 
 #include "abc_000_warning.h"
@@ -7,6 +6,7 @@
 #include "abc_ide_util.h" // r_printf
 #include "abc_cpu.h"
 
+#include <stdio.h>
 
 //https:// github.com/Mysticial/FeatureDetector
 //https:// stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set/22521619#22521619
@@ -36,7 +36,7 @@ has made the same mistake. The meat of the code is:
     /*********************************************/
     //        WINDOWS
      /*********************************************/
-    #if defined(MSVC_COMPILER) 
+    #if defined(COMPILER_MSVC) 
 
 
         #define WIN32_LEAN_AND_MEAN
@@ -94,7 +94,7 @@ has made the same mistake. The meat of the code is:
             return 1;
         }
 
-    #elif defined (SOLARIS_OS)
+    #elif defined (OS_SOLARIS)
     
     // cpuid:  https:// docs.oracle.com/cd/E23824_01/html/821-1475/cpuid-7d.html
 
@@ -142,7 +142,7 @@ has made the same mistake. The meat of the code is:
         //#error  "No cpuid intrinsic defined for compiler."
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(ARM64_OS) || defined (POWERPC_OS)
+#elif defined(cpu_ARM64) || defined (cpu_POWERPC64)
         //https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
         //https://stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
         #define _XCR_XFEATURE_ENABLED_MASK  0
@@ -416,7 +416,7 @@ void i386_cpuid_caches (Bool quiet) {
         eax = 4; // get cache info
         ecx = i; // cache id
 
-        #if !defined(MSVC_COMPILER) && !defined(ARM64_OS)
+        #if !defined(COMPILER_MSVC) && !defined(cpu_ARM64) && !defined (cpu_POWERPC64)
             __asm__ (
                 "cpuid" // call i386 cpuid instruction
                 : "+a" (eax) // contains the cpuid command code, 4 for cache query

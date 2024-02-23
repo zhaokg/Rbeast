@@ -1,7 +1,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 
 #include "abc_win32_demo.h"
 void BEAST2_InitGlobalData(void) {

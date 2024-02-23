@@ -367,7 +367,7 @@ void dynbuf_init(DynMemBufPtr buf, int init_max_len) {
 
 	buf->cur_len      = 0;
 
-	if (init_max_len > buf->max_len) {		
+	if ( (size_t) init_max_len > buf->max_len) {		
 		if (buf->raw) {
 			free(buf->raw);			
 			buf->raw = NULL;
@@ -393,7 +393,7 @@ void dynbuf_requestmore(DynMemBufPtr buf, int moreBytes) {
 
 	// Request more bytes relative to the current size (cur_len)
 
-	int newLength = (int) (buf->cur_len + moreBytes) ;
+	size_t newLength = (size_t) (buf->cur_len + moreBytes) ;
 
 	if (newLength <= buf->max_len) {
 		if (buf->raw == NULL) {
@@ -481,7 +481,7 @@ void dynbuf_alloc_list(DynMemBufPtr buf, MemNode* list) {
 	 }
 
 	 
-	 if (init_max_len > buf->max_len) {
+	 if ((size_t)init_max_len > buf->max_len) {
 		 buf->max_len = init_max_len;
 		 if (buf->p.raw) {
 			 free(buf->p.raw - buf->offset);
@@ -514,7 +514,7 @@ void dynbuf_alloc_list(DynMemBufPtr buf, MemNode* list) {
 
  void adynbuf_requestmore(DynAlignedBufPtr buf, int moreElements) {
 
-	 int newLength = moreElements + buf->cur_len;
+	 size_t newLength = moreElements + buf->cur_len;
 	 if (newLength <= buf->max_len) {
 		 return;
 	 }

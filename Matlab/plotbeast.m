@@ -228,7 +228,7 @@ for i =1:length(vars)
     end
 	
     if ( strcmp(var,'t'))
-        [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
+        [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
         
         plot_y(h,ytitle, has,clr,x, t,t2t,Y, CI, ncp, cp) ;
@@ -241,7 +241,7 @@ for i =1:length(vars)
     end
     
     if ( strcmp(var,'tcp'))
-        [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
+        [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
         plot_prob(h,ytitle,  has, clr,x, t, t2t, Prob1, Prob,ncp,cp );
         
@@ -255,7 +255,7 @@ for i =1:length(vars)
     end
     
     if ( strcmp(var,'torder')  )
-        [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
+        [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         [cp, cpCI, ncp, ncpPr,cpPr, cpChange, Prob, Prob1] = get_tcp(x,ncpStat);
        plot_order(h,ytitle, has, clr,x, t, t2t,Order, ncp, cp);
         
@@ -268,13 +268,13 @@ for i =1:length(vars)
     end
     
     if (strcmp(var,'tslp') )
-        [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
-        plot_slp( h,ytitle,has, clr,x, t, t2t,Slp,SlpSD)
+        [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
+        plot_slp( h,ytitle,has, clr,x, t, t2t,Slp,SlpCI)
         
     end
     
     if (strcmp(var,'slpsgn') )
-        [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
+        [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
         plot_slpsgn(h,ytitle, has, clr,x, t, t2t,SlpSignPos,SlpSignZero)
         
     end
@@ -387,27 +387,32 @@ end
 end
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function  [Y,SD, CI,Slp,SlpSD,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder)
+function  [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder)
 
-Y  = x.trend.Y;
-tmp=Y+x.trend.SD;
-SD =[Y-x.trend.SD;  tmp(end:-1:1)];
+Y   = x.trend.Y;
+tmp = Y+x.trend.SD;
+SD  = [Y-x.trend.SD;  tmp(end:-1:1)];
+CI  = SD;
 if isfield(x.trend,'CI') &  ~isempty(x.trend.CI)
     tmp = x.trend.CI(:,2);
     CI  = [x.trend.CI(:,1); tmp(end:-1:1)] ;
-else
-    CI  =SD;
 end
 
 if (hasSlp)
     Slp         =  x.trend.slp;
     tmp         =  Slp+x.trend.slpSD;
     SlpSD       =  [Slp-x.trend.slpSD;  tmp(end:-1:1)];
+	SlpCI       = SlpSD
+	if isfield(x.trend,'slpCI') &  ~isempty(x.trend.slpCI)
+        tmp    = x.trend.slpCI(:,2);
+        SlpCI  = [x.trend.slpCI(:,1); tmp(end:-1:1)] ;
+    end
     SlpSignPos  =  x.trend.slpSgnPosPr;
     SlpSignZero =  x.trend.slpSgnZeroPr;
 else
     Slp=[];
     SlpSD=[];
+	SlpCI=[];
     SlpSignPos=[];
     SlpSignZero=[];
 end
@@ -639,10 +644,10 @@ plot(h, t,   Amp,'color',clr );
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function plot_slp(h,ytitle, has, clr,x, t, t2t,Slp,SlpSD)
+function plot_slp(h,ytitle, has, clr,x, t, t2t,Slp,SlpCI)
 %cla;  hold on;
 alpha=0.5;
-fill(h,t2t, SlpSD,  clr,'LineStyle','none','FaceAlpha',alpha) ;
+fill(h,t2t, SlpCI,  clr,'LineStyle','none','FaceAlpha',alpha) ;
 plot(h,t,Slp, 'color',clr);
 end
 

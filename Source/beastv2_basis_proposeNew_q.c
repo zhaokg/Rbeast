@@ -143,6 +143,7 @@ static INLINE void _CalcDevExtremPos(PROP_DATA_PTR info ) {
 	__CalcExtremKnotPos_ST_BirthOnly(model->extremePosVec, model->deviation, info->N, threshold);
 }
 
+
 static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PTR newcol, PROP_DATA_PTR info)
 {	
 	I32					goodNum = basis->goodNum;
@@ -226,12 +227,12 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	{
 	case BIRTH:
 	{
-		I32    Npad16  = info->Npad16;		
+		I32    Npad16  = info ->Npad16;		
 		U64PTR goodVec = basis->goodvec; // Aliased is used here, goodvec must be 8-byte algined
 		U64PTR tmpGoodVec;
 		I32    tmpGoodNum;
 		
-		if ( *(PRND->rnd08)++ < 255* PROB_SAMPLE_EXTREME_VECTOR ) {				             
+		if ( *(PRND->rnd08)++ < 255 * PROB_SAMPLE_EXTREME_VECTOR ) {				             
 
 			//  When samples=0, extremPosVec should be all 1s'; it was pre-set when creating the initla model before entering the mcmc loop.			
 			I32 samples = info->samples[0];
@@ -289,7 +290,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	}
 	case DEATH:
 	{
-		newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
+		newIdx = RANDINT(1,  nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
 		new->numSeg     = 1;
 		new->SEG[0].R1  = knotList[(newIdx - 1) - 1];
 		new->SEG[0].R2  = knotList[(newIdx + 1) - 1] - 1L;
@@ -306,7 +307,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	}//flag==2/2
 	case MERGE:
 	{
-		newIdx = RANDINT(1, (U16)nKnot - 1, *(PRND->rnd16)++);  //(*rnd32++) % (tKnotNum-1) + 1; // (int)ceilfunc((*rnd32++) *(tKnotNum-1));	
+		newIdx = RANDINT(1, nKnot - 1, *(PRND->rnd16)++);  //(*rnd32++) % (tKnotNum-1) + 1; // (int)ceilfunc((*rnd32++) *(tKnotNum-1));	
 		// count is the number of samples bettween the two MERGEd knots
 		I32  r1 = knotList[(newIdx)-1];
 		I32  r2 = knotList[(newIdx + 1) - 1];
@@ -341,7 +342,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	}//flag==merge
 	case MOVE: //MOVE
 	{
-		newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
+		newIdx      = RANDINT(1, nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
 
 		I32 oldKnot = knotList[newIdx - 1];
 		I32 r1      = newIdx==1     ?  knotList[INDEX_FakeStart]: knotList[(newIdx - 1) - 1];
@@ -355,7 +356,11 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 		// oldKNot, r1 and r2 should be sigend (though knotList are unsigned); otherwise
 		// oldKnot-maxMoveSize could be a negative number and aliased to a super large postiive number
 		//, which will cause big r1 or r2. Another possible solution is to use signed intergers for knotList
+		// Jan 27-2004: Change knotList from u32 (unsigned) to signed (i32) because KNOT[INDEX_FakeStart]
+		// may be negative. (this shouldn't be a problem bcz int r1 = (uint) -2 is still -2
 		/*??????????????????????????????????*/
+		 
+
 		if (r2 == r1) {
 			new->newKnot = oldKnot;
 		} else if (r2 > r1) {
@@ -364,7 +369,22 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 			RANDINT_SKIPONE(new->newKnot, r1, oldKnot, r2, *(PRND->rnd32)++);
 			// r1,..., oldKnot-1,oldKnot(skipped),oldKnot+1,...,r2
 		} else {
-			r_error("ERROR: r1 < r2; there must be something wrong!\n");
+			/*
+			r_printf("ERROR: r1 < r2; this should never happen and there must be something wrong!\n");
+			r_printf("More info for diagnostic purpuse:\n");
+			r_printf("r1=%d r2=%d minSepDist=%d, maxMoveStepSize=%d \n", r1, r2, minSepDist, MCMC_maxMoveStepSize);
+			r_printf("INDEX_FakeStart=%d  INDEX_FakeEnd=%d newIdx=%d  oldknot=%d \n", INDEX_FakeStart, INDEX_FakeEnd, newIdx, oldKnot);
+			r_printf("KnotList (nKnot=%d): \n", nKnot);
+			for (int i = INDEX_FakeStart; i <= nKnot; i++) {
+				r_printf("  [%d, %d] ", i, knotList[i]);
+				if ((i - INDEX_FakeStart + 1) % 10 == 0) {
+					r_printf("\n");
+				}
+			}
+			r_printf("\n"); 
+			StdouFlush();
+			*/
+			r_error("ERROR: r1 < r2; this should never happen and there must be something wrong!\n");			
 			return ;
 		}
 
@@ -393,7 +413,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	   // this branch should be NEVER visited by DUMMY bases
 	   // if (basis->type==DUMMYID) r_error("ChORDER should never been chosen for DUMMYID; there must be something wrong!\n");
 	   
-		newIdx = RANDINT(1, (U16)nKnot + 1, *(PRND->rnd16)++);  //// (int)ceilfunc((*rnd32++) *(tKnotNum + 1));
+		newIdx = RANDINT(1, nKnot + 1, *(PRND->rnd16)++);  //// (int)ceilfunc((*rnd32++) *(tKnotNum + 1));
 
 		I32 newOrder;
 		I32 oldOrder = orderList[newIdx - 1];
@@ -425,7 +445,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	   //Added to handle a global model without any changepoint or order-resampling
 		new->numSeg  = 0;
 
-		new->newKnot = -9999;
+		new->newKnot   = -9999;
 		new->SEG[0].R1 = 0x0fffffff;
 		new->SEG[0].R2 = 0x0fffffff;
 		new->SEG[1].R1 = 0x0fffffff;
@@ -835,7 +855,7 @@ static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLIN
 	}
 	case DEATH:
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
 		newIdx  = __OO_NewIdx_MoveDeath(basis, info);
 		new->newKnot = knotList[newIdx - 1];
 		new->numSeg  = 0;
@@ -852,7 +872,7 @@ static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLIN
 	}//flag==2/2
 	case MOVE: //MOVE
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
 
 		// Randomly choose a good loc: newKnot is the newly chosen breakpoint		
 		//rI32 randLoc = RANDINT(1, (I32)goodNum, *(PRND->rnd32)++); // will fail if goodNum=0
@@ -983,7 +1003,7 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_P
 
 	case MOVE: //MOVE
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
 
 		// Randomly choose a good loc: newKnot is the newly chosen breakpoint		
 		//rI32 randLoc = RANDINT(1, (I32)goodNum, *(PRND->rnd32)++); // will fail if goodNum=0
@@ -1013,7 +1033,7 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_P
 
  	if (flag== DEATH)
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
 		newIdx = __OO_NewIdx_MoveDeath(basis, info);
 		new->newKnot = knotList[newIdx - 1];
 		new->numSeg = 0;
@@ -1130,7 +1150,7 @@ static void OO_Propose_2(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	}
 	case DEATH:
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);       // (*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) * tKnotNum);
 
 		newIdx = __OO_NewIdx_MoveDeath(basis, info);		
 		new->newKnot = knotList[newIdx - 1];
@@ -1147,7 +1167,7 @@ static void OO_Propose_2(	BEAST2_BASIS_PTR basis, NEWTERM_PTR new, NEWCOLINFO_PT
 	}//flag==2/2
 	case MOVE: //MOVE
 	{
-		//newIdx = RANDINT(1, (U16)nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
+		//newIdx = RANDINT(1, nKnot, *(PRND->rnd16)++);  //(*rnd32++) % tKnotNum + 1; // (int)ceilfunc((*rnd32++) *tKnotNum);	
 
 
 		// Randomly choose a good loc: newKnot is the newly chosen breakpoint		

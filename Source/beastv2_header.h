@@ -6,7 +6,7 @@
 #include "abc_ts_func.h"
 #include "abc_mat.h"   //NEWXCOLINFO
 
-#ifndef SOLARIS_COMPILER
+#ifndef COMPILER_SOLARIS
 
 #if R_INTERFACE==1 
 	#ifdef beta
@@ -32,7 +32,7 @@
 #define SVDID      4
 #define A(xxx)     BEAST2_##xxx
 
-typedef U32 TKNOT,  *_restrict TKNOT_PTR;
+typedef I32 TKNOT,  *_restrict TKNOT_PTR;
 typedef U08 TORDER, *_restrict TORDER_PTR;
 #define rTKNOT_PTR   register  TKNOT_PTR
 #define rTORDER_PTR  register  TORDER_PTR
@@ -212,7 +212,7 @@ typedef struct BEAST2_RESULT {
 	F32PTR  tY, tSD;
 	F32PTR  tCI;            //computeCI
 	I32PTR  torder;         //computeOrder
-	F32PTR  tslp, tslpSD;   //computeSlp
+	F32PTR  tslp, tslpSD ,tslpCI;   //computeSlp
 	I32PTR  tslpSgnPosPr;   //computeSlp
 	I32PTR  tslpSgnZeroPr;   //computeSlp: THere is a sizable probability that slp ==0.
 
@@ -454,7 +454,7 @@ typedef struct {
 #define INDEX_FakeEnd   -2
  
 
-#elif defined(SOLARIS_COMPILER)
+#elif defined(COMPILER_SOLARIS)
 #include "beastv2_header_solaris.h"
 #endif
 

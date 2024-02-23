@@ -3,31 +3,31 @@
 #include "abc_ide_util.h"  // for printf only
 
 //https://stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
-#if defined(_WIN32) || defined(WIN64_OS)
+#if defined(_WIN32) || defined(OS_WIN64)
     //#define WIN32_LEAN_AND_MEAN
 	//#include <windows.h>
     #include "abc_pthread.h"
-#elif defined(MAC_OS)
+#elif defined(OS_MAC)
 	#include <sys/param.h>
 	#include <sys/sysctl.h>
    #include "abc_pthread.h"  // needed for cpu_set__t
-#elif defined(LINUX_OS) || defined(SOLARIS_OS)
+#elif defined(OS_LINUX) || defined(OS_SOLARIS)
    //https://docs.oracle.com/cd/E36784_01/html/E36874/sysconf-3c.html
 	#include <unistd.h> // needed for sysconf
 #endif
 
-#if  defined(LINUX_OS) 
+#if  defined(OS_LINUX) 
     //you have to define_GNU_SOURCE before anything else
     //https://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
     //https://stackoverflow.com/questions/7296963/gnu-source-and-use-gnu/7297011#7297011
     //https://stackoverflow.com/questions/24034631/error-message-undefined-reference-for-cpu-zero/24034698
     #ifndef _GNU_SOURCE
-        #define _GNU_SOURCE
+        #define _GNU_SOURCE  // for including CPU_ZERO in sched.h
     #endif
-    #include <sched.h>  ////cpu_set_t , CPU_SET
+    #include <sched.h>       //cpu_set_t , CPU_SET
     #include <pthread.h>
-#elif defined(SOLARIS_OS)
-    #include <sched.h>  ////cpu_set_t , CPU_SET
+#elif defined(OS_SOLARIS)
+    #include <sched.h>       //cpu_set_t , CPU_SET
     #include <pthread.h>
 #endif
 
@@ -103,7 +103,7 @@ int GetNumCores(void)  {
     }
 
     // stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
-#if defined(_WIN32) || defined(WIN64_OS)    
+#if defined(_WIN32) || defined(OS_WIN64)    
     uint32_t count = GetCPUInfo(); 
 #elif defined(__MACH__)
     int nm[2];
@@ -127,7 +127,7 @@ int GetNumCores(void)  {
 }
 
 ////////////////////////////////////////////////////////////////////
-#if defined(_WIN32) || defined(WIN64_OS) ||  defined(MAC_OS) 
+#if defined(_WIN32) || defined(OS_WIN64) ||  defined(OS_MAC) 
 
 void  CPU_ZERO(cpu_set_t* cs) {
     cs->core_count = GetNumCores();
@@ -175,7 +175,7 @@ int   CPU_get_first_bit_id(cpu_set_t* cs) {
 #endif
 ////////////////////////////////////////////////////////////////////
 
-#if defined(_WIN32) || defined(WIN64_OS)
+#if defined(_WIN32) || defined(OS_WIN64)
 
 typedef struct __CPUINFO {
 
@@ -382,7 +382,7 @@ static int GetCoreNumbers_WINXP(void) {
 
 static int GetCoreNumbers_WIN7V2(void) {
 
-    #ifdef WIN64_OS
+    #ifdef OS_WIN64
 
     cpuInfo = (CPUINFO){0, };
 
@@ -521,7 +521,7 @@ static int GetCoreNumbers_WIN7V2(void) {
 
 static void RankCPU(void) {
 
-   #ifdef WIN64_OS
+   #ifdef OS_WIN64
 
     PROCESSOR_NUMBER procNum;
     cpuFunc.GetCurrentProcessorNumberEx(&procNum);
@@ -636,7 +636,7 @@ void PrintCPUInfo() {
      if (cpuset == NULL)   return 0; 
 
     //https://stackoverflow.com/questions/25472441/pthread-affinity-before-create-threads
-#ifdef WIN64_OS
+#ifdef OS_WIN64
 
      if (attr->lpAttributeList != NULL) {
          DeleteProcThreadAttributeList(attr->lpAttributeList);
@@ -669,7 +669,7 @@ void PrintCPUInfo() {
  // instead of exploring options with weak symbol, I make it static here
 int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start) (void*), void* arg) {
 
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     if (cpuFunc.CreateRemoteThreadEx == NULL || attr==NULL || attr->lpAttributeList==NULL ) {
         // r_printf("the CreateRemoteThreadEx funnction is not detected!\n");
         *tid = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE) start, arg, 0, 0);
@@ -704,7 +704,7 @@ int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start)
 
 
 
-#if defined(_WIN32) || defined(WIN64_OS)
+#if defined(_WIN32) || defined(OS_WIN64)
 
     #if _WIN32_WINNT >= 0x0602
        //The function below is to get hte stackszie of the current thread.  
@@ -716,14 +716,14 @@ int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start)
         }
     #else
        // https://stackoverflow.com/questions/28708213/can-i-get-the-limits-of-the-stack-in-c-c
-        #if defined(MSVC_COMPILER)
+        #if defined(COMPILER_MSVC)
         int get_thread_stacksize(void) {
              NT_TIB* tib         = (NT_TIB*)NtCurrentTeb();
              LPVOID   StackLimit = tib->StackLimit;
              LPVOID   StackBase  = tib->StackBase;
              return  StackLimit;
         }
-        #elif  defined(GCC_COMPILER)
+        #elif  defined(COMPILER_GCC)
 
             static INLINE unsigned __int64 readgsqword_bad(unsigned __int64 Offset) {
                 // this verseion will give a warning of  array subscript 0 is outside array bounds of 'long long unsigned int[0]' [-Warray-bounds]
@@ -788,7 +788,7 @@ int  pthread_create0(pthread_t* tid,  const pthread_attr_t* attr, void* (*start)
         return 0;        
     }
     
-#elif defined(LINUX_OS) 
+#elif defined(OS_LINUX) 
 
 //https://docs.oracle.com/cd/E88353_01/html/E37843/pthread-getattr-np-3c.html
 int get_thread_stacksize(void) {

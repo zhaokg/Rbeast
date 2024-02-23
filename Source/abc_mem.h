@@ -82,11 +82,11 @@ struct MemPointers
 		 float*   f32;
 		 double*  f64;
 	 } p;
-	 int  max_len;
-	 int  cur_len;
-	 int  elem_size;
-	 int  align;
-	 int  offset;
+	 size_t  max_len;
+	 size_t  cur_len;
+	 int     elem_size;
+	 int     align;
+	 int     offset;
  } DynAlignedBuf, * _restrict DynAlignedBufPtr;
 
  void adynbuf_init(DynAlignedBufPtr buf, int init_max_len);

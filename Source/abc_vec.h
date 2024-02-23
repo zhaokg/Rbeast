@@ -63,12 +63,12 @@ extern "C" {
 	extern I64 i08_sum(I08PTR x, int N);
 
 
-	extern int i32_insert_noduplicate(I32PTR x, I32 N, I32PTR Xnew, I32 Nnew);
-	extern int i32_unique_inplace(I32PTR x, int N);
-	extern int i32_exclude_inplace(I32PTR x, int N, I32PTR excludeList, I32 Nexclude);
+	extern int  i32_insert_noduplicate(I32PTR x, I32 N, I32PTR Xnew, I32 Nnew);
+	extern int  i32_unique_inplace(I32PTR x, int N);
+	extern int  i32_exclude_inplace(I32PTR x, int N, I32PTR excludeList, I32 Nexclude);
 	extern void f32_sumfilter(const F32PTR X, F32PTR Y, int N, int winSize);
 	extern F32  f32_corr_rmse_nan(const F32PTR X, const F32PTR Y, int N, F32PTR rmse);
-	extern void  f32_truncate_inplace(const F32PTR X, F32 value, int N);
+	extern void f32_truncate_inplace(const F32PTR X, F32 value, int N);
 
 
 	I32 i32_maxidx(const I32PTR  X, const  int N, I32PTR val);
@@ -189,9 +189,6 @@ extern "C" {
 	F77__iaddc(const int C, int* X, const int N);
 
 
-
-
-
 	void  i32_add_val_inplace(const int C, const I32PTR X, const int N);
 	I32   i32_sum(const I32PTR X, const int N);
 
@@ -259,10 +256,10 @@ extern "C" {
 
 
 
-	//Compute the 1-step backward difference:
-	//First, get the backward difference: diff=[d1=NA,d2=x2-x1,...,d_N=x_n-x_(n-1)]
-	//The first elemn of result (d1=y1-y0 where y0 is non-existent) is borrowed from its
-	//immediate right neighor: d1 =d2=x2-x1, so that diff=(d1=y2-y1, d2=y2-y1, d3=d3-d2...)
+	// Compute the 1-step backward difference:
+	// First, get the backward difference: diff=[d1=NA,d2=x2-x1,...,d_N=x_n-x_(n-1)]
+	// The first elemn of result (d1=y1-y0 where y0 is non-existent) is borrowed from its
+	// immediate right neighor: d1 =d2=x2-x1, so that diff=(d1=y2-y1, d2=y2-y1, d3=d3-d2...)
 	// diff[0] = diff[1]; //fill the leftmost
 
 	void f32_diff_back(const F32PTR  X, F32PTR result, const  int N);

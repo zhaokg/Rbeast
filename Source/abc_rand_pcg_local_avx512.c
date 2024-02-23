@@ -15,13 +15,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 			//do something////
 	#pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 			//do something////
@@ -33,7 +33,7 @@
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
 
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64) 
 	//https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
 	#pragma clang optimize on
 
@@ -44,7 +44,7 @@
 #endif
 
  
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64) 
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -69,7 +69,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 
 
 #include "abc_math_avx.h"
@@ -189,7 +189,7 @@ void SetupPCG_AVX512(void) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
 	//pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
 #pragma clang attribute pop
 #endif

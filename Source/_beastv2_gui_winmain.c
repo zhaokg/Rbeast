@@ -2,7 +2,7 @@
 #include "abc_000_warning.h"
  
 
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 
 #include <stdio.h>   // printf
 #include <io.h>      // _open_osfhandle, _dup2

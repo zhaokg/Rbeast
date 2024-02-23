@@ -1549,29 +1549,37 @@ void swap_elem_bands(NEWCOLINFOv2* new, void *x, void *xnew, I32 elemSize) {
 
 void shift_lastcols_within_matrix(F32PTR X, I32 N, I32 Kstart, I32 Kend, I32 Knewstart) {
 
-	if (Knewstart == Kstart) {
+	int offset = Knewstart - Kstart;
+	if (offset == 0) {
 		return;
 	}
 
-	int j = Knewstart - Kstart;
-	if (j < 0 || Knewstart > Kend) {
-		// dst(k2_new):-----123455----
-		// src(k2_old):----------123455----
+	int Kseg = Kend - Kstart + 1;
+	if ( offset>=Kseg || offset <= -Kseg) { // Not overlapping	
+		// dst(k2_new):--------------------{Knewstart]123455----  [CASE 1]
+		// src(k2_old):-----123455[Kend]----
 
-		// dst(k2_new):----------------123455----
-		// src(k2_old):-----123455----
-		r_cblas_scopy((Kend - Kstart + 1) * N, X + (Kstart - 1) * N, 1, X + (Knewstart - 1) * N, 1);
-	} else {
+		// dst(k2_new):-----123455----                            [CASE 2] 
+		// src(k2_old):---------------[Ksart]123455----
+		r_cblas_scopy(Kseg * N, X + (Kstart - 1) * N, 1, X + (Knewstart - 1) * N, 1);
+	}	
+	else if (offset < 0) { // Overlaping [ -Kseg <offset <0]
+		// Use of memcpy in this case is not safe, having undefined behavior accroding to the C standard
+		// dst(k2_new):-----123455----
+		// src(k2_old):----------123455----		
+		memmove( X+(Knewstart - 1) * N, X + (Kstart - 1) * N, Kseg * N * sizeof(F32));
+	}
+    else {  // Overlaping [ 0 <offset < Kseg]
 		// dst(k2_new):-------------123456----
 		// src(k2_old):---------123456----
 		I32 segStartIdx = Kend + 1;
 		while (_True_) {
-			segStartIdx = segStartIdx - j;
+			segStartIdx = segStartIdx -offset;
 			if (segStartIdx > Kstart) {
-				SCPY(j * N, X + (segStartIdx - 1) * N, X + ((segStartIdx + j) - 1) * N);				
+				SCPY(offset * N, X + (segStartIdx - 1) * N, X + ((segStartIdx + offset) - 1) * N);
 			} else {
-				j = (segStartIdx + j) - Kstart;
-				SCPY(j * N, X + (Kstart - 1) * N, X + (Knewstart - 1) * N);
+				int Kremaining = (segStartIdx + offset) - Kstart;
+				SCPY(Kremaining * N, X + (Kstart - 1) * N, X + (Knewstart - 1) * N);
 				break;
 			}
 		}//while (_True_)
