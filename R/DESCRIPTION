@@ -1,0 +1,22 @@
+Package: Rbeast
+Type: Package
+Version: 1.0.1
+Date:    2024-02-08
+Title: Bayesian Change-Point Detection and Time Series Decomposition
+Authors@R: c(person(given = "Tongxi",   family = "Hu",       role = "aut",           email = "hu.1555@osu.edu"),
+             person(given = "Yang",     family = "Li",       role = "aut",           email = "li.10015@osu.edu"),             
+			 person(given = "Xuesong",  family = "Zhang",    role = "aut",           email= "xuesong.zhang@usda.gov" ),
+			 person(given = "Kaiguang", family = "Zhao",     role = c("aut", "cre"), email = "zhao.1423@osu.edu"),
+             person(given = "Jack",     family = "Dongarra", role = "ctb"),
+             person(given = "Cleve",    family = "Moler",    role = "ctb")
+             )
+Author:    Tongxi Hu [aut], Yang Li [aut], Xuesong Zhang [aut], Kaiguang Zhao [aut, cre], Jack Dongarra [ctb], Cleve Moler [ctb]
+Maintainer: Kaiguang Zhao <zhao.1423@osu.edu>
+Depends: R (>= 2.10.0),methods, utils
+Description: Interpretation of time series data is affected by model choices. Different models can give different or even contradicting estimates of patterns, trends, and mechanisms for the same data--a limitation alleviated by the Bayesian estimator of abrupt change,seasonality, and trend (BEAST) of this package. BEAST seeks to improve time series decomposition by forgoing the "single-best-model" concept and embracing all competing models into the inference via a Bayesian model averaging scheme. It is a flexible tool to uncover abrupt changes (i.e., change-points), cyclic variations (e.g., seasonality), and nonlinear trends in time-series observations. BEAST not just tells when changes occur but also quantifies how likely the detected changes are true. It detects not just piecewise linear trends but also arbitrary nonlinear trends. BEAST is applicable to real-valued time series data of all kinds, be it for remote sensing, economics, climate sciences, ecology, and hydrology. Example applications include its use to identify regime shifts in ecological data, map forest disturbance and land degradation from satellite imagery, detect market trends in economic data, pinpoint anomaly and extreme events in climate data, and unravel system dynamics in biological data. Details on BEAST are reported in Zhao et al. (2019) <doi:10.1016/j.rse.2019.04.034>.
+LazyData: true
+Imports:  grid
+License:  GPL (>= 2)
+URL: https://github.com/zhaokg/Rbeast
+NeedsCompilation: yes
+

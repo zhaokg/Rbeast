@@ -1,0 +1,9 @@
+PKG_LIBS     = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -lm -lkernel32 -lgdi32 -luser32
+PKG_CPPFLAGS = -D_REENTRANT -DR_RELEASE
+PKG_CFLAGS   = -DR_RELEASE -fno-asynchronous-unwind-tables   
+#PKG_CFLAGS  = -DR_RELEASE -fno-asynchronous-unwind-tables   -std=gnu2x -Wstrict-prototypes -Wstringop-overflow -pedantic  -Wall 
+ 
+#https://stackoverflow.com/questions/12201625/disable-using-sprintf-chk
+#PKG_CFLAGS  =  -g
+#PKG_CFLAGS  = -DR_RELEASE -fno-asynchronous-unwind-tables -Wno-restrict -std=gnu2x -Wstrict-prototypes -D_FORTIFY_SOURCE=0  
+#PKG_FFLAGS  = -ffpe-trap=invalid,zero,overflow

@@ -1,0 +1,56 @@
+citHeader("To cite Rbeast in publications, please use")
+
+bibentry(bibtype = "Article",
+         title   = "Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm",
+         author  = c(person("Kaiguang", "Zhao"), person(given="Michael", family="Wulder"),person("Tongxi", "Hu"),
+		                     person("Ryan", "Bright"), person("Qiusheng", "Wu"), person("Haiming", "Qin"),
+							 person("Yang", "Li"), person("Elizabeth", "Toman"), person("Bani", "Mallick"),
+							 person("Xuesong", "Zhang"), person("Molly", "Brown")
+							 ),
+         journal      = "Remote Sensing of Environment",
+         year         = "2019",
+	     volume       = "232",
+	     pages        = "111181",
+	     doi          = "10.1016/j.rse.2019.04.034", 
+         mheader ="xxxxxxx, xx",		 
+         textVersion = 
+         paste("Zhao, K., Wulder, M.A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick, B., Zhang, X. and Brown, M. (2019).", 
+               "Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm.",
+	       "Remote sensing of Environment, 232, p.111181.",
+	       "doi:10.1016/j.rse.2019.04.034"),
+)
+
+
+bibentry(bibtype = "Article",
+         title = "Hyperspectral remote sensing of plant biochemistry using Bayesian model averaging with variable and band selection",
+         author = c(person("Kaiguang", "Zhao"),  person("Denis", "Valle"),person("Sorin", "Popescu"),  person("Xuesong", "Zhang"),
+						 person("Bani",  "Mallick")	 ),
+         journal      = "Remote Sensing of Environment",
+         year         = "2013",
+         volume       = "132",
+	     pages        = "102-119",
+	     doi          = "10.1016/j.rse.2012.12.026",
+         textVersion = 
+         paste("Zhao, K., Valle, D., Popescu, S., Zhang, X. and Mallick, B. (2013).", 
+               "Hyperspectral remote sensing of plant biochemistry using Bayesian model averaging with variable and band selection.",
+	       "Remote Sensing of Environment, 132, 102-119.",
+	       "doi:10.1016/j.rse.2012.12.026"),
+)
+
+
+bibentry(bibtype = "Article",
+         title = "Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine",
+         author = c(person("Tongxi", "Hu"), person(given="Elizabeth", family="Toman"),
+                             person("Gang", "Chen"), person("Gang", "Shao"), person("Yuyu", "Zhou"),
+							 person("Yang", "Li"), person("Kaiguang", "Zhao"), person("Yinan", "Feng")),
+         journal      = "ISPRS Journal of Photogrammetry and Remote Sensing ",
+         year         = "2021",
+         volume       = "176",
+         pages        = "250-261",
+         doi          = "10.1016/j.isprsjprs.2021.04.008",
+         textVersion  = 
+         paste("Hu, T., Toman, E.M., Chen, G., Shao, G., Zhou, Y., Li, Y., Zhao, K. and Feng, Y. (2021).", 
+               "Mapping fine-scale human disturbances in a working landscape with Landsat time series on Google Earth Engine.",
+               "ISPRS Journal of Photogrammetry and Remote Sensing, 176, 250-261.",
+               "doi:10.1016/j.isprsjprs.2021.04.008")         
+)
