@@ -1,3 +1,4 @@
+import warnings
 from . import Rbeast as cb
 from .cvt_to_numpy import force_convert_to_numpy
            
@@ -29,7 +30,8 @@ def beast_irreg(Y, \
           quiet          = False,
           hasOutlier     = False,
           ocp_max        = 10,
-          gui            = False
+          gui            = False,
+          freq           = None
         ):
       """
 ################################################################################################
@@ -263,8 +265,8 @@ at zhao.1423@osu.edu.
       
       metadata.period           = period
       if (season != 'none' and period != period and deltat == deltat):
-         if 'freq' in kwargs:
-            freq            = kwargs['freq']
+         if freq is not None:
+            warnings.warn('`freq` parameter has been deprecated, instead use `period` with `freq * deltat`.')
             metadata.period = deltat * freq
             
       metadata.missingValue     = float('nan')
