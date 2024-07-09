@@ -2,25 +2,25 @@
 # Handle 3D stacked images of irregular time-series : 'ndvi.zip' is  a zip file of 
 # 437 NDIV tiff image files, each having a dim of 12 x 9.
 
-  zipfile = system.file("extdata/ndvi.zip", package="Rbeast") # the path of ndvi.zip
-  tmpfld  = file.path(tempdir(), "RbeastTmpDir" )             # get a temp folder
-  dir.create(tmpfld)                                          # create a tmp folder
-  unzip(zipfile, exdir= normalizePath(tmpfld))                # unzip the images to the tmp folder
+  zipfile = system.file("extdata/ndvi.zip", package="Rbeast")        # the path of ndvi.zip
+  tmpfld  = file.path(tempdir(), "RbeastTmpDir" )                    # get a temp folder named "RbeastTmpDir"
+  dir.create(tmpfld)                                                 # create the tmp folder
+  unzip( zipfile, exdir= normalizePath(tmpfld ))                     # unzip the images to the tmp folder
+  filelist=list.files(path=tmpfld, pattern='*.tif', full.names=TRUE) # the list of all  the tiff filenames
 
-  library(raster)             # the raster pacakge is needed to read the tiff files
-  filelist=list.files(path=tmpfld, pattern='*.tif', full.names=TRUE)  # the tiff filenames
-  ndvi3d  = stack(filelist)                                           # create a rasterstack object 
+  library(raster)             # the "raster" pacakge used to read the tiff files  
+  ndvi3d  = stack(filelist)   # create a rasterstack object 
   inMemory(ndvi3d)            # image data not read yet
   ndvi3d  = readAll(ndvi3d)   # To use beast, make sure all the data is read into memory
-                              # 'raster' is slow with the reading,even for our small images
+                              # 'raster' is very slow with the reading,even for our small images
   ndvi3d  = brick(ndvi3d)     # Convert the stack to a RasterBrick object
   inMemory(ndvi3d)            # Now, all the image data is in memory
   dims    = dim(ndvi3d)       # WARNING: the 'raster' package reports a dim of 12 x 9 x 437 
                               #corresponding to row x col x band/time. But 'raster' seems to 
                               # use a row-major storage mode. So internally, the RasterBrick image
-                              # data is 9 x 12 x 437 in term of R's column-major storage mode:
-                              #  beast also use the col-major mode.
-  Y        = values(ndvi3d)
+                              # data is 9 x 12 x 437 in terms of R's column-major storage mode:
+                              # beast also use the col-major mode.
+  Y        = values(ndvi3d)   # Y has a dimesion of 9x12x437
   dim(Y)   = c(9, 12, 437)    # Assign the correct column-major dim
   datestr  = names(ndvi3d)    # the time strings
 
@@ -45,9 +45,9 @@
   o=beast123(Y, metadata=metadata,extra=extra) # Default values used for missing parameters 
 
   #WARNING: bcz the input ts is from a RasterBrick object that has a row-major storage mode, 
-  #the beast output will be of size 9 x 12 for each band/time. That is, the row and col are
-  #reversed, compared to the raster package. This is a glitch only with the raster package.
-  #The beast output dim is consistent with the dim of the input Y.
+  # the beast output will be of size 9 x 12 for each band/time. That is, the row and col are
+  # reversed, compared to the raster package. This is a glitch only with the raster package.
+  # The beast output dim is consistent with the dim of the input Y.
  
   image(o$trend$ncp)                       # number of changepoints over space
   grid::grid.raster( o$trend$ncpPr[,,1:3]) # an pseduo-RGB image composed from the prob of 
