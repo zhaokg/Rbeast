@@ -37,13 +37,7 @@ void StdouFlush(void) {
     extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
  #endif
 #elif defined(OS_MAC)
-    #if !defined(cpu_ARM64)
-      extern Bool ioFlush(void)  asm("__Z7ioFlushv");
-      #warning "MacOS Intel is detected ...... "
-    #else
-      #define ioFlush()
-      #warning "MacOS Apple Silcon is detected ...... "
-    #endif
+      extern Bool ioFlush(void)  asm("__Z7ioFlushv"); 
 #elif defined(OS_LINUX)   
    extern Bool ioFlush(void)  asm("_Z7ioFlushv");
     #warning "Linux is detected...... "
