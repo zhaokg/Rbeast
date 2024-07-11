@@ -37,10 +37,9 @@ void StdouFlush(void) {
     extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
  #endif
 #elif defined(OS_MAC)
-      extern Bool ioFlush(void)  asm("__Z7ioFlushv"); 
+   extern Bool ioFlush(void)  asm("__Z7ioFlushv"); 
 #elif defined(OS_LINUX)   
    extern Bool ioFlush(void)  asm("_Z7ioFlushv");
-    #warning "Linux is detected...... "
 #else
    // Do nothing
 #endif
