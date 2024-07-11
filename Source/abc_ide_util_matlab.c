@@ -37,7 +37,11 @@ void StdouFlush(void) {
     extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
  #endif
 #elif defined(OS_MAC)
-   extern Bool ioFlush(void)  asm("__Z7ioFlushv");
+    #if !defined(cpu_ARM64)
+      extern Bool ioFlush(void)  asm("__Z7ioFlushv");
+    #else
+      #define ioFlush()
+    #endif
 #elif defined(OS_LINUX)   
    extern Bool ioFlush(void)  asm("_Z7ioFlushv");
 #else
@@ -239,7 +243,7 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 		else {
 			int    cols = dims[1];
 			int    rows = dims[0];
-			//MATLAB uses 16-bit unsigned integer character encoding for Unicode® characters.
+			//MATLAB uses 16-bit unsigned integer character encoding for UnicodeÂ® characters.
 			mwSize   newdims[2] = {1,cols };
 			mxArray* newrow     = mxCreateCharArray(2, newdims);
 			
