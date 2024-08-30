@@ -40,7 +40,7 @@ end
 
 
 if isempty(beastPath)
-      eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/installbeast.m',weboptions('CertificateFilename','')));    
+      eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/rbeast_install.m',weboptions('CertificateFilename','')));    
 end
 %%
 clearvars  rbeastGitHubVersion localVersion remoteVersion isRemoteVersionAvaiable strMsgBeast hasBeastSrcFld answerBeast

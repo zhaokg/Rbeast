@@ -118,16 +118,6 @@ function out = beast(y, varargin)
 %        window/segment of length tseg.rightmargin. tseg.rightmargin must be an unitless integer (the number of 
 %        time intervals/data points) so that the time window in the original unit is tseg.rightmargin*deltat. 
 %        If missing, tseg.rightmargin defaults to tseg.min.
-%   <strong>hasOutlier</strong>: 
-%        boolean; if true, the model with an outlier component  will be fitted:
-%        (a) Y = Trend + error                     if season = 'none'  and hasOutlier=false 
-%		 (b) Y = Trend + Season  + error)          if season~= 'none'  and hasOutlier=false 
-%        (c) Y = Trend + Outlier + error           if season = 'none'  and hasOutlier=true 
-%		 (d) Y = Trend + Season  + Outlier + error if season~= 'none'  and hasOutlier=true 
-%       where the outlier component is extreme spikes or dips at isolated points of time.
-%   <strong>ocp.max</strong>: 
-%        an integer; needed only if hasOutlier=true to specify the maximum number of outliers (i.e., 
-%        outlier-type changepoints) allowed in the time series
 %   <strong>method</strong>: 
 %        a string (default to 'bayes'); specify which method is used to model the posterior probability.
 %        (1) 'bayes': the full Bayesian formulation as described in Zhao et al. (2019).
@@ -135,6 +125,11 @@ function out = beast(y, varargin)
 %        (3) 'aic'  : approximation of posterior probability using the Akaike information criterion (aic).
 %        (4) 'aicc' : approximation of posterior probability using the corrected Akaike information criterion (aicc).
 %        (5) 'hic'  : approximation of posterior probability using the Hannan-Quinn information criterion (hic)
+%        (6) 'bic0.25':  approximation using the Bayesian information criterion adopted from Kim et al. (2016) <doi: 
+%             10.1016/j.jspi.2015.09.008>; bic0.25=n*ln(SSE)+0.25k*ln(n) with less complexity penelaty than the standard BIC.
+%        (7) 'bic0.50': the same as above except that the penalty factor is 0.50.
+%        (8) 'bic1.5':  the same as above except that the penalty factor is 1.5.
+%        (9) 'bic2':    the same as above except that the penalty factor is 2.0.
 %   <strong>deseasonalize</strong>: 
 %       boolean; if true, the input ts is first de-seasonalize by removing a global seasonalcomponent, prior 
 %       to applying BEAST; after BEAST is done, the the global seasonal component will be added back.
@@ -171,15 +166,29 @@ function out = beast(y, varargin)
 %            for individual components but also for individual orders of each component; their initial values is 
 %            specified by precValue. In other words, precValue will be inferred by the MCMC, so the fitting result
 %            will be insensitive to the initial choice in precValue.
-%   <strong>ci</strong>: 
-%         boolean; if true, compute credible intervals. Unless needed for assessing the curve fitting, it is better 
-%         to disable it for changepoint analysis because computing CI (e.g., o.trend.CI and o.season.CI)is expensive.
+%   <strong>hasOutlier</strong>: 
+%        boolean; if true, the model with an outlier component  will be fitted:
+%        (a) Y = Trend + error                     if season = 'none'  and hasOutlier=false 
+%		 (b) Y = Trend + Season  + error)          if season~= 'none'  and hasOutlier=false 
+%        (c) Y = Trend + Outlier + error           if season = 'none'  and hasOutlier=true 
+%		 (d) Y = Trend + Season  + Outlier + error if season~= 'none'  and hasOutlier=true 
+%       where the outlier component is extreme spikes or dips at isolated points of time.
+%   <strong>ocp.minmax</strong>: 
+%        a vector of 2 integers (>=0); the min and max numbers of outlier-type changepoints (ocp) allowed in the time series
+%        trend component. Ocp refers to spikes or dips at isolated times that can't be modeled as trends or seasonal terms.
 %   <strong>print.progress</strong>: 
 %        boolean; if true, a progress bar is shown
-%   <strong>print.options</strong>: 
+%   <strong>print.param</strong>: 
 %        boolean; if true, print the BEAST paramers. 
+%   <strong>print.warning</strong>: 
+%        boolean; if true, print warning messages. 
 %   <strong>quiet</strong>: 
 %        boolean. If TRUE, warning messages are suppressed and not printed.
+%   <strong>dump.ci</strong>: 
+%         boolean; if true, compute credible intervals. Unless needed for assessing the curve fitting, it is better 
+%         to disable it for changepoint analysis because computing CI (e.g., o.trend.CI and o.season.CI)is expensive.
+%   <strong>dump.mcmc</strong>: 
+%        boolean. If TRUE, dump the sampled models in the MCMC chains.
 %   <strong>gui</strong>: 
 %       boolean; if true, show a gui to demostrate the MCMC sampling; runs only on Windows not Linux or MacOS
 %
@@ -205,27 +214,28 @@ function out = beast(y, varargin)
 %            sorder.minmax(1)    <->  prior.seasonMinOrder
 %            sorder.minmax(2)    <->  prior.seasonMaxOrder
 %            sseg.min            <->  prior.seasonMinSepDist
-%	         sseg.leftmargin     <->  prior.seasonLeftMargin  
-%	         sseg.rightmargin    <->  prior.seasonRightMargin  
+%            sseg.leftmargin     <->  prior.seasonLeftMargin  
+%            seg.rightmargin    <->  prior.seasonRightMargin  
 %            tcp.minmax(1)       <->  prior.trendMinKnotNum
 %            tcp.minmax(2)       <->  prior.trendMaxOrder
 %            torder.minmax(1)    <->  prior.trendMinOrder
 %            torder.minmax(2)    <->  prior.trendMaxOrder
 %            tseg.min            <->  prior.trendMinSepDist
-%	         tseg.leftmargin     <->  prior.trendLeftMargin  
-%	         tseg.rightmargin    <->  prior.trendRightMargin
-%	         precValue           <->  prior.precValue
-%	         precPriorType       <->  prior.precPriorType
-%	         ocp.max             <->  prior.outlierMaxKnotNum  
+%            tseg.leftmargin     <->  prior.trendLeftMargin  
+%            tseg.rightmargin    <->  prior.trendRightMargin
+%            precValue           <->  prior.precValue
+%            precPriorType       <->  prior.precPriorType
+%            ocp.minmax(2)       <->  prior.outlierMaxKnotNum  
 %            mcmc.seed           <->  mcmc.seed           
 %            mcmc.samples        <->  mcmc.samples    
 %            mcmc.thinningFactor <->  mcmc.thinningFactor 
 %            mcmc.burnin         <->  mcmc.burnin 
 %            mcmc.chainNumber    <->  mcmc.chainNumber  
-%            ci                  <->  extra.computeCredible
-%            print.progress      <->  extra.printProgressBar
-%            print.options       <->  extra.printOptions 
+%            dump.ci             <->  extra.computeCredible
+%            print.progress      <->  extra.printProgress
+%            print.param         <->  extra.printParameter
 %            quiet               <->  extra.quiet
+%            dump.mcmc           <->  extra.dumpMCMCSamples
 %
 %   <strong>Experts should use the the beast123 function.</strong>
 %
@@ -397,21 +407,25 @@ function out = beast(y, varargin)
    precPriorType   = GetValueByKey(KeyList, ValList, 'precPriorType',   'componentwise');    
    
    hasOutlierCmpnt = GetValueByKey(KeyList, ValList, 'hasOutlier',        []); 
-   ocp_max         = GetValueByKey(KeyList, ValList, 'ocp.max',           10); 
+   ocp_minmax      = GetValueByKey(KeyList, ValList, 'ocp.minmax',        [0,10]); 
       
    mcmc_seed       = GetValueByKey(KeyList, ValList, 'mcmc.seed',     0);         
    mcmc_samples    = GetValueByKey(KeyList, ValList, 'mcmc.samples',  8000);
    mcmc_thin       = GetValueByKey(KeyList, ValList, 'mcmc.thin',     5); 
    mcmc_burnin     = GetValueByKey(KeyList, ValList, 'mcmc.burnin',   200);
    mcmc_chainNumber= GetValueByKey(KeyList, ValList, 'mcmc.chains',   3);  
-   
-   ci               = GetValueByKey(KeyList, ValList, 'ci',             false);   
-   printProgressBar = GetValueByKey(KeyList, ValList, 'print.progress', true);     
-   printOptions     = GetValueByKey(KeyList, ValList, 'print.options',  true);    
+
+   printProgress   = GetValueByKey(KeyList, ValList, 'print.progress', true);     
+   printParameter   = GetValueByKey(KeyList, ValList, 'print.param',  true);    
+   printWarning     = GetValueByKey(KeyList, ValList, 'print.warning',  true);
    quiet            = GetValueByKey(KeyList, ValList, 'quiet',          false);   
    gui              = GetValueByKey(KeyList, ValList, 'gui',            false); 
+   ci               = GetValueByKey(KeyList, ValList, 'dump.ci',        false);      
+   mcmc_dump        = GetValueByKey(KeyList, ValList, 'dump.mcmc',   false);     
+   
    methods          = GetValueByKey(KeyList, ValList, 'method',        'bayes'); 
    
+
 %% Convert the opt parameters to the individual option parameters (e.g., metadata, prior, mcmc, and extra)
 
    %......Start of displaying 'MetaData' ......
@@ -449,8 +463,8 @@ function out = beast(y, varargin)
        prior.seasonMinKnotNum  = scp_minmax(1);
        prior.seasonMaxKnotNum  = scp_minmax(2);   
        prior.seasonMinSepDist  = sseg_min;
-	   prior.seasonLeftMargin  = sseg_leftmargin;
-	   prior.seasonRightMargin = sseg_rightmargin;
+       prior.seasonLeftMargin  = sseg_leftmargin;
+       prior.seasonRightMargin = sseg_rightmargin;
    end   
    prior.trendMinOrder	  = torder_minmax(1);
    prior.trendMaxOrder	  = torder_minmax(2);
@@ -461,7 +475,8 @@ function out = beast(y, varargin)
    prior.trendRightMargin = tseg_rightmargin;
 
    if hasOutlierCmpnt
-      prior.outlierMaxKnotNum = ocp_max;
+      prior.outlierMinKnotNum = ocp_minmax(1);   
+      prior.outlierMaxKnotNum = ocp_minmax(2);
    end
         
    prior.precValue        = precValue;
@@ -497,12 +512,14 @@ function out = beast(y, varargin)
    extra.tallyPosNegSeasonJump= false;
    extra.tallyPosNegTrendJump = false;
    extra.tallyIncDecTrendJump = false;
-   extra.printProgressBar     = printProgressBar;
-   extra.printOptions         = printOptions;
+   extra.printProgress        = printProgress;
+   extra.printParameter       = printParameter;
+   extra.printWarning         = printWarning;
    extra.quiet                = quiet;
    extra.consoleWidth         = 70;
    extra.numThreadsPerCPU     = 2;
    extra.numParThreads        = 0;
+   extra.dumpMCMCSamples      = mcmc_dump;
 %......End of displaying extra ......
 
 
@@ -524,9 +541,4 @@ function value=GetValueByKey(KeyList, ValList, key,defaultValue)
        value = ValList{idx(1)};
    end
 end
-
- 
-
-
-
  

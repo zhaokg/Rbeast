@@ -1,3 +1,4 @@
+% Aug 12, 2024: Remove the extra blank line when pringing. Also added the hasOutlier argument
 % Dec 12, 2023: Added the the sseg.leftmargin, sseg.rightmargin, tseg.leftmargin, and
 %   tseg.rightmargin argumentst upon the requst of Racine Nassau from University of Washington
 % July 12, 2023: Added the rbeast_mex_compile.m: not always working but
@@ -17,5 +18,5 @@
 %   model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.9470;
+rbeastGitHubVersion = 0.9481;
 disp(strcat('  matlab-beast v', num2str(rbeastGitHubVersion)));

@@ -195,6 +195,9 @@ function out = beast123(Y, metadata, prior, mcmc, extra, method)
 %        ending window/segment of length trendRightMargin. trendRightMargin must be an unitless integer 
 %        (the number of time intervals/data points) so that the time window in the original unit is 
 %        trendRightMargin*deltat. If missing, trendRightMargin to trendMinSepDist.%
+%   prior.outlierMinKnotNum : 
+%        integer; needed only if metadata.hasOutlierCmpnt==true to specify the mininum number of outliers (i.e., 
+%        outlier-type changepoints) allowed in the time series%
 %   prior.outlierMaxKnotNum : 
 %        integer; needed only if metadata.hasOutlierCmpnt==true to specify the maximum number of outliers (i.e., 
 %        outlier-type changepoints) allowed in the time series%
@@ -273,12 +276,14 @@ function out = beast123(Y, metadata, prior, mcmc, extra, method)
 %   extra.tallyPosNegSeasonJump:
 %   extra.tallyPosNegTrendJump :
 %   extra.tallyIncDecTrendJump :
-%   extra.printProgressBar     : 
+%   extra.printProgress        : 
 %        boolean; if true, show a progress bar
-%   extra.printOptions         : 
+%   extra.printParameter       : 
 %        boolean; if true, print the BEAST parameters at the start
-%   extra.quite                : 
-%        boolean; if true, print the BEAST parameters at the start
+%   extra.printWarning         : 
+%        boolean; if true, print warning messages
+%   extra.quiet                : 
+%        boolean; if false, print nothing
 %   extra.consoleWidth         : 
 %       an integer; the console/terminal width
 %   extra.numThreadsPerCPU     : 
@@ -303,12 +308,17 @@ function out = beast123(Y, metadata, prior, mcmc, extra, method)
 %   ----------------------------------------------------------------------------------------
 %   <strong>***method***</strong>: specify which method is used to formulate model posterior probability.
 %   ----------------------------------------------------------------------------------------
-%        a string (default to 'bayes'); four values are possible.
+%        a string (default to 'bayes'); 9 values are possible.
 %        (1) 'bayes': the full Bayesian formulation as described in Zhao et al. (2019).
 %        (2) 'bic'  : approximation of posterior probability using the Bayesian information criterion (bic).
 %        (3) 'aic'  : approximation of posterior probability using the Akaike information criterion (aic).
 %        (4) 'aicc' : approximation of posterior probability using the corrected Akaike information criterion (aicc).
 %        (5) 'hic'  : approximation of posterior probability using the Hannan-Quinn information criterion (hic)
+%        (6) 'bic0.25':  approximation using the Bayesian information criterion adopted from Kim et al. (2016) <doi: 
+%             10.1016/j.jspi.2015.09.008>; bic0.25=n*ln(SSE)+0.25k*ln(n) with less complexity penelaty than the standard BIC.
+%        (7) 'bic0.50': the same as above except that the penalty factor is 0.50.
+%        (8) 'bic1.5':  the same as above except that the penalty factor is 1.5.
+%        (9) 'bic2':    the same as above except that the penalty factor is 2.0.
 %
 %
 %   <strong>More help</strong>:  

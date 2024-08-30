@@ -269,7 +269,7 @@ for i =1:length(vars)
     
     if (strcmp(var,'tslp') )
         [Y,SD, CI,Slp,SlpCI,SlpSignPos,SlpSignZero,Order] = get_T(x,hasSlp,hasTOrder);
-        plot_slp( h,ytitle,has, clr,x, t, t2t,Slp,SlpCI)
+        plot_slp( h,ytitle,has, clr,x, t, t2t,Slp,SlpCI);
         
     end
     
@@ -402,7 +402,7 @@ if (hasSlp)
     Slp         =  x.trend.slp;
     tmp         =  Slp+x.trend.slpSD;
     SlpSD       =  [Slp-x.trend.slpSD;  tmp(end:-1:1)];
-	SlpCI       = SlpSD
+	SlpCI       = SlpSD;
 	if isfield(x.trend,'slpCI') &  ~isempty(x.trend.slpCI)
         tmp    = x.trend.slpCI(:,2);
         SlpCI  = [x.trend.slpCI(:,1); tmp(end:-1:1)] ;
@@ -673,7 +673,7 @@ stem(h,t,Y,'marker','none','color',clr);
 end
 
 function   plot_oprob(h,ytitle, has, clr,x, t, t2t, Prob1, Prob,ncp,cp )
-alpha=0.2
+alpha=0.2;
 %plot( c(t2t[1],t2t), c(0.22,Prob1),type = 'n', ann=FALSE, xaxt='n', yaxt='n');
 %# polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
 %# points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
@@ -685,3 +685,6 @@ function plot_error(h,ytitle,has, clr,x, t, t2t, Yerr)
 plot(h,t, t-t, 'color',clr);
 stem(h,t,Yerr,'color',clr,'marker','none');
 end
+
+% here is the regexp to get lines without a ending semicomma.
+% ^((?!(;|end|if|%|else|for|[\s]+))[^\r\n])+(?=\n)
