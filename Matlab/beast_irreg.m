@@ -424,8 +424,9 @@ function out = beast_irreg(y, varargin)
    printWarning     = GetValueByKey(KeyList, ValList, 'print.warning',  true);
    quiet            = GetValueByKey(KeyList, ValList, 'quiet',          false);   
    gui              = GetValueByKey(KeyList, ValList, 'gui',            false); 
-   ci               = GetValueByKey(KeyList, ValList, 'dump.ci',        false);      
-   mcmc_dump        = GetValueByKey(KeyList, ValList, 'dump.mcmc',   false);     
+   dump_ci          = GetValueByKey(KeyList, ValList, 'dump.ci',        false);      
+   dump_ci          = GetValueByKey(KeyList, ValList, 'ci',             dump_ci);         
+   dump_mcmc        = GetValueByKey(KeyList, ValList, 'dump.mcmc',   false);     
    
    methods          = GetValueByKey(KeyList, ValList, 'method',        'bayes'); 
    
@@ -505,7 +506,7 @@ function out = beast_irreg(y, varargin)
    extra = [];
    extra.dumpInputData        = true;
    extra.whichOutputDimIsTime = 1;
-   extra.computeCredible      = ci;
+   extra.computeCredible      = dump_ci;
    extra.fastCIComputation    = true;
    extra.computeSeasonOrder   = true;
    extra.computeTrendOrder    = true;
@@ -523,7 +524,7 @@ function out = beast_irreg(y, varargin)
    extra.consoleWidth         = 70;
    extra.numThreadsPerCPU     = 2;
    extra.numParThreads        = 0;
-   extra.dumpMCMCSamples      = mcmc_dump;
+   extra.dumpMCMCSamples      = dump_mcmc;
 %......End of displaying extra ......
 
 

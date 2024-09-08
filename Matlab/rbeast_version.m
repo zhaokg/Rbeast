@@ -18,5 +18,5 @@
 %   model results but just improve the robutness of the program
 
 % The larger the number, the higher/latest version it is
-rbeastGitHubVersion = 0.9481;
+rbeastGitHubVersion = 0.9482;
 disp(strcat('  matlab-beast v', num2str(rbeastGitHubVersion)));
