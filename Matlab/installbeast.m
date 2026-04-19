@@ -69,7 +69,6 @@ if isempty(beastPath)
 	disp( strcat ("BEAST installation Path: " , beastPath) );
 end
 
-
 if ~exist(beastPath,"dir")
     beast_success=mkdir(beastPath);
     if ~ beast_success
@@ -136,14 +135,42 @@ for i=1:numel(codelist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-%%
+%% Add the beastPath into Matlab's search paths
 addpath(beastPath);
 addpath(datapath);
 % addpath(genpath(beastPath) );
 savepath
+ 
+%% Not used here, but kept as a quick reminder
+% https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
+
+rbeastFile=[];
+
+if ismac()
+    arch = computer('arch');
+    if strcmp(arch, 'maca64')
+         rbeastFile='Rbeast.mexmaci64';
+    elseif strcmp(arch, 'maci64')
+         rbeastFile='Rbeast.mexmaci64';     
+    end 
+elseif isunix() % true for linux and mac
+   rbeastFile='Rbeast.mexa64';
+elseif ispc()
+   rbeastFile='Rbeast.mexw64';   
+end
+
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+if isOctave
+    rbeastFile = 'Rbeast.mex';
+end
+
+if isempty(rbeastFile)
+    fprintf("*** No precompiled Rbeast.mex available for your platform: Ccomplike it from C source files on your own.\n"  );
+else
+    fprintf("*** The beast MEX library '%s' is used for your machine\n", rbeastFile);
+end
 %%
 
-https://github.com/zhaokg/Rbeast/tree/master/Matlab
 %clc
 fprintf('\n\n');
 fprintf('*** <strong>Rbeast</strong> was installed at %s\n', beastPath);
@@ -172,14 +199,6 @@ fprintf("    plotbeast(o)\n\n");
 fprintf("*** Run <strong>'help beast'</strong>, <strong>'help beast123'</strong>, or <strong>'help beast_irreg'</strong> for usage and examples\n");
 
 
-%% Not used here, but kept as a quick reminder
-% https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
-if ismac()
-   rbeastFile='Rbeast.mexmaci64';
-elseif isunix() % true for linux and mac
-   rbeastFile='Rbeast.mexa64';
-elseif ispc()
-   rbeastFile='Rbeast.mexw64';   
-end
 
-clearvars datapath codepath fn lfile rfile datalist codelist beast_success beast_fid beast_tmpfile rbeastFile isOctave 
+
+clearvars datapath codepath fn lfile rfile datalist codelist beast_success beast_fid beast_tmpfile rbeastFile isOctave arcg 
