@@ -305,7 +305,7 @@ v16sf sin512_ps(v16sf x) { // any x
     v16si imm0, imm2;
 
  
-
+    
     sign_bit = x;
     /* take the absolute value */
     x = _mm512_and_ps(x, *(v16sf*)_ps512_inv_sign_mask);

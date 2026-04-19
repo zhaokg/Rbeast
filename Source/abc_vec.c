@@ -6,9 +6,6 @@
 #include "abc_vec.h"
 #include "abc_ide_util.h"
 
-
-
-
 void (*i32_add_val_inplace)(const int C, const I32PTR X, const int N)   = NULL;
 I32  (*i32_sum)(const I32PTR X, const int N)                            = NULL;
 void (*f32_fill_val)(const F32 C, F32PTR X, int N);
@@ -658,8 +655,6 @@ void f32_mat_multirows_set_by_submat(F32PTR X, I32 ROW, I32 COL, F32PTR Xcopy, I
 	for (int i = 0; i < COL; ++i) f32_scatter_vec_byindex(X + i * ROW, (I32PTR)RowIndices, Xcopy + nRows * i, nRows);
 }
 
-
-
 void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
 	dst = (F64PTR)dst + dstOffset;
 	#define UNROLL_NUMBER 4
@@ -680,6 +675,7 @@ void f32_to_strided_f64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffs
 	}
 #undef UNROLL_NUMBER
 }
+
 void f32_to_strided_i64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
 	dst = (I64PTR)dst + dstOffset;
 	#define UNROLL_NUMBER 4
@@ -699,6 +695,7 @@ void f32_to_strided_i64(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffs
 		dst = (I64PTR)dst + stride;
 	}
 }
+
 void f32_to_strided_f32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
 	dst = (F32PTR)dst + dstOffset;
 	if (stride == 1)
@@ -722,6 +719,7 @@ void f32_to_strided_f32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffs
 
 #undef UNROLL_NUMBER
 }
+
 void f32_to_strided_i32(F32PTR src, VOID_PTR dst, I64 N, I64 stride, I64 dstOffset) {
 	dst = (I32PTR)dst + dstOffset;
 	#define UNROLL_NUMBER 4

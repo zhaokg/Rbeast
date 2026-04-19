@@ -2464,7 +2464,7 @@ STATIC  void avx2_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z, c
     f32_seq   = & avx2_f32_seq;
     i32_seq = &avx2_i32_seq;
 
-/////////////////2
+    /////////////////2
     f32_to_f64_inplace   = &avx2_f32_to_f64_inplace;
     f64_to_f32_inplace   = &avx2_f64_to_f32_inplace;
     
@@ -2475,12 +2475,12 @@ STATIC  void avx2_f32_step_neg(const F32PTR X, const F32PTR Y, const F32PTR Z, c
     //i08_find_nth_onebyte_binvec_v2  = &  avx2_i08_find_nth_onebyte_binvec_v2;
     i08_sum_binvec   = &avx2_i08_sum_binvec;
    
-    f32_gemm_XtY2x1 = avx2_f32_gemm_XtY2x1;
-    f32_gemm_XtY2x2 = avx2_f32_gemm_XtY2x2;
-    f32_gemm_XY1x2  = avx2_f32_gemm_XY1x2;
+    f32_gemm_XtY2x1  = avx2_f32_gemm_XtY2x1;
+    f32_gemm_XtY2x2  = avx2_f32_gemm_XtY2x2;
+    f32_gemm_XY1x2   = avx2_f32_gemm_XY1x2;
     f32_gemm_XY2x2   = avx2_f32_gemm_XY2x2;
     f32_gemm_XtYt2x2 = avx2_f32_gemm_XtYt2x2;
-    f32_gemm_XYt2x1 = avx2_f32_gemm_XYt2x1;
+    f32_gemm_XYt2x1  = avx2_f32_gemm_XYt2x1;
     
     f32_gemv_Xb = &avx2_f32_gemv_Xb;
 

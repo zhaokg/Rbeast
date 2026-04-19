@@ -1,9 +1,10 @@
 #include "math.h"
 #include "abc_000_warning.h"
 #include "abc_mcmc.h"
+#include "abc_vec.h"
 #include "beastv2_header.h"
 
-static void DSVT(BEAST2_BASIS_PTR basis, I32 N, BEAST2_RNDSTREAM* PRAND)
+static void DSVT(BEAST2_BASIS_PTR basis, I32 N, BEAST2_RNDSTREAM* PRND)
 {
 	/*
 	I32 minKnotNum = basis->prior.minKnotNum;
@@ -71,18 +72,54 @@ static void DSVT(BEAST2_BASIS_PTR basis, I32 N, BEAST2_RNDSTREAM* PRAND)
 }
 
 
-static void OO(BEAST2_BASIS_PTR basis, I32 N_not_used, BEAST2_RNDSTREAM* PRAND_not_used)
+ static  void OO(BEAST2_BASIS_PTR basis, I32 N, BEAST2_RNDSTREAM* PRND,  BEAST2_YINFO_PTR yInfo)
 {
-	basis->nKnot = 0;     //basis->sY.ORDER[0] = (unsigned char)(minSeasonOrder - 1) + (unsigned char)ceilfunc((*rnd++)* (maxSeasonOrder - minSeasonOrder + 1));
+	basis->nKnot = basis->prior.minKnotNum;    
+	//basis->sY.ORDER[0] = (unsigned char)(minSeasonOrder - 1) + (unsigned char)ceilfunc((*rnd++)* (maxSeasonOrder - minSeasonOrder + 1));
 	//basis->Kbase = 0; // It must be re-calcuated in UpdateKbase
+
+	if (basis->nKnot > 0) {	
+		I32    nMissing     =  yInfo->nMissing;
+		I32PTR rowsMissing  =  yInfo->rowsMissing;
+	 
+		/////////////////////////////////////////
+		memset(basis->goodvec, 1, N);
+		for (int i = 0; i < nMissing; i++) {
+			basis->goodvec[rowsMissing[i]] = 0;  //rowMissing is zero-based
+		}
+ 
+		//I32  Npad16  = ((N + 15) / 16) * 16;
+		//I32  goodNum = i08_sum_binvec(basis->goodvec, Npad16);
+		I32  goodNum = yInfo->n;
+	
+		for (I32 i = 1; i <= basis->nKnot; ++i) {		
+			int   randLoc = RANDINT(1, (I32)goodNum, *(PRND->rnd32)++);
+			int   newKnot = i08_find_nth_onebyte_binvec(basis->goodvec, N, randLoc);
+			basis->KNOT[i - 1] = newKnot;
+			basis->goodvec[newKnot - 1] = 0;
+			goodNum--;
+		}	
+	}
+
+
+	// These are not used at all and made to provide consistenst API 
+	// (e.g., around UpdateGoodVec_KnotList in beast_core)
+	int fakeStart = 1;
+	int fakeEnd   = N + 1L;
+	basis->KNOT[INDEX_FakeStart] = fakeStart;
+	basis->KNOT[INDEX_FakeEnd]   = fakeEnd;
+	basis->KNOT[-1]              = 1L;
+	basis->KNOT[basis->nKnot]    = N + 1L;
 
 	// Get Ks andKe for individula segments of each components AND the total number of terms K
 	basis->CalcBasisKsKeK_TermType(basis);
 }
 
 
-void GenarateRandomBasis(BEAST2_BASIS_PTR basis, I32 NUMBASIS, I32 N, BEAST2_RNDSTREAM* PRAND) 
+void GenarateRandomBasis(BEAST2_BASIS_PTR basis, I32 NUMBASIS, I32 N, BEAST2_RNDSTREAM* PRAND, BEAST2_YINFO_PTR yInfo)
 {
+	//yInfo.missingRows needed only for the outllier component
+
 	for (I32 i = 0; i < NUMBASIS; i++) {
 
 		I32 id = basis[i].type;
@@ -93,7 +130,7 @@ void GenarateRandomBasis(BEAST2_BASIS_PTR basis, I32 NUMBASIS, I32 N, BEAST2_RND
 		case TRENDID:   
 			DSVT(basis + i, N, PRAND); break;
 		case OUTLIERID: 
-			OO(basis + i, N, PRAND); break;
+			OO(basis + i, N, PRAND, yInfo); break;
 		}
 	}
 }

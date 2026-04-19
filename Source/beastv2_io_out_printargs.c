@@ -15,9 +15,21 @@
 #include "beastv2_io.h"
 #include "globalvars.h"
 
+/*
+void BEAST2_print_basis(BEAST2_BASIS_PTR b, I32 numBasis) {
+
+	for (int i = 0; i < numBasis; i++) {
+	
+		r_printf("basis %1d[%-2d]: ", i, b[i].nKnot);
+		for (int j = 0; i < b[i].nKnot; j++) {
+			r_printf("(%-3d %-2d) ", b[i].KNOT[j], b[i].ORDER[j]);
+		}
+		r_printf("\n");
+	}
+}
+*/
 void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 {	
-	if (opt->extra.printOptions== 0 || GLOBAL_QUIET_MODE) return;
 	A(METADATA_PTR) meta = &(opt->io.meta);
 	BEAST2_IO_PTR   io    = &opt->io;
 	TimeVecInfo     *tvec  = &io->T;
@@ -30,31 +42,37 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	char comment	= '%';
 	char filler		= '.';
 	char dashdot    = '_';
+	char dashdot1    = '.';
 	char* emptyList = "[]";
 	char* logicals[] = { "false", "true" };
 	char* nanstr = "NaN";
 	char* em1 = ""; "<strong>";
 	char* em2 = ""; "</strong>";
+	int baseIdx=1;
 #elif R_INTERFACE==1
 	char* dateNumOriginStr = "1970-01-01";
 	char comment = '#';
 	char filler  = '$';
 	char dashdot = '.';
+	char dashdot1 = '.';
 	char* emptyList = "list()";
 	char* logicals[] = {"FALSE", "TRUE" };
 	char* nanstr = "NaN";
 	char* em1 = "";
 	char* em2 = "";
+	int baseIdx=1;	
 #elif P_INTERFACE==1
 	char* dateNumOriginStr = "0001-01-01";
 	char comment = '#';
 	char filler = '.';
 	char dashdot = '_';
+	char dashdot1 = '_';
 	char* emptyList  = " rb.args() ### or 'lambda: None': just get an empty object###";
 	char* logicals[] = { "False", "True" };
 	char* nanstr     ="float('nan')";
 	char* em1 = "";
 	char* em2 = "";
+	int baseIdx=0;	
 #endif
 
 	I08 hasSeasonCmpnt  = opt->prior.basisType[0] == SEASONID || opt->prior.basisType[0] == DUMMYID || opt->prior.basisType[0] == SVDID;
@@ -71,16 +89,29 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 
 	#define Print1(fmtstr,hasComponent,...) if(hasComponent)  r_printf(fmtstr, ##__VA_ARGS__);
 	#define Print2(fmtstr,hasComponent,...) if(hasComponent)  r_printf(fmtstr __VA_OPT__(,)  __VA_ARGS__);
-	#define Print(fmtstr,hasComponent,...) {if(hasComponent) r_printf(fmtstr,  __VA_ARGS__);}
+	#define Print(fmtstr,hasComponent,...)  {if(hasComponent) r_printf(fmtstr,  __VA_ARGS__);          }
 
 	Print("%s", hasAny, "\n");	
-	Print("%sINFO%s: To supress printing the parameers in beast(),      set print.options = 0 \n", hasAny, em1, em2);
-	Print("%sINFO%s: To supress printing the parameers in beast%cirreg(),set print.options = 0 \n", hasAny, em1, em2, dashdot);
-	Print("%sINFO%s: To supress printing the parameers in beast123(),   set extra%cprintOptions = 0  \n", hasAny, em1, em2, filler);
+	//Print("%sINFO%s: To supress printing parameers in beast(),          set print%cparams = 0 \n", hasAny, em1, em2, dashdot);
+	//Print("%sINFO%s: To supress printing parameers in beast%cirreg(),    set print%cparams = 0 \n", hasAny, em1, em2, dashdot, dashdot);
+	//Print("%sINFO%s: To supress printing parameers in beast123(),       set extra%cprintParams = 0  \n", hasAny, em1, em2, filler);
 		
-	Print("%sINFO%s: To supress warning messages in beast(),            set quiet = 1 \n", hasAny, em1, em2);
-	Print("%sINFO%s: To supress warning messages in beast%cirreg(),      set quiet = 1 \n", hasAny, em1, em2, dashdot);
-	Print("%sINFO%s: To supress warning messages in beast123(),         set extra%cquiet = 1  \n", hasAny, em1, em2, filler);
+	//Print("%sINFO%s: To supress warning messages in beast(),            set quiet = 1 \n", hasAny, em1, em2);
+	//Print("%sINFO%s: To supress warning messages in beast%cirreg(),      set quiet = 1 \n", hasAny, em1, em2, dashdot);
+	//Print("%sINFO%s: To supress warning messages in beast123(),         set extra%cquiet = 1  \n", hasAny, em1, em2, filler);
+
+	char str[200]=" Y =  trend + ";
+	
+	if (hasSeasonCmpnt)  strcat(str, "season + ");
+	if (hasOutlierCmpnt) strcat(str, "outlier + ");
+	strcat(str, "error");
+	
+	Print("Model fitted: %s \n\n", hasAny, str);
+	
+	Print("%sINFO%s: To supress messages, set print%cparam/print%cwarning/print%cprogresss = 0 in beast() and beast%cirreg()\n", hasAny, em1, em2, dashdot, dashdot, dashdot, dashdot);
+	Print("%sINFO%s: To supress messages, Set extra%cprintParameter/printWarning/printProgress = 0 in beast123()\n", hasAny, em1, em2, filler);
+	Print("%sINFO%s: To supress all messaages, set quiet=1 in beast() and beast%cirreg() or extra%cquiet=1 in beast123()\n", hasAny, em1, em2, dashdot, filler);
+
 
 	Print("%s", hasAny, "\n");
 	Print("%c--------------------------------------------------%c\n", hasAny, comment, comment);
@@ -205,35 +236,37 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	A(PRIOR_PTR) prior = &(opt->prior);
 
 	Print("%c......Start of displaying 'prior' ......\n", hasAny, comment);
-	Print("prior                   = %-10s %c prior is the true model parameters of BEAST\n", hasAny, emptyList, comment);
-	Print("prior%cseasonMinOrder    = %-10d %c sorder.minmax[1]: min harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMinOrder,comment );
-	Print("prior%cseasonMaxOrder    = %-10d %c sorder.minmax[2]: max harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMaxOrder,comment);
-	Print("prior%cseasonMinKnotNum  = %-10d %c scp.minmax[1]   : min num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMinKnotNum, comment);
-	Print("prior%cseasonMaxKnotNum  = %-10d %c scp.minmax[2]   : max num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMaxKnotNum, comment);
-	Print("prior%cseasonMinSepDist  = %-10d %c sseg.min        : min seasonal segment length in terms of datapoints\n", hasSeasonCmpnt, filler, prior->seasonMinSepDist,comment);
-	Print("prior%cseasonLeftMargin  = %-10d %c sseg.leftmargin : no season chngpts in the first %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonLeftMargin, comment,prior->seasonLeftMargin);
-	Print("prior%cseasonRightMargin = %-10d %c sseg.rightmargin: no seoson chngpts in the last %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonRightMargin, comment, prior->seasonRightMargin);
+	Print("prior                       = %-10s %c prior is the true hyperprior parameters of BEAST model\n", hasAny, emptyList, comment);
+	Print("prior%cseasonMinOrder        = %-10d %c sorder%cminmax[%d]: min harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMinOrder,comment,dashdot1,baseIdx);
+	Print("prior%cseasonMaxOrder        = %-10d %c sorder%cminmax[%d]: max harmonic order alllowed\n", hasSeasonCmpnt, filler, prior->seasonMaxOrder,comment,dashdot1,baseIdx+1);
+	Print("prior%cseasonMinKnotNum      = %-10d %c scp%cminmax[%d]   : min num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMinKnotNum, comment,dashdot1,baseIdx);
+	Print("prior%cseasonMaxKnotNum      = %-10d %c scp%cminmax[%d]   : max num of seasonal chngpts allowed\n", hasSeasonCmpnt, filler, prior->seasonMaxKnotNum, comment,dashdot1,baseIdx+1);
+	Print("prior%cseasonMinSepDist      = %-10d %c sseg%cmin        : min seasonal segment length in terms of datapoints\n", hasSeasonCmpnt, filler, prior->seasonMinSepDist,comment,dashdot1);
+	Print("prior%cseasonLeftMargin      = %-10d %c sseg%cleftmargin : no season chngpts in the first %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonLeftMargin, comment,dashdot1,prior->seasonLeftMargin);
+	Print("prior%cseasonRightMargin     = %-10d %c sseg%crightmargin: no season chngpts in the last %d datapoints\n", hasSeasonCmpnt, filler, prior->seasonRightMargin, comment,dashdot1, prior->seasonRightMargin);
+	Print("prior%cseasonComplexityFactor= %-10f %c s%ccomplexfct    : how complex the seasonal curve is \n", hasSeasonCmpnt, filler, prior->seasonComplexityFactor, comment, dashdot1);
 
-	Print("prior%ctrendMinOrder     = %-10d %c torder.minmax[1]: min trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMinOrder, comment);
-	Print("prior%ctrendMaxOrder     = %-10d %c torder.minmax[2]: max trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMaxOrder, comment);
-	Print("prior%ctrendMinKnotNum   = %-10d %c tcp.minmax[1]   : min num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMinKnotNum, comment);
-	Print("prior%ctrendMaxKnotNum   = %-10d %c tcp.minmax[2]   : max num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMaxKnotNum, comment);
-	Print("prior%ctrendMinSepDist   = %-10d %c tseg.min        : min trend segment length in terms of datapoints\n", hasTrendCmpnt,  filler, prior->trendMinSepDist, comment);
-	Print("prior%ctrendLeftMargin   = %-10d %c tseg.leftmargin : no trend chngpts in the first %d datapoints\n", hasTrendCmpnt, filler, prior->trendLeftMargin, comment, prior->trendLeftMargin);
-	Print("prior%ctrendRightMargin  = %-10d %c tseg.rightmargin: no trend chngpts in the last %d datapoints\n", hasTrendCmpnt, filler, prior->trendRightMargin, comment, prior->trendRightMargin);
+	Print("prior%ctrendMinOrder         = %-10d %c torder%cminmax[%d]: min trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMinOrder, comment,dashdot1,baseIdx);
+	Print("prior%ctrendMaxOrder         = %-10d %c torder%cminmax[%d]: max trend polynomial order alllowed\n", hasTrendCmpnt,  filler, prior->trendMaxOrder, comment,dashdot1,baseIdx+1);
+	Print("prior%ctrendMinKnotNum       = %-10d %c tcp%cminmax[%d]   : min num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMinKnotNum, comment,dashdot1,baseIdx);
+	Print("prior%ctrendMaxKnotNum       = %-10d %c tcp%cminmax[%d]   : max num of chngpts in trend allowed\n", hasTrendCmpnt,  filler, prior->trendMaxKnotNum, comment,dashdot1,baseIdx+1);
+	Print("prior%ctrendMinSepDist       = %-10d %c tseg%cmin        : min trend segment length in terms of datapoints\n", hasTrendCmpnt,  filler, prior->trendMinSepDist, comment,dashdot1);
+	Print("prior%ctrendLeftMargin       = %-10d %c tseg%cleftmargin : no trend chngpts in the first %d datapoints\n", hasTrendCmpnt, filler, prior->trendLeftMargin, comment, dashdot1,prior->trendLeftMargin);
+	Print("prior%ctrendRightMargin      = %-10d %c tseg%crightmargin: no trend chngpts in the last %d datapoints\n", hasTrendCmpnt, filler, prior->trendRightMargin, comment, dashdot1,prior->trendRightMargin);
+	Print("prior%ctrendComplexityFactor = %-10f %c t%ccomplexfct    : how complex the trend curve is \n", hasTrendCmpnt, filler, prior->trendComplexityFactor, comment, dashdot1);
 
-
-	Print("prior%coutlierMaxKnotNum = %-10d %c ocp             : max num of datapoints treated as outliers\n", hasOutlierCmpnt, filler, prior->outlierMaxKnotNum, comment);
-	Print("prior%coutlierSigFactor  = %-10g %c above which datapoints considered outliers\n", hasOutlierCmpnt, filler, prior->outlierSigFactor, comment);
-	Print("prior%cK_MAX             = %-10d %c max number of terms in general linear model (relevant only at small values)\n", hasAny,      filler, prior->K_MAX, comment);
-	Print("prior%cprecValue         = %-10g %c useful mainly when precPriorType='constant'\n", hasAny,      filler, prior->precValue, comment);
-	Print("prior%cmodelPriorType    = %-10d\n", hasAny, filler, prior->modelPriorType);
+	Print("prior%coutlierMinKnotNum     = %-10d %c ocp%cminmax[%d]   : min num of datapoints treated as outliers\n", hasOutlierCmpnt, filler, prior->outlierMinKnotNum, comment,dashdot1,baseIdx);
+	Print("prior%coutlierMaxKnotNum     = %-10d %c ocp%cminmax[%d]   : max num of datapoints treated as outliers\n", hasOutlierCmpnt, filler, prior->outlierMaxKnotNum, comment,dashdot1,baseIdx+1);
+	Print("prior%coutlierSigFactor      = %-10g %c above which datapoints considered outliers\n", hasOutlierCmpnt, filler, prior->outlierSigFactor, comment);
+	Print("prior%cK_MAX                 = %-10d %c max number of terms in general linear model (relevant only at small values)\n", hasAny,      filler, prior->K_MAX, comment);
+	Print("prior%cprecValue             = %-10g %c useful mainly when precPriorType='constant'\n", hasAny,      filler, prior->precValue, comment);
+	Print("prior%cmodelPriorType        = %-10d\n", hasAny, filler, prior->modelPriorType);
 	//Print("   prior%calpha1           = %f\n", hasAny,      filler, prior->alpha1 );
 	//Print("   prior%calpha2           = %f\n", hasAny,      filler, prior->alpha2);
 	//Print("   prior%cdelta1           = %f\n", hasAny,      filler, prior->delta1);
 	//Print("   prior%cdelta2           = %f\n", hasAny,      filler, prior->delta2);	
 	
-	if (prior->precPriorType == ConstPrec)
+	if (prior->precPriorType == ConstPrec)    
 	Print("prior%cprecPriorType     = '%s'\n", hasAny, filler, "constant")
 	else if (prior->precPriorType == UniformPrec)
 	Print("prior%cprecPriorType     = '%s'\n", hasAny, filler, "uniform")
@@ -283,8 +316,11 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("extra%ctallyIncDecTrendJump = %-5s %c differentiate increased/decreased slopes at tcp\n", hasTrendCmpnt,  filler, logicals[!!extra->tallyIncDecTrendJump], comment);
 	Print("extra%ctallyPosNegOutliers  = %-5s %c differentiate postive/negative outliers\n", hasOutlierCmpnt,filler, logicals[!!extra->tallyPosNegOutliers], comment);
 
-	Print("extra%cprintProgressBar     = %-5s %c if true, show an ascii progressbar\n", hasAny, filler, logicals[!!extra->printProgressBar], comment);
-	Print("extra%cprintOptions         = %-5s %c if true, print the option of the BEAST run\n", hasAny, filler, logicals[!!extra->printOptions], comment);
+	Print("extra%cquiet                = %-5s %c if true, print nothing\n", hasAny, filler, logicals[!!GLOBAL_IS_QUIET_MODE], comment);
+	Print("extra%cprintProgress        = %-5s %c if true, show an ascii progressbar\n", hasAny, filler, logicals[!!GLOBAL_PRNT_PROGRESS], comment);
+	Print("extra%cprintParameter       = %-5s %c if true, print the parameters of the BEAST run\n", hasAny, filler, logicals[!!GLOBAL_PRNT_PARAMETER], comment);
+	Print("extra%cprintWarning         = %-5s %c if true, print warnings, if any\n", hasAny, filler, logicals[!!GLOBAL_PRNT_WARNING], comment);
+	Print("extra%cprintCpuInfo         = %-5s %c if true, print the cpu info\n", hasAny, filler, logicals[!!GLOBAL_PRNT_CPU], comment);
 	Print("extra%cconsoleWidth         = %-5d %c an integer specifying the console width for printing\n", hasAny, filler, extra->consoleWidth, comment);
 	//Print("  extra%cnumCPUCoresToUse     = %d\n", filler, extra->numCPUCoresToUse, hasAny);
 	Print("extra%cnumThreadsPerCPU     = %-5d %c each cpu core spawns %d concurrent threads (for beast123())\n", hasAny, filler, extra->numThreadsPerCPU, comment, extra->numThreadsPerCPU);

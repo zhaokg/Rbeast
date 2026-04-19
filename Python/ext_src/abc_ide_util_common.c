@@ -9,9 +9,6 @@
 #include "abc_vec.h"
 #include "abc_sort.h"
  
-// https:// stackoverflow.com/questions/26271154/how-can-i-make-a-mex-function-printf-while-its-running
-extern void matlab_IOflush(void);
-
 
 // C++ solution to define a keyword as a function name
 // #pragma warning(suppress: 4483)
@@ -55,7 +52,7 @@ void* CreateI32NumMatrix(int Nrow, int Ncol, VOIDPTR* data_ptr) {
 	return CreateNumVar(DATA_INT32, dims, 2, data_ptr);
 }
 
-void printProgress(F32 pct, I32 width, char * buf, I32 firstTimeRun) {
+void printProgress1(F32 pct, I32 width, char * buf, I32 firstTimeRun) {
 	
 	//https:// stackoverflow.com/questions/2685435/cooler-ascii-spinners
 
@@ -63,7 +60,7 @@ void printProgress(F32 pct, I32 width, char * buf, I32 firstTimeRun) {
 	static I32  cnt = 1;
 	cnt++;
 	cnt = (cnt == 4) ? 0 : cnt;
-	width = max(width, 35); //cause errors when width is 0 or negative
+	width = max(width, 35);  // cause errors when width is 0 or negative
 	memset(buf, '*', width); // space = 20
 
 	I32  len = 0;
@@ -87,37 +84,28 @@ void printProgress(F32 pct, I32 width, char * buf, I32 firstTimeRun) {
 	buf[width] = 0;
 
 #if R_INTERFACE==1
-	Rprintf("\r%s", buf); 
-#elif P_INTERFACE==1
 	r_printf("\r%s", buf);
 	//R doesnto allow io operationrs from external libraries
 	//fflush(stdout);
+#elif P_INTERFACE==1
+	r_printf("\r%s", buf);
 #elif M_INTERFACE==1
-	if (firstTimeRun == 1)
-	{
+	if (firstTimeRun == 1) 	{
 		r_printf("\r\n");
-		r_printf("%s", buf);		
-		matlab_IOflush();
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-		//mexEvalString("pause(0.0000001);drawnow");
-	}
-	else
-	{
+		r_printf("%s", buf);
+	} else {
 		char * back = buf + width + 5;
 		memset(back, '\b', width + 2);
 		back[width + 2] = 0;
 
 		r_printf(back);
 		r_printf("%s\r\n", buf);
-		matlab_IOflush();
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-		//mexEvalString("pause(0.0000001);drawnow");
-
 	}
 
-
+	StdouFlush();
+	//mexEvalString("drawnow");
+	//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
+	//mexEvalString("pause(0.0000001);drawnow");
 #endif	
 }
 
@@ -175,26 +163,21 @@ void printProgress2(F32 pct, F64 time, I32 width, char * buf, I32 firstTimeRun)
 #elif P_INTERFACE==1
 	r_printf("\r%s", buf);
 #elif M_INTERFACE==1
-
-	if (firstTimeRun == 1)
-	{
+	if (firstTimeRun == 1)	{
 		r_printf("\r\n");
 		r_printf("%s", buf);
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-		matlab_IOflush();
-	}
-	else {
+	} else {
 		char * back = buf + width + 5;
 		memset(back, '\b', width + 2);
 		back[width + 2] = 0;
 
 		r_printf(back);
-		r_printf("%s\r\n", buf);
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-		matlab_IOflush();
+		r_printf("%s\r\n", buf); 
 	}
+
+	//mexEvalString("drawnow");
+	//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
+	StdouFlush();
 #endif	
 }
 
@@ -1175,7 +1158,7 @@ static int IsRegularTS(F64PTR t, int N, F32* dt) {
 	  /************************************************/
 	  t.sorted_time_indices = quick_timevec_allocator_sortidx(tv, Nold);
 	  i32_seq(t.sorted_time_indices, 0, 1, Nold); // fill with 0 to N-1.
-	  f64_QuickSortA(oldTime, t.sorted_time_indices, 0, Nold - 1);
+	  f64a_introSort_index(oldTime, 0, Nold - 1, t.sorted_time_indices);
 	  Nold = Nold - Nbadvalues;
 	  // Now the sorted values should have all the Infs at the CODE_EOF, if any	
 	  /************************************************/
@@ -1222,7 +1205,8 @@ static int IsRegularTS(F64PTR t, int N, F32* dt) {
 		  return;
 	  }
 	  if (IsNaN(t.data_dt)|| IsNaN(t.data_start)) {
-		  assert(0);  r_printf("ERROR: there must be something wrong with regards to deltaTime and start.\n", IsDate);
+		  assert(0); 
+		  r_printf("ERROR: there must be something wrong with regards to deltaTime and start.\n");
 		  return;
 	  }
 

@@ -32,7 +32,7 @@ F77__iaddc(const int C, int* X, const int N);
  
   
 
-#if defined(WIN64_OS) || defined(WIN32_OS)
+#if defined(OS_WIN64) || defined(OS_WIN32)
     #include <malloc.h> //alloca
 #else
     #include <alloca.h> //alloca
@@ -660,7 +660,7 @@ STATIC void gen_i32_increment_vec2_bycond_inplace(I32PTR x, I32PTR y, F32PTR con
 	I32 i = 0;
 	// stackoverflow.com/questions/18481740/pointer-expressions-ptr-ptr-and-ptr
 	for (; i < regularPart; i += UNROLL_NUMBER) {
-		if (cond[i]   > 1e-10)  ++*(x+i);
+		if (cond[i]   > 1e-10) ++*(x+i);
 		if (cond[i+1] > 1e-10) ++*(x+i+1);
 		if (cond[i+2] > 1e-10) ++*(x+i+2);
 		if (cond[i+3] > 1e-10) ++*(x+i + 3);

@@ -1,11 +1,11 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_001_config.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
-#include "abc_001_config.h"
 #include "abc_rand.h"
 #include "abc_mat.h"
 #include "beastv2_func.h"
@@ -33,7 +33,7 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR o
 	for (int i = 0; i < MODEL.NUMBASIS; i++) { 
 		MAX_TOTAL_SEGNUM += (MODEL.b[i].prior.maxKnotNum + 1);
 	}
-	I32 MAX_NUMELEM_SEGINFO = MAX_TOTAL_SEGNUM * (sizeof(BEAST2_BASESEG)/4);
+	I32 MAX_NUMELEM_SEGINFO = (MAX_TOTAL_SEGNUM * sizeof(BEAST2_BASESEG) +3) /4;
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -81,10 +81,10 @@ void AllocateXXXMEM( F32PTR * Xt_mars, F32PTR*  Xnewterm, F32PTR*  Xt_zeroBackup
 	                 BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointers * MEM) 
 {	
 
-	I32 N         = opt->io.N;
-	I32 Npad      = RoundTo8(N);
-	I32 K_MAX     = opt->prior.K_MAX;
-	I64 SIZE_Xtmars  = Npad * K_MAX;
+	I32 N           = opt->io.N;
+	I32 Npad        = RoundTo8(N);
+	I32 K_MAX       = opt->prior.K_MAX;
+	I64 SIZE_Xtmars = Npad * K_MAX;
 
 	I32 XNEW_MAX_NUMCOL;
 	I32 XNEW_TOTAL_NUM    = __GetNumElem_of_XnewTerm(model, opt, &XNEW_MAX_NUMCOL);
@@ -138,7 +138,7 @@ void AllocateYinfoMEM(BEAST2_YINFO_PTR yInfo, BEAST2_OPTIONS_PTR opt, MemPointer
 	nodes[nNodes++] = (MemNode){ .addr = &yInfo->rowsMissing,    .size = sizeof(U32) * MAXNUM_MISSINGROW,   .align =64,.offset_from_origin = 0 };
 
 	//added for MRBEAST and used in ComputeLik, PropseNew/__CalcAbsDeviation(compute deviaiton and extrempos)
-	//, MR_EvaluateModel,
+	//, BEAST2EvaluateModel,
 	yInfo->q               = q;
 
 	if (opt->io.meta.deseasonalize) {

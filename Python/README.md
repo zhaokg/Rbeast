@@ -30,7 +30,7 @@ library(Rbeast); data(Nile); o = beast(Nile); plot(o)
 ## Installation for Python
 
 <p  align="left">   
- <a href= "https://github.com/zhaokg/Rbeast"> <img src="https://img.shields.io/static/v1?style=plastic&logo=github&label=see also&message=github.com/zhaokg/Rbeast&color=brightgreen" height="20"></a>
+ <a href= "https://github.com/zhaokg/Rbeast"> <img src="https://img.shields.io/static/v1?style=plastic&logo=github&label=see%20also&message=github.com/zhaokg/Rbeast&color=brightgreen" height="20"></a>
 </p> 
 
 A package **`Rbeast`** has been deposited here at PyPI: https://pypi.org/project/Rbeast/. Install from a binary wheel using:
@@ -151,6 +151,35 @@ Despite being published originally for ecological and enviornmental applications
 | Discipline | Publication Title |
 | --- | --- |
 | Remote Sensing| *Li, J., Li, Z., Wu, H., and You, N., 2022. [Trend, seasonality, and abrupt change detection method for land surface temperature time-series analysis: Evaluation and improvement](https://doi.org/10.1016/j.rse.2022.113222). Remote Sensing of Environment, 10.1016/j.rse.2022.113222*|
+|Archaeogenetics|*Sikora, M., Canteri, E., Fernandez-Guerra, A., Oskolkov, N., Ågren, R., Hansson, L., Irving-Pease, E.K., Mühlemann, B., Holtsmark Nielsen, S., Scorrano, G. and Allentoft, M.E., 2025. The spatiotemporal distribution of human pathogens in ancient Eurasia. Nature, 643(8073), pp.1011-1019.*|
+|Energy|*Jakhmola, A., Jewell, J., Vinichenko, V. et al.2026. Probabilistic projections of global wind and solar power growth based on historical national experience. Nature Energy. https://doi.org/10.1038/s41560-026-02021-w*|
+|Sustainability|*Sun, X., Tian, L., Fang, H., Walling, D.E., Huang, L., Park, E., Li, D., Zheng, C. and Feng, L., 2025. Changes in global fluvial sediment concentrations and fluxes between 1985 and 2020. Nature Sustainability, 8(2), pp.142-151.*|
+|Paleoclimatology|*Lu, F., Lu, H., Gu, Y., Lin, P., Lu, Z., Zhang, Q., Zhang, H., Yang, F., Dong, X., Yi, S. and Chen, D., 2025. Tipping point-induced abrupt shifts in East Asian hydroclimate since the Last Glacial Maximum. Nature Communications, 16(1), p.477.*|
+|Biogeochemistry|Sun, X., Tian, L., Fang, H., Walling, D.E., Syvitski, J., Huang, L., Li, D., Zheng, C. and Feng, L., 2026. Mapping pan-Arctic riverine particulate organic carbon from space (1985 to 2022). Science Advances, 12(3), p.eady6314.|
+|Global Ecology|*Guo, R., Wu, X., Wang, P., Chen, T., Chen, X., Cai, J., Wang, X., Zhang, Z., Meng, Z. and Liu, Y., 2026. Increased spread of global flash droughts threatens vegetation productivity resilience. Nature Communications.*|
+|Paleoceanography|*Rahaman, W., Gutjahr, M. and Prabhat, P., 2025. Late Pliocene growth of the West Antarctic Ice Sheet to near-modern configuration. Nature Communications, 16(1), p.6705.*|
+|Zoology|*Meireles, J.P., Hahn-Klimroth, M., Lackey, L.B., van Eeuwijk, N., Bertelsen, M.F., Dressen, S., Dierkes, P.W., Abraham, A.J. and Clauss, M., 2026. Aging populations threaten conservation goals of zoos. Proceedings of the National Academy of Sciences, 123(5), p.e2522274123.*|
+|Medicial sciences|*Garcia-Aymerich, J., de Las Heras, M., Carsin, A.E., Accordini, S., Agustí, A., Bui, D., Dharmage, S.C., Dodd, J.W., Eze, I., Gehring, U. and Gislason, T., 2025. General population-based lung function trajectories over the life course: an accelerated cohort study. The Lancet Respiratory Medicine, 13(7), pp.611-622.*|
+|Climate Change|*Leclercq, L., Oelsmann, J., Cazenave, A., Passaro, M., Jevrejeva, S., Connors, S., Legeais, J.F., Birol, F. and Abarca-del-Rio, R., 2026. Abrupt trend change in global mean sea level and its components in the early 2010s. Communications Earth & Environment.*|
+|Communication|*Phillips, J.B., 2025. Exploring psyop-based conspiracy theories on social media. Information, Communication & Society, pp.1-20.*|
+|Applied Math|*Koutrouli, E., Manousopoulos, P., Theal, J. and Tresso, L., 2025. Crypto asset markets vs. financial markets: Event identification, latest insights and analyses. AppliedMath, 5(2), p.36.*|
+|Biosystems Engineering|*Mayrhuber, E., Maschat, K., Brunner, D., Winkler, S.M. and Oczak, M., 2026. Improved and interpretable accelerometer-based farrowing prediction. Biosystems Engineering, 263, p.104381.*|
+|Finance|*Li, S., Mishra, T. and Yarovaya, L., 2026. Heterogeneous Market Efficiency in Cryptocurrency Markets: A Multi‐Frequency Memory‐Based Approach. International Journal of Finance & Economics.*|
+|Economics|*Lakštutienė, A., Sutiene, K., Kabasinskas, A., Malakauskas, A. and Kopa, M., 2025. Sustaining in Uncertain Time: Investigating Pension Fund Performance during Market Stress. Engineering Economics, 36(1), pp.96-112.*|
+|Reliability Engineering|*Zhou, Y., Liu, S., Kou, G. and Kang, F., 2025. Degradation variation pattern mining based on BEAST time series decomposition integrated functional principal component analysis. Reliability Engineering & System Safety, 259, p.110952.*|
+|Biology|*Bancaud, A., Nakajima, T., Suehiro, J.I., Alric, B., Morfoisse, F., Cacheux, J. and Matsunaga, Y.T., 2025. Intraluminal pressure triggers a rapid and persistent reinforcement of endothelial barriers. Lab on a Chip, 25(8), pp.2061-2072.*|
+|Construction Engineering|*Li, F., Xie, Z., Yu, X. and Shi, B., 2025. Estimation of long-term variation patterns in the modal properties of a skyscraper under environmental effects. Engineering Structures, 336, p.120451.*|
+|Animal Ecology|*Hole, G.M., Büntgen, U., Wang, Y., DeVries, B., Rees, G. and Wheeler, H.C., 2026. Dendrochronology and remote sensing reveal beaver occupancy and colonization dynamics in an expanding Arctic population. Ecosphere, 17(3), p.e70557.*|
+|Wildlife|*Pérez-Mellado, V. and Pérez-Cembranos, A., 2025. Effects of the introduction of an herbivore on an endangered lizard. European Journal of Wildlife Research, 71(3), p.47.*|
+|Coastal & Estuary science |*Richey, A., Oberbauer, S.F., Castaneda-Moya, E., Troxler, T., Kominoski, J.S., Olivas, P. and Malone, S.L., 2025. Sea-level rise and freshwater management are reshaping coastal landscapes. Journal of Environmental Management, 387, p.125842.*|
+|Civil Engineering|*Englezou, Y., Timotheou, S. and Panayiotou, C.G., 2025. Fault-adaptive traffic demand estimation using network flow dynamics. IEEE Transactions on Intelligent Transportation Systems.*|
+|Computational Chemistry|*Faran, M. and Bisker, G., 2025. Coarse-graining self-assembly by the stochastic landscape method. Journal of Chemical Theory and Computation, 21(21), pp.10719-10734.*|
+|Education|*Huang, X., Wu, H., Liu, X. and Lajoie, S.P., 2025, July. What makes teamwork work? A multimodal case study on emotions and diagnostic expertise in an intelligent tutoring system. In International Conference on Artificial Intelligence in Education (pp. 44-52). Cham: Springer Nature Switzerland.*|
+|Agrometerology|*Ssembajwe, R., Mulinde, C., Ddumba, S.D., Kagezi, G.H., Opio, R., Kobusinge, J., Mugagga, F., Bamutaze, Y., Gidudu, A., Arinaitwe, G. and Voda, M., 2025. Dynamics and associations of selected agrometeorological variables in Robusta growing regions of Uganda. Agricultural Water Management, 307, p.109257.*|
+|Health Care|*Ünal, E. and Yılmaz, S., 2025, March. Healthcare Sector Dynamics in Turkey (2002–2022): Trends, Breakpoints, and Policy Implications (Privatization in the Hospital Sector). In Healthcare (Vol. 13, No. 6, p. 622). MDPI.*|
+|Rock Engineering|*Long, S., Yue, Z., Yue, W.V., Hu, H., Feng, Y., Yan, Y. and Xie, X., 2025. Identification of rock layer interface characteristics using drilling parameters. Rock Mechanics and Rock Engineering, 58(1), pp.1071-1098.*|
+|Energy|*Leiria, D., Johra, H., Anoruo, J., Praulins, I., Piscitelli, M.S., Capozzoli, A., Marszal-Pomianowska, A. and Pomianowski, M.Z., 2025. Is it returning too hot? Time series segmentation and feature clustering of end-user substation faults in district heating systems. Applied Energy, 381, p.125122.*|
+|Psychology|*Huang, X., Nguyen, A. and Lajoie, S.P., 2025. Examining socially shared regulation of learning in medical training: the interplay of heart rate change points on regulatory interactions: Huang et al. European Journal of Psychology of Education, 40(3), p.93.*|
 |Paleoclimatology|*Anastasia Zhuravleva et al., 2023. Caribbean salinity anomalies contributed to variable North Atlantic circulation and climate during the Common Era.  Science Advances,   DOI:10.1126/sciadv.adg2639*|
 |   Population Ecology  | *Henderson, P. A. (2021). [Southwood's Ecological Methods (5th edition)](https://www.google.com/books/edition/Southwood_s_Ecological_Methods/snEhEAAAQBAJ?hl=en&gbpv=1&pg=PA473&printsec=frontcover). Oxford University Press., page 475-476*|
 |Climatology|*Webster, M.A., Riihelä, A., Kacimi, S., Ballinger, T.J., Blanchard-Wrigglesworth, E., Parker, C.L. and Boisvert, L., 2024. Summer snow on Arctic sea ice modulated by the Arctic Oscillation. Nature Geoscience, pp.1-8.*|

@@ -1,11 +1,5 @@
 #include "abc_000_warning.h"
-
 #include "abc_001_config.h"
-
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
 
 #include "abc_datatype.h"
 #include "abc_blas_lapack_lib.h"
@@ -13,8 +7,15 @@
 #include "abc_common.h"    //strcicmp
 #include "abc_ts_func.h"
 #include "abc_date.h"
+#include "globalvars.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
+
+#include <stdio.h>	   
+#include <math.h>
+#include <string.h>
+#include <time.h>
+
  
 #define CondErrMsgRet0(cond, ...)   if(cond) { r_error(__VA_ARGS__); return 0;}
 #define CondErrActionRet0(cond, Action, ...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
@@ -56,7 +57,7 @@ static int  GetArg_0th_Data(VOIDPTR prhs[], int nrhs, BEAST2_IO_PTR _OUT_ io) {
 		//DATA is a vector of numeric type, and not a struct variable with multivariate time series			
 		q = 1;
 		//Mem to be dellocated in DeallocatTimeSeriesIO
-		io->pdata   = malloc(sizeof(VOID_PTR) * q);
+		io->pdata    = malloc(sizeof(VOID_PTR) * q);
 		io->dtype    = malloc(sizeof(DATA_TYPE) * q);
 		io->pdata[0] = GetData(DATA);
 		io->dtype[0] = GetDataType(DATA);
@@ -316,15 +317,16 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[], int nrhs, BEAST2_IO_PTR _OUT_ io
 	// Sanity check
 	CondErrMsgRet0(meta->hasSeasonCmpnt == UnknownStatus, "ERROR: Cnnot determine whether the input time series has a seasonal/periodic componnet or net.\n");
 	if (meta->hasSeasonCmpnt == 0) PERIOD = 0;        //just double check to make sure it is the case that period=0 for trend-only data
-	if (DT  < 0.)      DT     = getNaN(); //dT should never < 0 at this point, but just double check.
+	if (DT  < 0.)                  DT     = getNaN(); //dT should never < 0 at this point, but just double check.
 	////////////////////////////////////////////////////////////////////////////////
 
-	/**********************************/
-    // If there is a time object suppiked
-	/**********************************/
+
 	TimeVecInfo tvec = { 0 };
 	TimeVec_init(&tvec);
 
+	/**********************************/
+	// If there is a time object suppiked
+	/**********************************/
      if (TIMEobj) { 
 		//  Allocated mem that needs to be freeed explicilty for tvec.fyear, but noo mem allocated if TIMEObj
 		//  is NULL, which means that the ts is regular/ordered, as dertermined by start and dt only
@@ -688,8 +690,11 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	struct PRIOR_MISSING {	
 		U08   seasonMinOrder, seasonMaxOrder, trendMinOrder, trendMaxOrder;
 		U08   trendMinSepDist, seasonMinSepDist;
-		U08   trendMinKnotNum, seasonMinKnotNum;
+		U08   trendMinKnotNum, seasonMinKnotNum, outlierMinKnotNum;
 		U08   trendMaxKnotNum, seasonMaxKnotNum,  outlierMaxKnotNum;
+
+		U08   trendLeftMargin, trendRightMargin;
+		U08   seasonLeftMargin, seasonRightMargin;
 
 		U08   seasonBasisFuncType, trendBasisFuncType,  outlierBasisFuncType;
 		U08   modelPriorType;
@@ -702,6 +707,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 		U08   precValue;
 		U08   alpha1, alpha2, delta1, delta2;
 
+		U08  seasonComplexityFactor;
+		U08  trendComplexityFactor;
  
 	} m = {0,};
 
@@ -726,6 +733,9 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 				o.seasonMinSepDist = (tmp = GetField123Check(S, "seasonMinSepDist", 10)) ? GetScalar(tmp) : (m.seasonMinSepDist = 1);
 				o.seasonMinKnotNum = (tmp = GetField123Check(S, "seasonMinKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMinKnotNum = 1);
 				o.seasonMaxKnotNum = (tmp = GetField123Check(S, "seasonMaxKnotNum", 10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum = 1);
+
+				o.seasonLeftMargin  = (tmp = GetField123Check(S, "seasonLeftMargin", 10)) ? GetScalar(tmp) : (m.seasonLeftMargin = 1);
+				o.seasonRightMargin = (tmp = GetField123Check(S, "seasonRightMargin", 10)) ? GetScalar(tmp) : (m.seasonRightMargin = 1);
 			}
 
 			o.trendMinOrder     = (tmp = GetField123Check(S, "trendMinOrder",  10)) ?   GetScalar(tmp) : (m.trendMinOrder = 1);
@@ -734,14 +744,18 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			o.trendMinKnotNum   = (tmp = GetField123Check(S, "trendMinKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMinKnotNum = 1);			
 			o.trendMaxKnotNum   = (tmp = GetField123Check(S, "trendMaxKnotNum", 10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum = 1);
 			
+			o.trendLeftMargin  = (tmp = GetField123Check(S, "trendLeftMargin", 10)) ? GetScalar(tmp) : (m.trendLeftMargin = 1);
+			o.trendRightMargin = (tmp = GetField123Check(S, "trendRightMargin", 10)) ? GetScalar(tmp) : (m.trendRightMargin = 1);
+
 			if (io->meta.hasOutlierCmpnt) {
+				o.outlierMinKnotNum = (tmp = GetField123Check(S, "outlierMinKnotNum", 10)) ? GetScalar(tmp) : (m.outlierMinKnotNum = 1);
 				o.outlierMaxKnotNum = (tmp = GetField123Check(S, "outlierMaxKnotNum", 10)) ? GetScalar(tmp) : (m.outlierMaxKnotNum = 1);
 				o.outlierSigFactor = (tmp = GetFieldCheck(S, "outlierSigFactor")) ? GetScalar(tmp) : (m.outlierSigFactor = 1);
 			}
 
 			o.sigFactor         = (tmp = GetFieldCheck(S,  "sigFactor")) ?			GetScalar(tmp) : (m.sigFactor        = 1);
 
-			o.sig2              = (tmp = GetField123Check(S, "sig2",2)) ?				GetScalar(tmp) : (m.sig2 = 1);
+			o.sig2              = (tmp = GetField123Check(S, "sig2",2)) ?			GetScalar(tmp) : (m.sig2 = 1);
 			o.precValue		    = (tmp = GetField123Check(S, "precValue",5)) ?		GetScalar(tmp) : (m.precValue = 1);
 			o.alpha1			= (tmp = GetField123Check(S, "alpha1",0)) ?			GetScalar(tmp) : (m.alpha1 = 1);
 			o.alpha2			= (tmp = GetField123Check(S, "alpha2",0)) ?			GetScalar(tmp) : (m.alpha2 = 1);
@@ -758,7 +772,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			//o.precPriorType		    = (tmp = GetFieldCheck(S, "precPriorType")) ?	    GetScalar(tmp) : (m.precPriorType = 1);
 			o.precPriorType = __GetPrecPriorType(S);
 
-		
+			o.seasonComplexityFactor  = (tmp = GetFieldCheck(S, "seasonComplexityFactor")) ? GetScalar(tmp) : (m.seasonComplexityFactor = 1);
+			o.trendComplexityFactor   = (tmp = GetFieldCheck(S, "trendComplexityFactor"))  ? GetScalar(tmp) : (m.trendComplexityFactor = 1);
 		}
 
 	} // if (nrhs >= 4)
@@ -794,25 +809,95 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 			if (m.seasonMaxOrder)      o.seasonMaxOrder = (period / 2 - 1);    o.seasonMaxOrder = min(o.seasonMaxOrder, period );  o.seasonMaxOrder = max(o.seasonMaxOrder, o.seasonMinOrder);
 		}
 		
-		if (m.seasonMinSepDist || o.seasonMinSepDist <= 0)   o.seasonMinSepDist = period / 2;          o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
-		if (m.seasonMinKnotNum)                              o.seasonMinKnotNum = 0;                   o.seasonMinKnotNum = max(min(o.seasonMaxKnotNum, o.seasonMinKnotNum), 0);
-		if (m.seasonMaxKnotNum)                              o.seasonMaxKnotNum = min(floor(N / (o.seasonMinSepDist + 1) - 1.f), 5);  o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, floor(N / (o.seasonMinSepDist + 1) - 1.f));   o.seasonMaxKnotNum = max(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+		if (m.seasonMinSepDist || o.seasonMinSepDist <= 0)   o.seasonMinSepDist  = period / 2;         
+		o.seasonMinSepDist = max(o.seasonMinSepDist, o.seasonMaxOrder);		 
+		o.seasonMinSepDist = min(o.seasonMinSepDist, N / 2 - 1       ); // TODO:N/2-1 can be negtative, and then forced into a lager postive U16 integer
+
+		if (m.seasonLeftMargin  || o.seasonLeftMargin  < 0)   o.seasonLeftMargin  = o.seasonMinSepDist;          
+		if (m.seasonRightMargin || o.seasonRightMargin < 0)   o.seasonRightMargin = o.seasonMinSepDist;
+
+		I32 Nleft = N - (1 + o.seasonLeftMargin + o.seasonRightMargin);
+		if (Nleft < 1) {
+			
+			if (N - (1 + o.seasonMinSepDist * 2) < 1) {
+				o.seasonLeftMargin  = 0;
+				o.seasonRightMargin = 0;
+			} else {
+				o.seasonLeftMargin  = o.seasonMinSepDist;
+				o.seasonRightMargin = o.seasonMinSepDist;
+			}
+			q_warning("WARNING: prior$seasonLeftMargin and prior$seasonRightMargin are too large, and no remaining data points are "
+				      "available as potential changepoints! Their vaules are changed to %d and %d.", o.seasonLeftMargin, o.seasonRightMargin);
+
+			Nleft = N - (1 + o.seasonLeftMargin + o.seasonRightMargin);
+		}
+
+		I32 MaxChangePointPossible = ceil((Nleft + 0.0) / (o.seasonMinSepDist + 1.0));
+
+		if (m.seasonMinKnotNum   )   o.seasonMinKnotNum = 0;                  
+		if (m.seasonMaxKnotNum==0)   o.seasonMinKnotNum =  min(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+		o.seasonMinKnotNum = max(o.seasonMinKnotNum, 0);
+		o.seasonMinKnotNum = min(o.seasonMinKnotNum, MaxChangePointPossible);
+
+		if (m.seasonMaxKnotNum)     o.seasonMaxKnotNum  = min(MaxChangePointPossible, 5);
+		o.seasonMaxKnotNum = min(o.seasonMaxKnotNum, MaxChangePointPossible);
+		o.seasonMaxKnotNum = max(o.seasonMaxKnotNum, o.seasonMinKnotNum);
+	}
+
+	{ // the trend component
+		if (m.trendMinOrder || o.trendMinOrder < 0)      o.trendMinOrder    = 0L;
+		if (m.trendMaxOrder)                             o.trendMaxOrder    = 1L;				                    
+		o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);	
+
+		if (m.trendMinSepDist || o.trendMinSepDist <= 0) o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ;
+		o.trendMinSepDist = max(o.trendMinSepDist, o.trendMaxOrder + 1);
+		o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
+
+		if (m.trendLeftMargin  || o.trendLeftMargin < 0)     o.trendLeftMargin = o.trendMinSepDist;
+		if (m.trendRightMargin || o.trendRightMargin < 0)    o.trendRightMargin = o.trendMinSepDist;
+
+		I32 Nleft = N - (1 + o.trendLeftMargin + o.trendRightMargin);
+		if (Nleft < 1) {
+
+			if (N - (1 + o.trendMinSepDist * 2) < 1) {
+				o.trendLeftMargin = 0;
+				o.trendRightMargin = 0;
+			}
+			else {
+				o.trendLeftMargin = o.trendMinSepDist;
+				o.trendRightMargin = o.trendMinSepDist;
+			}
+			q_warning("WARNING: prior$trendLeftMargin and prior$trendRightMargin are too large, and no remaining data points are "
+				"available as potential changepoints! Their vaules are changed to %d and %d.", o.trendRightMargin, o.trendRightMargin);
+
+			Nleft = N - (1 + o.trendLeftMargin + o.trendRightMargin);
+		}
+
+		I32 MaxChangePointPossible = ceil((Nleft + 0.0) / (o.trendMinSepDist + 1.0));
+
+
+		if (m.trendMinKnotNum)       o.trendMinKnotNum = 0;	   
+		o.trendMinKnotNum = max(min(o.trendMaxKnotNum, o.trendMinKnotNum), 0);
+
+		if (m.trendMinKnotNum)        o.trendMinKnotNum = 0;
+		if (m.trendMaxKnotNum == 0)   o.trendMinKnotNum = min(o.trendMinKnotNum, o.trendMaxKnotNum);
+		o.trendMinKnotNum = max(o.trendMinKnotNum, 0);
+		o.trendMinKnotNum = min(o.trendMinKnotNum, MaxChangePointPossible);
+
+		if (m.trendMaxKnotNum)     o.trendMaxKnotNum = min(MaxChangePointPossible, 10);
+		o.trendMaxKnotNum = min(o.trendMaxKnotNum, MaxChangePointPossible);
+		o.trendMaxKnotNum = max(o.trendMaxKnotNum, o.trendMinKnotNum);	 
 	}
 	
-	if (m.trendMinOrder)                             o.trendMinOrder    = 0L;				                      o.trendMinOrder	  = max(o.trendMinOrder, 0L);
-	if (m.trendMaxOrder)                             o.trendMaxOrder    = 1L;				                      o.trendMaxOrder	  = max(o.trendMaxOrder, o.trendMinOrder);	
-	if (m.trendMinSepDist || o.trendMinSepDist <= 0) o.trendMinSepDist = io->meta.hasSeasonCmpnt? period / 2: 3 ; o.trendMinSepDist = max(o.trendMinSepDist, o.trendMaxOrder + 1);	o.trendMinSepDist = min(o.trendMinSepDist, N / 2 - 1);
-	if (m.trendMinKnotNum)                           o.trendMinKnotNum = 0;	                                      o.trendMinKnotNum = max(min(o.trendMaxKnotNum, o.trendMinKnotNum), 0);
-	if (m.trendMaxKnotNum)                           o.trendMaxKnotNum = min(floor(N / (o.trendMinSepDist + 1) - 1.f), 10); o.trendMaxKnotNum = min(o.trendMaxKnotNum, floor(N / (o.trendMinSepDist + 1) - 1.f)); o.trendMaxKnotNum = max(o.trendMaxKnotNum, o.trendMinKnotNum);
+	if (m.outlierMinKnotNum) o.outlierMinKnotNum = 0;
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;    
 
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum = o.trendMaxKnotNum;      o.outlierMaxKnotNum = max(o.outlierMaxKnotNum, 1L); // at least has one; otherwise, the program crahses if hasOUtliercomponet=1
-	
-	if (m.K_MAX )            o.K_MAX            = 500;                  
+	if (m.K_MAX )            o.K_MAX            = 0;    // exact value of K_max to be determined later if Kmax = 0              
 	if (m.sigFactor)         o.sigFactor        = 1.8;            o.sigFactor        = max(o.sigFactor,        1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor = 2.5;            o.outlierSigFactor = max(o.outlierSigFactor, 1.5);
 
 	if (m.sig2 )             o.sig2      = 0.2f;				  o.sig2             = max(o.sig2,      0.01);
-	if (m.precValue)         o.precValue = 1.5f;				  o.precValue        = max(o.precValue, 0.01);
+	if (m.precValue)         o.precValue = 1.5f;				  o.precValue        = max(o.precValue, 1e-32);
 	if (m.alpha1)		     o.alpha1	 = 0.00000001f;
 	if (m.alpha2)		     o.alpha2	 = 0.00000001f;
 	if (m.delta1)		     o.delta1	 = 0.00000001f;
@@ -820,6 +905,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 
 	if (m.precPriorType)			o.precPriorType = UniformPrec;
 
+	if (m.trendComplexityFactor)    o.trendComplexityFactor  = 0.0;
+	if (m.seasonComplexityFactor)   o.seasonComplexityFactor = 0.0;
 
 	if (m.seasonBasisFuncType) {
 		if      (o.precPriorType == UniformPrec)		o.seasonBasisFuncType = 0;
@@ -830,7 +917,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 	if (m.trendBasisFuncType) {
 		if      (o.precPriorType == UniformPrec)		o.trendBasisFuncType = 0;
 		else if (o.precPriorType == ConstPrec)          o.trendBasisFuncType = 0;
-		else if (o.precPriorType == ComponentWise)      o.seasonBasisFuncType = 1;
+		else if (o.precPriorType == ComponentWise)      o.trendBasisFuncType = 1;
 		else if (o.precPriorType == OrderWise)          o.trendBasisFuncType = 1;
 	}	 
 	if (m.outlierBasisFuncType) {
@@ -840,6 +927,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[], int nrhs, BEAST2_PRIOR_PTR prior,
 		else if (o.precPriorType == OrderWise)          o.outlierBasisFuncType = 1;
 	}	 
 	if (m.modelPriorType)			o.modelPriorType        = 1L;
+	o.modelPriorType         = o.modelPriorType % 3;             //TODO: Truncated up to 2
 
 	return 1;
 
@@ -922,9 +1010,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 		I08   removeSingletonDims;
 		I08   dumpInputData;
 
-		I08   ncpStatMethod;
 		I08  smoothCpOccPrCurve;
-		I08  useMeanOrRndBeta;
+		I08  useRndBeta;
 		I08  computeCredible;
 		I08  fastCIComputation;
 		I08  computeSeasonOrder;
@@ -942,8 +1029,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 		I08 tallyIncDecTrendJump;
 		I08 tallyPosNegOutliers;
 
-		I08  printOptions;
-		I08  printProgressBar;
+
+		I08 dumpMCMCSamples;
 	} m = {0,};
 
 
@@ -958,27 +1045,29 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 		}
 		else {
 			VOIDPTR tmp;
-			o.whichOutputDimIsTime = (tmp = GetField123Check(S, "whichOutputDimIsTime",2)) ?	GetScalar(tmp) : (m.whichOutputDimIsTime = 1);
+			o.whichOutputDimIsTime = (tmp = GetField123Check(S, "whichOutputDimIsTime",2)) ? GetScalar(tmp) : (m.whichOutputDimIsTime = 1);
 			o.removeSingletonDims  = (tmp = GetField123Check(S, "removeSingletonDims", 8)) ? GetScalar(tmp) : (m.removeSingletonDims = 1);			
-			o.numThreadsPerCPU     = (tmp = GetField123Check(S, "numThreadsPerCPU", 4)) ? GetScalar(tmp) : (m.numThreadsPerCPU = 1);
-			o.numParThreads        = (tmp = GetField123Check(S, "numParThreads", 4)) ?			GetScalar(tmp) : (m.numParThreads = 1);
-			o.numCPUCoresToUse     = (tmp = GetField123Check(S, "numCPUCoresToUse", 4)) ?		GetScalar(tmp) : (m.numCPUCoresToUse = 1);
-			o.consoleWidth         = (tmp = GetField123Check(S, "consoleWidth",2)) ?			GetScalar(tmp) : (m.consoleWidth = 1);
-			o.dumpInputData        = (tmp = GetField123Check(S, "dumpInputData",2)) ? GetScalar(tmp) : (m.dumpInputData = 1);
-			o.smoothCpOccPrCurve   = (tmp = GetField123Check(S, "smoothCpOccPrCurve",2)) ? GetScalar(tmp) : (m.smoothCpOccPrCurve = 1);
+			o.numThreadsPerCPU     = (tmp = GetField123Check(S, "numThreadsPerCPU", 4))    ? GetScalar(tmp) : (m.numThreadsPerCPU = 1);
+			o.numParThreads        = (tmp = GetField123Check(S, "numParThreads", 4))       ? GetScalar(tmp) : (m.numParThreads = 1);
+			o.numCPUCoresToUse     = (tmp = GetField123Check(S, "numCPUCoresToUse", 4))    ? GetScalar(tmp) : (m.numCPUCoresToUse = 1);
+			o.consoleWidth         = (tmp = GetField123Check(S, "consoleWidth",2))         ? GetScalar(tmp) : (m.consoleWidth = 1);
+			o.dumpInputData        = (tmp = GetField123Check(S, "dumpInputData",5))        ? GetScalar(tmp) : (m.dumpInputData = 1);
+			o.smoothCpOccPrCurve   = (tmp = GetField123Check(S, "smoothCpOccPrCurve",2))   ? GetScalar(tmp) : (m.smoothCpOccPrCurve = 1);
+			o.dumpMCMCSamples      = (tmp = GetField123Check(S, "dumpMCMCSamples", 7))     ? GetScalar(tmp) : (m.dumpMCMCSamples = 1);
 			#define _1(x)       o.x = (tmp=GetFieldCheck(S,#x))? GetScalar(tmp): (m.x=1)
 			#define _2(x,y)     _1(x);_1(y)
 			#define _3(x,y,z)   _1(x);_2(y,z)
 			#define _4(x,y,z,w) _2(x,y);_2(z,w)
-			
-			_2(printProgressBar, printOptions);
+
 			_2(computeCredible,  fastCIComputation);
 
 			_2(computeSeasonOrder,   computeTrendOrder);
 			_3(computeSeasonChngpt,  computeTrendChngpt, computeOutlierChngpt);
 			_2(computeSeasonAmp,     computeTrendSlope);
 			_4(tallyPosNegSeasonJump, tallyPosNegTrendJump, tallyIncDecTrendJump, tallyPosNegOutliers);
-			_1(useMeanOrRndBeta);
+			_1(useRndBeta);
+
+ 
 				 
 		} // if (!IsStruct(S)) : S is a struct
 	} // if (nrhs >= 5)
@@ -995,8 +1084,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 	if (m.numParThreads)         o.numParThreads		= 0;
 	if (m.numCPUCoresToUse)      o.numCPUCoresToUse	= 0;	
 	if (m.consoleWidth||o.consoleWidth<=0)  o.consoleWidth= GetConsoleWidth(); 	o.consoleWidth = max(o.consoleWidth, 40);
-	if (m.printProgressBar)      o.printProgressBar	= 1;
-	if (m.printOptions)          o.printOptions		= 1;
+
 
 	if (m.computeCredible)       o.computeCredible		= 0L;
 	if (m.fastCIComputation)     o.fastCIComputation	= 1L;
@@ -1021,8 +1109,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[], int nrhs, BEAST2_EXTRA_PTR extra,
 	if (o.tallyIncDecTrendJump)  o.computeTrendChngpt	= 1,	o.computeTrendSlope = 1;
 	if (o.tallyPosNegOutliers)   o.computeOutlierChngpt = 1;
 
-	if (m.useMeanOrRndBeta)      o.useMeanOrRndBeta = 0;
-
+	if (m.useRndBeta)      o.useRndBeta        = 0;
+	if (m.dumpMCMCSamples) o.dumpMCMCSamples   = 0;
 
 	
 	return 1;
@@ -1038,6 +1126,19 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	I08 hasOutlierCmpnt  = opt->prior.basisType[opt->prior.numBasis - 1] == OUTLIERID;
 	I08 hasTrendCmpnt    = 1;
 	I08 hasAlways        = 1;
+
+	// If outlierMaxKnotNum==0,, then force removing the outlier component
+	if (hasOutlierCmpnt ) {
+		if (opt->prior.outlierMinKnotNum > opt->io.N/2) {
+			opt->prior.outlierMinKnotNum = opt->io.N / 2;
+		}
+		// Remove the outlier componnet if ocp.min > ocp.max
+		if (opt->prior.outlierMaxKnotNum <= 0 || opt->prior.outlierMaxKnotNum < opt->prior.outlierMinKnotNum) {
+			hasOutlierCmpnt              = 0;			
+			opt->io.meta.hasOutlierCmpnt = 0;
+			opt->prior.numBasis--;
+		}		
+	}
 
 	// Period must be an integer when Dummy is used
 	if (hasDummyCmpnt) opt->io.meta.period = ceil(opt->io.meta.period);
@@ -1069,7 +1170,8 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		opt->prior.seasonMaxOrder           = 0;		
 	}
 	if (hasSVDCmpnt) { 
-		opt->extra.computeSeasonAmp = 0; //TODO: remove this restriction 
+		opt->extra.computeSeasonAmp      = 0; //TODO: remove this restriction 
+		opt->extra.tallyPosNegSeasonJump = 0;
 	}
 	if (!hasOutlierCmpnt) {
 		opt->extra.computeOutlierChngpt = 0;
@@ -1120,9 +1222,24 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		if (type == TRENDID)			KMAX += (PRIOR->trendMaxOrder +1) * (PRIOR->trendMaxKnotNum + 1);
 		if (type == OUTLIERID)			KMAX += PRIOR->outlierMaxKnotNum;
 	}
-	PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
-
+	if (PRIOR->K_MAX <= 0) {  // Not set yet, so takt the max number of terms as dertermined by the knots
+		PRIOR->K_MAX =  KMAX;
+	} else {
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
 	
+	if (opt->io.N < 5000)
+		PRIOR->K_MAX = min(PRIOR->K_MAX, opt->io.N);
+	else if (opt->io.N < 15000) {
+		int KMAX = min(5000, opt->io.N / 2);
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
+	else  {
+		int KMAX = 7500;
+		PRIOR->K_MAX = min(PRIOR->K_MAX, KMAX);
+	}
+
+
 	// The initial model is generated in "basis_genrandombasis". We cacluat the number of terms for it
 	// so KMAX must be larger than it
 	I32 K_INITIAL_MODEL = 0;
@@ -1163,21 +1280,50 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		opt->prior.precPriorType = UniformPrec;
 		//q_warning("WARNING: prior$precPriorType is changed from 'componentwise' to 'uniform' because the model specified only has a trend component.\n");
 	}
+
+	if (opt->io.numOfPixels > 1) {
+		opt->extra.dumpMCMCSamples = 0;
+	}
+
+
+	if (opt->prior.numBasis == 1 && opt->prior.precPriorType == ComponentWise) {	
+		opt->prior.precPriorType = UniformPrec;
+	}
+
+	opt->extra.printProgress = GLOBAL_PRNT_PROGRESS;
+
+
+	// the input is multivariate time series data
+	if (opt->io.q > 1) {
+		//memset(&option.extra, 0, sizeof(option.extra));
+		opt->extra.computeSeasonAmp = 0;
+		opt->extra.computeTrendSlope = 0;
+		opt->extra.tallyIncDecTrendJump = 0;
+		opt->extra.tallyPosNegTrendJump = 0;
+		opt->extra.tallyPosNegOutliers = 0;
+		opt->extra.tallyPosNegSeasonJump = 0;
+
+		opt->extra.computeTrendChngpt = 1;
+		opt->extra.computeSeasonChngpt = 1;
+		//option.extra.computeOutlierChngpt = 1;
+	}
+	
 	return 1;
 }
 
 int BEAST2_GetArgs(VOIDPTR prhs[], int nrhs, A(OPTIONS_PTR) opt) {
 
-  
-
-	int  failed = !GetArg_0th_Data(prhs, nrhs, &opt->io)                 ||
+	int  failed = !GetArg_0th_Data(prhs, nrhs, &opt->io)                  ||
 		          !GetArg_1st_MetaData(prhs, nrhs, &opt->io)		      || 				  
 			      !GetArg_2nd_Prior__(prhs, nrhs, &opt->prior, &opt->io)  ||
 			      !GetArg_3rd_MCMC___(prhs, nrhs, &opt->mcmc,  opt)       ||
 			      !GetArg_4th_EXTRA__(prhs, nrhs, &opt->extra, opt->io.meta.whichDimIsTime,opt->io.ndim) ;
+
 	int success = !failed;	
-	if (success) 	success=PostCheckArgs(opt); 	
-	if (success) 	BEAST2_print_options(opt);	
+	if (success)  success=PostCheckArgs(opt); 	
+	if (success && GLOBAL_PRNT_PARAMETER) {
+		BEAST2_print_options(opt);
+	}	
 
 	return success;
 }

@@ -1,4 +1,5 @@
 #include "abc_000_macro.h"
+#include "abc_001_config.h"
 #include "abc_000_warning.h"
 
 #if (defined(OS_WIN64) || defined(OS_WIN32)) && R_INTERFACE==1

@@ -1,9 +1,10 @@
-#include <math.h>
 #include "abc_000_warning.h"
-
-#include "abc_mcmc.h"
+#include "abc_001_config.h"
 #include "abc_blas_lapack_lib.h"
-#include "abc_mat.h" //f32_transpose_inplace
+#include "abc_mat.h"             //f32_transpose_inplace
+#include "abc_mcmc.h"
+
+#include <math.h>
 
 
 static void PrepareCiInfo(CI_PARAM *cinfo, U32 nSamples,  MemPointers * MEM)

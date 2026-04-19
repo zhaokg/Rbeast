@@ -5,13 +5,13 @@
 ///////////////////////////////////////////////////////////////////////////
 //stackoverflow.com/questions/2622017/suppressing-deprecated-warnings-in-xcode
 /*
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             //do something////
     #pragma clang diagnostic pop
 #endif
-#ifdef GCC_COMPILER
+#ifdef COMPILER_GCC
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             //do something////
@@ -22,7 +22,9 @@
 
 ///////////////////////////////////////////////////////////////////////////
 //https://clickhouse.tech/codebrowser/html_report/ClickHouse/src/Functions/TargetSpecific.h.html
-#ifdef CLANG_COMPILER
+ 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64)  
+
     //https://stackoverflow.com/questions/31373885/how-to-change-optimization-level-of-one-function/49353441
     #pragma clang optimize on
     //https://stackoverflow.com/questions/46165752/does-clang-have-something-like-pragma-gcc-target
@@ -30,7 +32,9 @@
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw"))), apply_to=function)
     //#pragma clang attribute pop
 #endif
-#ifdef  GCC_COMPILER
+
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
+
     //https://www.geeksforgeeks.org/speed-up-naive-algorithms-in-competitive-coding-in-c-cpp/
     //https://codeforces.com/blog/entry/78897
     //https://stackoverflow.com/questions/61759552/why-some-top-level-competitive-programmers-use-pragma    
@@ -55,12 +59,12 @@
 
 
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_vec.h"
 
 /* yes I know, the top of this file is quite ugly */
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     # define ALIGN64_BEG __declspec(align(64))
     # define ALIGN64_END 
 #else
@@ -301,7 +305,7 @@ v16sf sin512_ps(v16sf x) { // any x
     v16si imm0, imm2;
 
  
-
+    
     sign_bit = x;
     /* take the absolute value */
     x = _mm512_and_ps(x, *(v16sf*)_ps512_inv_sign_mask);
@@ -606,7 +610,7 @@ v16sf pow512_ps(v16sf x, float n) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-#ifdef CLANG_COMPILER
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     //pragma clang attribute push (__attribute__((target("avx,avx2"))), apply_to=function)
     #pragma clang attribute pop
 #endif

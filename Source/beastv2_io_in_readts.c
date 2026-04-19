@@ -1,8 +1,3 @@
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-
 #include "abc_000_warning.h"
 #include "abc_001_config.h"
 
@@ -14,6 +9,11 @@
 #include "abc_mat.h"
 #include "abc_blas_lapack_lib.h"
 #include "beastv2_io.h"
+
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 static void __convert_index_to_datasubs3(BEAST2_IO* io, int index, int subs3[]) {
 	

@@ -1,6 +1,4 @@
 #pragma once
-#include <math.h>  
-#include <string.h>  
 
 #include "abc_datatype.h" 
 extern void chol_update_U(F32PTR U, F32PTR x, I32 ldu, I32 n);
@@ -44,15 +42,14 @@ void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au, F32PTR U,  F32PTR prec
 void chol_addCol_skipleadingzeros_precVec_invdiag(   F32PTR Au,  F32PTR U, F32PTR precPrior, I64 N, I64 K0, I64 K1);
 
 
-
 void linear_regression(F32PTR Y, F32PTR X, int ldx, int N, int K, F32PTR B, F32PTR Yfit, F32PTR Yerror, F32PTR TMP);
 void simple_linear_regression_nan(F32PTR Y, F32PTR X, int N, F32PTR Yfit, F32PTR Yerror);
 
 typedef struct {
    I32 N;
-   I32 Nlda; // the leading dimensio of the X
+   I32 Nlda;  // the leading dimensio of the X
 
-   I16 k1;   // k1_old=k1_new;
+   I16 k1;     // k1_old=k1_new;
    I16 k2_old, k2_new;
    I16 Knewterm;
    I16 KOLD,  KNEW;
@@ -60,18 +57,11 @@ typedef struct {
 } NEWCOLINFO, * _restrict NEWCOLINFO_PTR;
 
 
-extern void update_XtX_from_Xnewterm(F32PTR X, F32PTR Xnewterm, F32PTR XtX, F32PTR XtXnew, NEWCOLINFO* new);
-
-extern void update_XtY_from_Xnewterm(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYnew, NEWCOLINFO* new, I32 q);
-
-
-
 typedef struct {
 	I32 N;
 	I32 Nlda; // the leading dimensio of the X
 
-	F32PTR X;
-	F32PTR Xnewterm;
+	F32PTR X, Xnewterm;
 
 	I16 nbands;
 	I16 ks_x[5];
@@ -94,6 +84,7 @@ typedef struct {
 	I16 isEqualSwap;
 
 } NEWCOLINFOv2, * _restrict NEWCOLINFOvs_PTR;
+
 extern void get_parts_for_newinfo(NEWCOLINFOv2* new);
 extern void update_XtX_from_Xnewterm_v2(F32PTR XtX, F32PTR XtXnew, NEWCOLINFOv2* new); 
 extern void update_XtY_from_Xnewterm_v2(F32PTR XtY, F32PTR XtYnew, F32PTR Y, NEWCOLINFOv2* new, I32 q);

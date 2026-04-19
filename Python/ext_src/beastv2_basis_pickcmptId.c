@@ -45,22 +45,15 @@ static I32 _PickBaisID_____________3fix1(PROP_DATA_PTR PROPINFO) {
 	return unifRnd < 128? 0:2; //gives only 0 or 2
 }
 
+/////////////////////////////////////////////////////////////////////
+//OUTLIER is always the last component; outlier can't be fixed
+/////////////////////////////////////////////////////////////////////
 
-//THe outlier is always the last component
-static I32 _PickBaisID_hasOutlier_2fix0(PROP_DATA_PTR PROPINFO) {
-	// Do not pick oid if sample == 0; pick oid only if sammple > 0
-	if (*PROPINFO->samples == 0) {
-		//this basis will be a NoChangeFIXGlobal
-		return 0; 
-	}
-	return 1;
-}
 static I32 _PickBaisID_hasOutlier_2none(PROP_DATA_PTR PROPINFO) {
 	// Do not pick oid if sample == 0; pick oid only if sammple > 0
-	if (*PROPINFO->samples == 0) {return 0;}
-	
+
     BEAST2_RNDSTREAM* PRAND = PROPINFO->pRND;
-	return (*PRAND->rnd08++ > 128)?0:1;
+	return (*PRAND->rnd08++ < (U08)(255 * 0.66)) ? 0 : 1;
 }
 static I32 _PickBaisID_hasOutlier_3none(PROP_DATA_PTR PROPINFO) {
 	BEAST2_RNDSTREAM*	PRAND	= PROPINFO->pRND;
@@ -69,33 +62,26 @@ static I32 _PickBaisID_hasOutlier_3none(PROP_DATA_PTR PROPINFO) {
 	// do not pick oid if sample == 0; pick oid only if sammple > 0
 	if (*PROPINFO->samples == 0) {	return (unifRnd > 128);	}
 
-	if		(unifRnd <  (U08)(255*0.33) )		return 0;
-	else if (unifRnd < (U08)(255*0.66) )		return 1;
+	if		(unifRnd <  (U08)(255*0.4) )		return 0;
+	else if (unifRnd < (U08)(255*0.8) )		return 1;
 	else										return 2; 
 }
 static I32 _PickBaisID_hasOutlier_3fix0(PROP_DATA_PTR PROPINFO) {
 	BEAST2_RNDSTREAM* PRAND   = PROPINFO->pRND;
 	U08				  unifRnd = *PRAND->rnd08++;
 
-	// do not pick oid if sample == 0; pick oid only if sammple > 0
-	if (*PROPINFO->samples == 0) {return 1;}
-	return (unifRnd > 128) ? 1 : 2;
+ 
+	return (unifRnd < (U08)(255 * 0.66)) ? 1 : 2;
 
 }
 static I32 _PickBaisID_hasOutlier_3fix1(PROP_DATA_PTR PROPINFO) {
 	BEAST2_RNDSTREAM* PRAND   = PROPINFO->pRND;
 	U08				  unifRnd = *PRAND->rnd08++;
 
-	// do not pick oid if sample == 0; pick oid only if sammple > 0
-	if (*PROPINFO->samples == 0) {	return 0;	}
-	return (unifRnd > 128) ? 0 : 2;
+	return (unifRnd < (U08)(255 * 0.66)) ? 0 : 2;
 }
 static I32 _PickBaisID_hasOutlier_3fix01(PROP_DATA_PTR PROPINFO) {
 	// Do not pick oid if sample == 0; pick oid only if sammple > 0
-	if (*PROPINFO->samples == 0) { 
-		//this basis will be a NoChangeFIXGlobal
-		return 0; 
-	}
 	return 2;
 }
 void * Get_PickBasisID(I08 numBasis, I08 hasOutlier, I32PTR isComponentFixed)
@@ -116,7 +102,7 @@ void * Get_PickBasisID(I08 numBasis, I08 hasOutlier, I32PTR isComponentFixed)
 		} else { 
 			//hasOulier==1
 			if (isComponentFixed[0])
-				return _PickBaisID_hasOutlier_2fix0;		//NoChangeFIXGLOBAL will be generated
+				return _PickBaisID_______2fix0______;		//NoChangeFIXGLOBAL will be generated
 			else //the second cmpt must be outliers
 				return _PickBaisID_hasOutlier_2none;
 		}

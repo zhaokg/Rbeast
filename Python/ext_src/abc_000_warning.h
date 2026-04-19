@@ -7,9 +7,16 @@
 	#define WARNING_SWITCH
     DISABLE_MANY_WARNINGS
 #else
-    // for MacOS, for some reason, sing and warning defined in R. h will expand into Rf_sign 
-    // to mess up the pragram ingore statements.
-    #undef sign    
-    #undef warning 
+    // For some reason,, on  MacOS, sign and warning defined in R. h expand into Rf_sign 
+    // to mess up the pragma ingore statements. A sloppy solution is to simply undefine sign and wanring
+
+    #ifdef sign
+      #undef sign
+    #endif
+
+    #ifdef warning
+      #undef warning 
+    #endif
+
 	ENABLE_MANY_WARNINGS 	
 #endif

@@ -189,7 +189,17 @@ void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt, A(RESULT_PTR) result, I64 pixelInde
 				f32_to_strided_mem(result->tCI + N * i,         mat[i].tCI, N, stride, offset, datType);
 				f32_to_strided_mem(result->tCI + N * q + N * i, mat[i].tCI, N, stride, offset + N * stride, datType);
 			}
+
+			if (opt->extra.computeTrendSlope) {
+				for (I32 i = 0; i < q; ++i) {
+					//f32_to_strided_mem(result->tCI + len * i, mat[i].tCI, len, stride, offset, datType);
+					f32_to_strided_mem(result->tslpCI + N * i,         mat[i].tslpCI, N, stride, offset, datType);
+					f32_to_strided_mem(result->tslpCI + N * q + N * i, mat[i].tslpCI, N, stride, offset + N * stride, datType);
+				}			
+			}
+
 		}
+
 		if (opt->extra.computeTrendChngpt) {
 			GET_OFFSET_STRIDE(trendMaxKnotNum); 
 			_2(tcp, tcpPr);

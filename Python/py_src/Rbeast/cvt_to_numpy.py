@@ -3,13 +3,12 @@ from array import array as arrtype
 
 IsTpye = isinstance
 
-def force_convert_to_numpy(x): 
+def force_convert_to_numpy_ndarray(x): 
       if  IsTpye(x, list) or IsTpye(x, tuple) or IsTpye(x, arrtype):
-           if not IsTpye(x[0], str):    # a sloppy way to test if the array is a string array or not
-                 # this is not really needed here bcz they can be converted in the C code
-                 return squeeze(nparray(x))
+           if not IsTpye(x[0], str):        # A sloppy way to test if the array is a string array or not
+                 return squeeze(nparray(x)) # squeeze() is not really needed here bcz they can be converted in the BEAST's internal C/C++ code
            else:
-                 return x   # we assume if the first elm is a sting and the whole array is a string array,
+                 return x                   # we assume if the first elm is a sting and the whole array is a string array,
       elif IsTpye(x, ndarray):
            return squeeze( x )
       elif hasattr(x,'to_numpy') and callable(getattr(x,'to_numpy')):

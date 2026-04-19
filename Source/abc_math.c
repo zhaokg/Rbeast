@@ -90,6 +90,7 @@ F32 sumlog(F32PTR p, I32 K)
 	sumlog += log(cumprod);
 	return (F32) sumlog;
 }
+
 F32 fastexp(F32 x){
 
 	x = (x > 88.7f) ? 88.7f : x;

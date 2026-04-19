@@ -1,12 +1,12 @@
-#include <string.h>
-#include "assert.h"
-
 #include "abc_000_warning.h"
 #include "abc_ide_util.h"
 #include "abc_common.h"
 #include "abc_date.h"
 
-#include<stdio.h>  // Need _GNU_SOURCE for manylinux; otherwise report /usr/include/stdio.h:316:6: error: unknown type name '_IO_cookie_io_functions_t'
+#include<stdio.h>  
+#include <string.h>
+#include "assert.h"
+
 
 //char t[] = "\033[0;35m";
 // fflush(stdout);   //: c function: fflush(stdout)--flush the line buffer to see immediate outputs
@@ -66,7 +66,12 @@ I32      GetConsoleWidth() {
 
 int IsClass(void* ptr, char* class) {
 
-	if (OBJECT(ptr)) {
+	//a NOTE reported at CRAN:
+	//	Found non - API call to R : ‘OBJECT’
+	//	Compiled code should not call non - API entry points in R.
+	// Solution: change OBJECT to 
+
+	if (Rf_isObject(ptr)) { //if (OBJECT(ptr)) {		
 		SEXP klass = getAttrib(ptr, R_ClassSymbol);
 		for (int i = 0; i < length(klass); i++) {
 			if (strcmp(CHAR(STRING_ELT(klass, i)), class) == 0) {
@@ -78,13 +83,13 @@ int IsClass(void* ptr, char* class) {
 }
 
 int IsCell(void* ptr)    { return 0L; }
-int IsChar(void* ptr)    { return TYPEOF((SEXP)ptr) == STRSXP; }
-int IsEmpty(void* ptr)   { return ptr == R_NilValue || GetNumberOfElements(ptr)==0; }
-int IsStruct(void* ptr)  { return isNewList((SEXP)ptr) || ptr==R_NilValue;       }
-int IsNumeric(void* ptr) { return isNumeric((SEXP)ptr); }
-int IsDouble(void* ptr)  { return TYPEOF((SEXP)ptr) == REALSXP; }
-int IsSingle(void* ptr)  { return 0; }
-int IsInt32(void* ptr)   { return TYPEOF((SEXP)ptr) == INTSXP;  }
+int IsChar(void* ptr)    { if (ptr == NULL) return 0; return TYPEOF((SEXP)ptr) == STRSXP; }
+int IsEmpty(void* ptr)   { if (ptr == NULL) return 0; return ptr == R_NilValue || GetNumberOfElements(ptr)==0; }
+int IsStruct(void* ptr)  { if (ptr == NULL) return 0; return isNewList((SEXP)ptr) || ptr==R_NilValue;       }
+int IsNumeric(void* ptr) { if (ptr == NULL) return 0; return isNumeric((SEXP)ptr); }
+int IsDouble(void* ptr)  { if (ptr == NULL) return 0; return TYPEOF((SEXP)ptr) == REALSXP; }
+int IsSingle(void* ptr)  { if (ptr == NULL) return 0; return 0; }
+int IsInt32(void* ptr)   { if (ptr == NULL) return 0; return TYPEOF((SEXP)ptr) == INTSXP;  }
 int IsInt16(void* ptr)   { return 0; }
 int IsInt64(void* ptr)   { return 0; }
 //http://adv-r.had.co.nz/C-interface.html

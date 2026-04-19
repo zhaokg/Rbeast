@@ -90,7 +90,9 @@ typedef struct BEAST2_PRIOR {
 
 	I16   trendMinKnotNum,  seasonMinKnotNum;
 	I16   trendMaxKnotNum,  seasonMaxKnotNum;
-	I16   outlierMaxKnotNum;
+	I16   outlierMinKnotNum, outlierMaxKnotNum;
+
+	F32   seasonComplexityFactor, trendComplexityFactor;
 
 	U16   K_MAX;
  
@@ -115,7 +117,7 @@ typedef struct BEAST2_MCMC {
  
 typedef struct BEAST2_EXTRA {
 	I08   smoothCpOccPrCurve;
-	I08   useMeanOrRndBeta;
+	I08   useRndBeta;
 	I08   dumpInputData;
 	U08   numThreadsPerCPU;
 	U16   numParThreads;
@@ -124,7 +126,6 @@ typedef struct BEAST2_EXTRA {
 	I08   whichOutputDimIsTime;
 	I08   removeSingletonDims;
 
-	I08   ncpStatMethod;
 	Bool  computeCredible;
 	Bool  fastCIComputation;
 	Bool  computeSeasonOrder;
@@ -139,8 +140,9 @@ typedef struct BEAST2_EXTRA {
 	Bool tallyIncDecTrendJump;
 	Bool tallyPosNegOutliers;
 
-	Bool  printOptions;
-	Bool  printProgressBar;
+	Bool  printProgress;
+	
+	Bool dumpMCMCSamples;
 
 } BEAST2_EXTRA, * _restrict BEAST2_EXTRA_PTR;
  
@@ -188,7 +190,7 @@ typedef struct BEAST2_YINFO {
 	F32        alpha1_star;
 	TKNOT      n, nMissing;		
 	//q is added for MRBEAST and used in ComputeLik, PropseNew/__CalcAbsDeviation(compute deviaiton and extrempos)
-    //, MR_EvaluateModel,
+    //, BEAST2_EvaluateModel,
 	I32        q; 
 	I32PTR     rowsMissing;
 	F32PTR     Y;
@@ -259,6 +261,8 @@ typedef struct BEAST2_RESULT {
 	F32PTR  opos_cpPr, oneg_cpPr;	
 	F32PTR  opos_cpCI, oneg_cpCI;
 
+	F32PTR  smcmc, tmcmc, omcmc;
+
 
 } BEAST2_RESULT, * _restrict BEAST2_RESULT_PTR;
 
@@ -286,10 +290,12 @@ typedef struct PROPOSE_STRUCT {
 	BEAST2_MODEL_PTR   model;
 	BEAST2_RANDSEEDPTR pRND;
 	BEAST2_YINFO_PTR   yInfo;
-	I32                nSample_ExtremVecNeedUpdate;
 	I32                N, Npad16;
 	F32                sigFactor;	
 	F32                outlierSigFactor;
+	I32                nSample_DeviationNeedUpdate;
+	I08                numBasisWithoutOutlier;
+	I08                shallUpdateExtremVec;
 } PROP_DATA, *_restrict PROP_DATA_PTR;
 
 
@@ -298,9 +304,11 @@ typedef struct BEAST2_BASESEG {
 	I32 R1, R2, K;
 	union {
 		struct {I16 ORDER1, ORDER2;}; //for trend, harmonic, and SVD(??) only
-		I32     outlierKnot;          //used only for the outlier component
+		I32      outlierKnot;          //used only for the outlier component
 	};	                              //Not used at all for DUMMY
 } BEAST2_BASESEG, * _restrict BEAST2_BASESEG_PTR;
+
+typedef enum  MOVETYPE { BIRTH, DEATH, MERGE, MOVE, ChORDER, NoChangeFixGlobal } MOVETYPE;
 
 typedef struct _NEWTERM {
 
@@ -310,13 +318,13 @@ typedef struct _NEWTERM {
 		struct {TORDER oldOrder, newOrder;};   //for chorder: oldOrder seems not to be used
 	};
 
-	I16 nKnot_new;
-	I16 newIdx;
+	MOVETYPE jumpType;
+	I16      nKnot_new;
+	I16      newIdx;
  
-	NEWCOLINFO xcols;
-
-	U08 numSeg;
-	I08 jumpType;
+	NEWCOLINFO newcols;
+	U08        numSeg;
+	
 	//I16 Knewterm; //not used
 	//U08 basisID;	//not used
 } NEWTERM, * _restrict NEWTERM_PTR;
@@ -347,7 +355,7 @@ typedef struct BEAST2_BASIS {
 
 	BASIS_CONST  bConst;
 	struct {
-		void        (*Propose)(BEAST2_BASIS_PTR, NEWTERM_PTR, NEWCOLINFO_PTR, PROP_DATA*);
+		void        (*Propose)(BEAST2_BASIS_PTR, NEWTERM_PTR, PROP_DATA*);
 		pfnGenTerms GenTerms;
 		int         (*CalcBasisKsKeK_TermType)(BEAST2_BASIS_PTR  basis);
 		void        (*UpdateGoodVec_KnotList)(BEAST2_BASIS_PTR basis, NEWTERM_PTR new, I32 Npad16_not_used);
@@ -355,15 +363,19 @@ typedef struct BEAST2_BASIS {
 		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis, NEWCOLINFO_PTR newcol, NEWTERM_PTR new);
 	};	
 
-	F32PTR   scalingFactor;
+	// F32PTR   scalingFactor; //removed
 	F64PTR   priorMat;
 	F64PTR   priorVec;
+	F64PTR   priorNmodelsPerNseg;
+	I32      priorKmax;         // only count the unique combination of orders: for season, priorKmax =true Kmax/2
+ 
 
 	struct {
 		TKNOT  minSepDist, leftMargin, rightMargin;
 		I16    minKnotNum;
 		I16    maxKnotNum;
 		TORDER minOrder, maxOrder;
+		F32    modelComplexity;
 	} prior;
 
 	PROP_PROB_STRUCT	propprob;
@@ -411,11 +423,17 @@ typedef struct {
 	*/
 } BEAST2_MODELDATA, *_restrict  BEAST2_MODELDATA_PTR;
 
+typedef struct PRECSTATE {
+	F32PTR  precVec;
+	F32PTR  logPrecVec;
+	I16     nPrecGrp;
+} PRECSTATE ,* _restrict  PRECSTATE_PTR;;
+
 typedef struct BEAST2_MODEL {
 	I32 (*PickBasisID)(PROP_DATA_PTR );
 
-	F32PTR  beta;	
-	F32PTR	sig2; // for MRBEAST
+	F32PTR   beta;	
+	F32PTR	 sig2; // for MRBEAST
 	
 	/////////////////////////////	
 	I08PTR08 extremePosVec;
@@ -423,17 +441,15 @@ typedef struct BEAST2_MODEL {
 	F32PTR   avgDeviation;  // Changed to a pointer for a consistent API with MRBEAST
 	I32      extremPosNum;
 	
-	I16     nPrec;
-	F32PTR  precVec;
-	F32PTR  logPrecVec;
- 
-	/////////////////
+	PRECSTATE precState;
+ 	
 	/*
 	F32PTR XtX,  XtY, cholXtX,  beta_mean,  beta;
 	F32PTR precXtXDiag;
 	I08PTR nTermsPerPrecGrp;
+	F32PTR XtX_prop, XtY_prop, cholXtX_prop, beta_mean_prop, beta_prop;
 	*/
-	//F32PTR XtX_prop, XtY_prop, cholXtX_prop, beta_mean_prop, beta_prop;
+	
 	BEAST2_MODELDATA curr, prop;
 
 	I32          NUMBASIS;

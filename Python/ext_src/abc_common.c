@@ -1,13 +1,15 @@
-#include <math.h>
-#include <string.h>
-#include "abc_000_warning.h"
+#include "abc_000_macro.h"
+#include "abc_001_config.h"
 
 #include "abc_common.h"
-#include "abc_001_config.h"
 #include "abc_sort.h"
-#include "abc_vec.h" //f32_sumfilter
-#include "abc_blas_lapack_lib.h"
+#include "abc_vec.h"             //f32_sumfilter
+#include "abc_blas_lapack_lib.h"  
 #include "abc_rand_pcg_local.h"
+
+#include <math.h>
+#include <string.h>
+
 
 
 /*Discarded code*/
@@ -211,7 +213,18 @@ F32 DeterminePeriod(F32PTR Y, I32 N)
 	U08PTR isPeak = isNA;
 	I32PTR INDEX  = (I32PTR)(TMP + M); // INDEX is an array of lenght M
 
-	memset(isNA, 0, (size_t) M);
+	// memset(isNA, 0, (size_t) M);
+	// Give the warning:  ‘__builtin___memset_chk’ specified size between 18446744072635809792 and 
+	// 18446744073709551615 exceeds maximum object size 9223372036854775807 [-Wstringop-overflow=]
+	// Reason:  M is a signed int32. When M-01, it is first sign-extend and converted to 2^64.
+	// Borroed from go's specficatiin:
+	// When converting between integer types, if the value is a signed integer, it is sign extended to 
+	// implicit infinite precision; otherwise it is zero extended. It is then truncated to fit in the 
+	// result type's size. For example, if v := uint16(0x10F0), then uint32(int8(v)) == 0xFFFFFFF0. 
+	// The conversion always yields a valid value; there is no indication of overflow.
+
+	memset(isNA, 0, (size_t)(uint32_t)M);
+
 	I32  numPeaks = 0;
 	for ( I32 i = 2; i <= (M - 1); i++)	{
 		if (ans[(i)-1] > ans[(i - 1) - 1] && ans[(i)-1] > ans[(i + 1) - 1]) {
@@ -363,7 +376,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 	if (numCpt == 0) { return numCpt; }
 	 
 
-	QuickSortD(cpfromProb_Val, cpfromProb_Pos, 0, numCpt - 1);
+	f32d_introSort_index(cpfromProb_Val,  0, numCpt - 1, cpfromProb_Pos);
 
 	numCpt = min(numCpt, maxCptNumber);
 	r_cblas_scopy(numCpt, (F32PTR)cpfromProb_Pos, 1, (F32PTR) cpt, 1);
@@ -378,7 +391,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 	}
 	INDEX		= INDEX - numCpt;
 	CPT_float	= CPT_float - numCpt;	
-	QuickSortA(CPT_float, INDEX, 0, numCpt - 1);
+	f32a_introSort_index(CPT_float, 0, numCpt - 1, INDEX);
 
 	//Compute confidence intervals for indentified changepoints
 	for (I32 i = 0; i < numCpt; i++)
@@ -449,6 +462,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 
 	return numCpt;
 }
+
  I32 FindChangepointv1(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR cptCI, I32 N, I32 minSepDist, I32 maxCptNumber)
 {
 	if (maxCptNumber == 0)	{ return maxCptNumber; }
@@ -546,7 +560,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 
 	if (numCpt == 0) { return numCpt; }
 	
-	QuickSortD(cpfromSumP_Val, cpfromProb_Pos, 0, numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val, 0, numCpt - 1, cpfromProb_Pos);
 	numCpt  = min(numCpt, maxCptNumber);
 
 	f32_copy( (F32PTR)cpfromProb_Pos, (F32PTR)cpt, numCpt);	
@@ -560,7 +574,8 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 		cpt_f32[i]             = (F32)cpt[i];
 		INDEX_timeToProbAmp[i] = i;
 	}
-	QuickSortA(cpt_f32, INDEX_timeToProbAmp, 0, numCpt - 1);
+
+	f32a_introSort_index(cpt_f32,  0, numCpt - 1, INDEX_timeToProbAmp);
 	// Now, cpt_f32 contains the cpts ranked in the order of time
 	// INDEX saves the indices mapping to the list ranked in magnitdue
 
@@ -569,7 +584,6 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 	f32_fill_val(-9999.f, cptCI, 2*numCpt);
 		
 	F32PTR tmpSeg  = (F32*) mem + 3 * N;
-	I32PTR nullSeg = (I32*) mem + 4 * N;  
 	for (I32 i = 0; i < numCpt; i++)
 	{
 		I32 startIdx, endIdx,len;
@@ -580,7 +594,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 		len = endIdx-startIdx + 1;		
 
 		f32_copy(prob+startIdx, tmpSeg, len);		
-		QuickSortA(tmpSeg, nullSeg, 0, len - 1); // nullSeg is just provided as an input but the result is not used
+		f32a_introSort(tmpSeg, 0, len - 1);  // nullSeg is just provided as an input but the result is not used
 		cptCI[i] = confidenceInterval(tmpSeg, len, 'L');
 
     	//-------------------------------------------------------------------
@@ -592,7 +606,7 @@ static I32 find_changepoint_v0(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cp
 	    len      = endIdx - startIdx + 1;
 
 		f32_copy(prob + startIdx, tmpSeg, len);		
-		QuickSortD(tmpSeg, nullSeg, 0, len - 1); // nullSeg is just provided as an input but the result is not used
+		f32d_introSort(tmpSeg, 0, len - 1); // nullSeg is just provided as an input but the result is not used
 		cptCI[numCpt + i] = confidenceInterval(tmpSeg, len, 'R');
  	}
 	
@@ -670,7 +684,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob, F32PTR mem, F32 threshold, I
  
 	if (numCpt == 0) { return numCpt; }
 
-	QuickSortD(cpfromSumP_Val, cpfromProb_Pos, 0, numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val, 0, numCpt - 1, cpfromProb_Pos);
 	numCpt = min(numCpt, maxCptNumber);
 
 	f32_copy((F32PTR)cpfromProb_Pos, (F32PTR)cpt, numCpt);
@@ -684,7 +698,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob, F32PTR mem, F32 threshold, I
 		cpt_f32[i]             = (F32)cpt[i];
 		INDEX_timeToProbAmp[i] = i;
 	}
-	QuickSortA(cpt_f32, INDEX_timeToProbAmp, 0, numCpt - 1);
+	f32a_introSort_index(cpt_f32, 0, numCpt - 1, INDEX_timeToProbAmp);
 	// Now, cpt_f32 contains the cpts ranked in the order of time
 	// INDEX saves the indices mapping to the list ranked in magnitdue
 
@@ -871,7 +885,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 			}
 			else {
 				// there are at least 2 cpts in the top list
-				QuickSortD(topTenPeaksPrb, topTenPeaksLoc, 0, numTopTenCpt - 1);
+				f32d_introSort_index(topTenPeaksPrb, 0, numTopTenCpt - 1, topTenPeaksLoc);
 				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
 					// if the best peak is far beter than the the seond best peak
 					cpfromProb_Pos[i] = topTenPeaksLoc[0];
@@ -902,7 +916,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 
 	if (numCpt == 0) { return numCpt; }
 
-	QuickSortD(cpfromSumP_Val, cpfromProb_Pos, 0, numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val, 0, numCpt - 1, cpfromProb_Pos);
 	numCpt = min(numCpt, maxCptNumber);
 
 	f32_copy((F32PTR)cpfromProb_Pos, (F32PTR)cpt, numCpt);
@@ -916,7 +930,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 		cpt_f32[i]             = (F32)cpt[i];
 		INDEX_timeToProbAmp[i] = i;
 	}
-	QuickSortA(cpt_f32, INDEX_timeToProbAmp, 0, numCpt - 1);
+	f32a_introSort_index(cpt_f32, 0, numCpt - 1, INDEX_timeToProbAmp);
 	// Now, cpt_f32 contains the cpts ranked in the order of time
 	// INDEX saves the indices mapping to the list ranked in magnitdue
 
@@ -925,7 +939,6 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 	f32_fill_val(-9999.f, cptCI, 2 * numCpt);
 
 	F32PTR tmpSeg = (F32*)mem + 3 * N;
-	I32PTR nullSeg = (I32*)mem + 4 * N;
 	for (I32 i = 0; i < numCpt; i++) 	{
 
 		I32 startIdx, endIdx, len;
@@ -936,8 +949,8 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 		startIdx = (startIdx + endIdx) / 2;
 		len = endIdx - startIdx + 1;
 
-		f32_copy(prob + startIdx, tmpSeg, len);
-		QuickSortA(tmpSeg, nullSeg, 0, len - 1); // nullSeg is just provided as an input but the result is not used
+		f32_copy(prob + startIdx, tmpSeg, len);		
+		f32a_introSort(tmpSeg, 0, len - 1);             // nullSeg is just provided as an input but the result is not used
 		cptCI[i] = confidenceInterval(tmpSeg, len, 'L');		
 		//-------------------------------------------------------------------
 
@@ -948,7 +961,7 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 		len = endIdx - startIdx + 1;
 
 		f32_copy(prob + startIdx, tmpSeg, len);
-		QuickSortD(tmpSeg, nullSeg, 0, len - 1); // nullSeg is just provided as an input but the result is not used
+		f32d_introSort(tmpSeg, 0, len - 1);       // nullSeg is just provided as an input but the result is not used
 		cptCI[numCpt + i] = confidenceInterval(tmpSeg, len, 'R');
 		//-------------------------------------------------------------------
 	}
@@ -979,6 +992,272 @@ I32 FindChangepoint(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR c
 	return numCpt;
 }
 
+I32 FindChangepoint_LeftRightMargins(F32PTR prob, F32PTR mem, F32 threshold, I32PTR cpt, F32PTR cptCI, I32 N, I32 minSepDist, I32 maxCptNumber, I32 leftMargin, I32 rightMargin)
+{
+	if (maxCptNumber == 0) { return maxCptNumber; }
+
+	I32 minSegLen = minSepDist + 1;
+
+	// minSepDist may be zero.
+	// The seg pattern is  "c"      when minseg=1 (minSeptDist=0)
+	// The seg pattern is  "xc"     when minseg=2
+	// The seg pattern is  "xcx"    when minseg=3
+	// The seg pattern is  "xxcx"   when minseg=4
+	// The seg pattern is  "xxcxx"  when minseg=5
+		
+	// this is only for the outlier component
+	if (minSepDist  == 0) { return FindChangepoint_minseg_is_1(prob, mem, threshold, cpt, cptCI, N, minSepDist, maxCptNumber);}
+
+	F32PTR sump           = mem;
+	I32PTR cpfromSumP_Pos = (I32PTR)mem + N;
+	F32PTR cpfromSumP_Val = (F32PTR)mem + N * 2;
+	I32PTR cpfromProb_Pos = (I32PTR)mem + N * 3;
+	F32PTR cpfromProb_Val = (F32PTR)mem + N * 4;
+
+	/* // A fast way to apply a w-sum filter to the prob arrary
+	for (I32 i = -w1; i <= w0; i++)	{
+		I32 len           = i > 0 ? i : -i;
+		I32 startIdx_mem  = i <= 0 ? 0 : i,  startIdx_prob = i <= 0 ? -i : 0;
+		r_ippsAdd_32f_I(prob + startIdx_prob, mem + startIdx_mem, N - len);
+	} // Now mem holds the sum-filterd probability profile: the value at a point is the sume of the prob values within a window [i-w0, i+w1]
+	*/
+		 
+	// Now mem holds the sum-filterd probability profile: the value at a point  is the sume 
+	// of the prob values within a window [i-w0,i+w1].In this funciton, the two parts of 
+	// the window are computed differently from the above commented routine [i-w0, i+w1]
+	I32 w0        = minSegLen / 2;         // leftside half
+	I32 w1        = (minSegLen - w0) - 1;  // rightside half	  and we have  w0 >= w1		
+	f32_sumfilter(prob, sump, N, minSegLen);  //  hold the sum-filtered prob
+	sump[0] = 0; // force the first elemtn to be zero bcz the first pos can never be a changepoint
+
+   #define IsLocalPeak(j, p)      (  ( p[j]>p[j-1] && p[j]>=p[j+1] )  || ( p[j]>=p[j-1]&&p[j] > p[j+1]   ) )
+   #define IsPeak_4Neigbor(j, p)  (  p[j]>=p[j-1] && p[j]>=p[j+1] && p[j]>=p[j-2] && p[j] >= p[j+2]   )
+   
+	I32  LOWERIDX = 0     + leftMargin + 1; //leftMargin>=0; lowerindx >=1
+	I32  UPPERIDX = (N-1) - rightMargin;    //rightMargin>=0; upperix <= N-1
+	I32  numCpt   = 0;
+	for (I32 i = LOWERIDX; i <= UPPERIDX; i++) {
+
+		if (sump[i] < threshold) continue;
+
+		// i alsways has a lefthand neighobor, but may not have a righthand neighor
+		Bool hasRightNeighor = (i < N-1);
+		Bool hasTwoNeighors  = i > 1 && (i < N- 2);
+
+		// Imporant: stricltly larger than the left, larger or equal to the right: pick up the rising side of the plateau peak
+		Bool isLargeThanNearestNeighor     = IsLocalPeak(i, sump);
+		Bool isLargeThanNearestTwoNeighors = IsPeak_4Neigbor(i, sump);
+		Bool isLargeThanLeftNeighor        = (sump[i] > sump[i - 1]);  // used only when  rightMargin=0
+
+		// if minSegLen = 1,2, 3, or 4, we only check the two neihgoring points, not the four neighors
+		if ( ( hasRightNeighor  && isLargeThanNearestNeighor==0 )                      ||
+			 ( minSegLen > 4    && hasTwoNeighors && isLargeThanNearestTwoNeighors==0) ||
+			 ( !hasRightNeighor && isLargeThanLeftNeighor==0) )
+			continue;
+
+		/*********************************************************************/
+		// If the current point is a local maximum in the filtered prob curve
+		/*********************************************************************/
+		I32 dist_to_prevCpt = i - cpfromSumP_Pos[numCpt - 1]; //invalid if numCpt==0
+		if ( (numCpt == 0) || dist_to_prevCpt > minSepDist || dist_to_prevCpt < -minSepDist) {
+			//If the current identified peak is NOT within a distance less (2*w+1)
+			cpfromSumP_Pos[numCpt] = i;
+			cpfromSumP_Val[numCpt] = sump[i];
+			numCpt++;			
+		} else {
+			// if it is within a distance less than minSepDist PLUS the current peak has a larer magnitude 
+			// than the previously identified cp then replace the old changepoint with the new peak.			
+			if (sump[i] > cpfromSumP_Val[numCpt - 1]) { // Possible buggy if using sump[i] ">=" cpfromSumP_Val[numCpt - 1]
+				cpfromSumP_Pos[numCpt - 1] = i;
+				cpfromSumP_Val[numCpt - 1] = sump[i];				
+			}
+		}
+
+	}
+
+
+	/************************************************************************************************/
+	// The cpts given above are peaks in the summed prob, and now for each, find the best peak in the original prob.
+	/************************************************************************************************/
+	if (minSepDist <= 4) {
+		for (I32 i = 0; i < numCpt; i++) {
+			I32     cpt      = cpfromSumP_Pos[i];
+			I32     LOWERIDX = max(cpt - w0, 1  );  // the pos 0 is neverr a changepont
+			I32		UPPERIDX = min(cpt + w1, N-1);  // N-1 may be a changepoint when rightMargin=0
+
+			// Pre-assign the best cpt to the sumP-based cpt: this is needed when minSepdist=0 (i.e., outlier componet)
+			// such that the following loop only runs once and no local min is found to update maxIdx and maxVAl
+			I32		maxIdx = cpt;
+			F32		maxVal = prob[cpt];
+			for (I32 j = LOWERIDX; j <= UPPERIDX; j++) {		 
+				if (prob[j] > maxVal) {
+						maxIdx = j;
+						maxVal = prob[j];
+				}
+			}
+			cpfromProb_Pos[i] = maxIdx;
+			cpfromProb_Val[i] = maxVal;
+		}
+	}
+	else {
+		// if minSeptDist >4, we will use a more complex rule to pinpoint the best peak bcz  the simple alg 
+		// for the minsepdist,4 case may not find the location with the highest amassed probability
+		for (I32 i = 0; i < numCpt; i++) {
+			I32     cpt      = cpfromSumP_Pos[i];
+			I32     LOWERIDX = max(cpt - w0, 1);     // the pos 0 is neverr a changepont
+			I32		UPPERIDX = min(cpt + w1, N - 1); // N-1 may be a changepoint when rightMargin=0
+
+			// (1) First, find all the local peaks up to a number of 25
+			I32 topTenPeaksLoc[15];
+			F32 topTenPeaksPrb[15];
+			I32 numTopTenCpt  = 0;
+
+			for (I32 j = LOWERIDX; j <= UPPERIDX; j++) {
+				F32 curProb           = prob[j];
+				Bool hasRightNeighbor = (j < N - 1);
+				if (  (hasRightNeighbor&&IsLocalPeak(j, prob) ) ||  ( !hasRightNeighbor && curProb>prob[j-1])    )
+				{
+					if (numTopTenCpt < 15) {
+						topTenPeaksLoc[numTopTenCpt] = j;
+						topTenPeaksPrb[numTopTenCpt] = curProb;
+						numTopTenCpt++;
+					} else {
+						// If the buf is full, find the worst peak and replace if the curprob is higher.
+						F32 minProbInList    = 100.f;
+						int minProbListIndex = 0;
+						for (int k = 0; k < 15; k++) {
+							if (minProbInList > topTenPeaksPrb[k]) {
+								minProbListIndex = k;
+								minProbInList = topTenPeaksPrb[k];
+							}
+						}
+
+						if (curProb > minProbInList) {
+							topTenPeaksLoc[minProbListIndex] = j;
+							topTenPeaksPrb[minProbListIndex] = curProb;
+						}
+					}
+				} //(curProb > prob[j - 1] && curProb >= prob[j + 1]) || (curProb >= prob[j - 1] && curProb > prob[j + 1]))
+			} //for (I32 j = LOWERIDX; j <= UPPERIDX; j++) 
+
+			// (2) Second, pick up the best peak
+			if (numTopTenCpt == 0) {
+				// If no local peask were found (this is unlikely the case),just use the best cpt to the sumP-based cpt: 
+				cpfromProb_Pos[i] = cpt;
+				cpfromProb_Val[i] = prob[cpt];
+			} else if (numTopTenCpt == 1) {
+				cpfromProb_Pos[i] = topTenPeaksLoc[0];
+				cpfromProb_Val[i] = topTenPeaksPrb[0];
+			} else {
+				// there are at least 2 cpts in the top list
+				f32d_introSort_index(topTenPeaksPrb, 0, numTopTenCpt - 1, topTenPeaksLoc);
+				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
+					// if the best peak is far beter than the the seond best peak
+					cpfromProb_Pos[i] = topTenPeaksLoc[0];
+					cpfromProb_Val[i] = topTenPeaksPrb[0];
+				} else {
+					// determine the best peak based on the summed prob over the ttwo neighboring points
+					int bestK              = 0;
+					F32 bestProb_3Neighors = -9999;
+					for (int k = 0; k < numTopTenCpt; k++) {
+						int cpLoc             = topTenPeaksLoc[k];
+						F32 cpProb_3Neighors = cpLoc==N-1? (prob[cpLoc] + prob[cpLoc - 1]): (prob[cpLoc] + prob[cpLoc + 1] + prob[cpLoc - 1]);
+						if (cpProb_3Neighors > bestProb_3Neighors) {
+							bestProb_3Neighors = cpProb_3Neighors;
+							bestK = k;
+						}
+					}
+					cpfromProb_Pos[i] = topTenPeaksLoc[bestK];
+					cpfromProb_Val[i] = topTenPeaksPrb[bestK];
+				}
+			} //if (numTopTenCpt == 0) 
+
+		}//for (I32 i = 0; i < numCpt; i++)
+	}
+
+	/*************************************************************************************************/
+	//cpfromProb_Pos may contian changepoinss that are within a distance of minSepDist from each other
+	/*************************************************************************************************/
+
+
+	if (numCpt == 0) { return numCpt; }
+
+	f32d_introSort_index(cpfromSumP_Val, 0, numCpt - 1, cpfromProb_Pos);
+	numCpt = min(numCpt, maxCptNumber);
+
+	f32_copy((F32PTR)cpfromProb_Pos, (F32PTR)cpt, numCpt);
+	// At this point, cpfromSumP_val has the prob values sorted from largest to least
+	// cpfromProb_Pos and cpt (integers) are the same, containing the cpt locations
+
+	/*************************************************************************************************/
+	// Now cpfromSumP_Val(mem+2*N) should not be touched and will be used later
+	/*************************************************************************************************/
+	I32PTR INDEX_timeToProbAmp = (I32*)mem;
+	F32PTR cpt_f32             = (F32*)mem + N;
+	for (I32 i = 0; i < numCpt; i++) {
+		cpt_f32[i]             = (F32)cpt[i];
+		INDEX_timeToProbAmp[i] = i;
+	}
+	f32a_introSort_index(cpt_f32, 0, numCpt - 1, INDEX_timeToProbAmp);
+	// Now, cpt_f32 contains the cpts ranked in the order of time
+	// INDEX saves the indices mapping to the list ranked in magnitdue
+
+	//Compute confidence intervals for indentified changepoints
+	// Fill the ctpCI with negative values
+	f32_fill_val(-9999.f, cptCI, 2 * numCpt);
+
+	F32PTR tmpSeg = (F32*)mem + 3 * N;
+	for (I32 i = 0; i < numCpt; i++) {
+
+		I32 startIdx, endIdx, len;
+
+		// Get the CI lenght on the lefthand side
+		endIdx = (I32)cpt_f32[i];
+		startIdx = i == 0 ? 0 : (I32)cpt_f32[i - 1];
+		startIdx = (startIdx + endIdx) / 2;
+		len = endIdx - startIdx + 1;
+
+		f32_copy(prob + startIdx, tmpSeg, len);
+		f32a_introSort(tmpSeg, 0, len - 1);     // nullSeg is just provided as an input but the result is not used
+		cptCI[i] = confidenceInterval(tmpSeg, len, 'L');
+		//-------------------------------------------------------------------
+
+		// Get the CI lenght on the righthand side
+		startIdx = (I32)cpt_f32[i];
+		endIdx   = i == (numCpt - 1) ? (N - 1) : (I32)cpt_f32[i + 1];
+		endIdx   = (startIdx + endIdx) / 2;
+		len      = endIdx - startIdx + 1;
+
+		f32_copy(prob + startIdx, tmpSeg, len);
+		f32d_introSort(tmpSeg, 0, len - 1);  // nullSeg is just provided as an input but the result is not used
+		cptCI[numCpt + i] = confidenceInterval(tmpSeg, len, 'R');
+		//-------------------------------------------------------------------
+	}
+
+	// Now, cpt contains knots sorted in magnitude
+	// cptCI contains CI for knots sorted in time
+
+	F32PTR cptCI_backup = mem + 3 * N;
+	f32_copy(cptCI, cptCI_backup, 2 * numCpt);
+
+	F32PTR cpt_summedProb = mem;
+	/*  	mem   :  Index/cpt_summedProb
+	        mem+N :  CPT_float
+	        mem+2*N: cpfromSum_Val
+	        mem+3*N: cpt_CI_backup 	*/
+
+	for (I32 i = 0; i < numCpt; i++) {
+		// Dual use of mem: one for INDEX and another for cpt_summrProb
+		// The index is feteched first and the same elment is overwritten with the cpt_summedProb
+		I32 idx             = INDEX_timeToProbAmp[i];
+		cptCI[idx]          = cpt_f32[i] - cptCI_backup[i];
+		cptCI[numCpt + idx] = cpt_f32[i] + cptCI_backup[numCpt + i];
+
+		cpt_summedProb[i] = min(1.0,  cpfromSumP_Val[i]);
+	}
+
+	return numCpt;
+}
 
 /*
 int NormalizeF32ArrayWithNaNOmitted(F32PTR Y, U32PTR rowsMissing, I32 N,F32PTR mean, F32PTR sd, F32PTR yty) {
@@ -1029,16 +1308,16 @@ int NormalizeF32ArrayWithNaNOmitted(F32PTR Y, U32PTR rowsMissing, I32 N,F32PTR m
 }
 */
 
-#if defined(WIN64_OS) || defined(WIN32_OS) 
+#if defined(OS_WIN64) || defined(OS_WIN32) 
 	#include "float.h"
-	#if defined(MSVC_COMPILER)
+	#if defined(COMPILER_MSVC)
 	void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_UNDERFLOW | EM_ZERODIVIDE | EM_DENORMAL | EM_INVALID, MCW_EM);
 		//errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_ZERODIVIDE | EM_DENORMAL | EM_INVALID, MCW_EM);
 		//errno_t err = _controlfp_s(&_oldState, EM_OVERFLOW | EM_ZERODIVIDE | EM_INVALID, MCW_EM); 
 	}
-	#elif defined(GCC_COMPILER)
+	#elif defined(COMPILER_GCC)
 void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err = _controlfp_s(&_oldState, _EM_OVERFLOW | _EM_UNDERFLOW | _EM_ZERODIVIDE | _EM_DENORMAL | _EM_INVALID, _MCW_EM);
@@ -1056,7 +1335,7 @@ void EnableFloatExcetion(void) {
 
 	//stackoverflow.com/questions/37819235/how-do-you-enable-floating-point-exceptions-for-clang-in-os-x
 	//https://gitlab.ikp.kit.edu/AirShowerPhysics/corsika/-/issues/415
-	#if defined(LINUX_OS) 
+	#if defined(OS_LINUX) 
 	   // Not availalbe in C23 for clang16
 	   //feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW); 
 	#endif
@@ -1106,70 +1385,57 @@ static INLINE void zeroOut_Xmars_zero(F32PTR Xt_mars, F32PTR Xt_zeroBackup, U32P
 
 #include "abc_cpu.h"
 #include "abc_ide_util.h"
-void SetupRoutines_AutoByCPU(Bool quite) {
 
-	static int IS_CPU_INSTRUCTON_CHECKED = 0;
-	if (IS_CPU_INSTRUCTON_CHECKED) {
-		return;
+int GetNativeCPUType(void) {
+
+	static int GLOBAL_CPU_NATIVE = 0;
+	if (GLOBAL_CPU_NATIVE) {
+		return GLOBAL_CPU_NATIVE;
 	}
-	if (!quite)	r_printf("\nOn the first run, check the CPU instruction set ... \n");
+	//if (!quite)	r_printf("\nOn the first run, check the CPU instruction set ... \n");
 	 
-	 struct cpu_x86 cpuinfo;
-	 detect_host(&cpuinfo);
-	 if (!quite) print_cpuinfo(&cpuinfo);
-	 i386_cpuid_caches(quite);
-
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+	 struct cpu_x86   cpuinfo;
+	 struct cpu_cache caches[8];
+	 cpuinfo_detect(&cpuinfo,NULL);
+ 
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 	if (cpuinfo.HW_AVX512_F /*Foundation*/ && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
-		 SetupVectorFunction_AVX512();
-		 SetupPCG_AVX512();
-		 if (!quite)	  r_printf("CPU checking result: The AVX512-enabled library is used ... \n\n");
-	}
-	else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
-		 SetupVectorFunction_AVX2();
-		 SetupPCG_AVX2();
-		 if (!quite)	 r_printf("CPU checking result: The AVX2-enabled library is used ...\n\n");
-	}
-	else {
-		 SetupVectorFunction_Generic();
-		 SetupPCG_GENERIC();
-		 if (!quite)	 r_printf("CPU checking result: No AVX2/AVX512 is supported and the default library is used ...\n\n");
+		GLOBAL_CPU_NATIVE = 3;
+		// if (!quite)	  r_printf("CPU checking result: The AVX512-enabled library is used ... \n\n");
+	}	else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
+		GLOBAL_CPU_NATIVE = 2;
+		// if (!quite)	 r_printf("CPU checking result: The AVX2-enabled library is used ...\n\n");
+	}	else {
+		GLOBAL_CPU_NATIVE = 1;
+		 //if (!quite)	 r_printf("CPU checking result: No AVX2/AVX512 is supported and the default library is used ...\n\n");
 	}
 #else
-	 SetupVectorFunction_Generic();
-	 SetupPCG_GENERIC();
-	 if (!quite) r_printf("CPU checking result: No AVX2 is supported and the default library is used ...");
+	 GLOBAL_CPU_NATIVE = 1;
+	 //if (!quite) r_printf("CPU checking result: No AVX2 is supported and the default library is used ...");
 #endif
-
-	 IS_CPU_INSTRUCTON_CHECKED = 1;
-
+ 
+	 return GLOBAL_CPU_NATIVE;
 }
 
-void SetupRoutines_UserChoice(int avxOption) {
+void SetupRoutines_ByCPU(int cputype) {
 
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
-
-	if (avxOption == 0) {
-		SetupVectorFunction_Generic();
-		SetupPCG_GENERIC();
-	}
-	else if (avxOption == 2) {
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
+	if (cputype == 2) {
 		SetupVectorFunction_AVX2();
 		SetupPCG_AVX2();
 	}
-	else if (avxOption == 512) {
+	else if (cputype == 3) {
 		SetupVectorFunction_AVX512();
 		SetupPCG_AVX512();
-	}
-	else {
-		SetupRoutines_AutoByCPU(1L); // Do not print out
+	} else {
+		SetupVectorFunction_Generic();
+		SetupPCG_GENERIC();	 
 	} 
 #else
 	//for SOaris system or Win32
 	SetupVectorFunction_Generic();
 	SetupPCG_GENERIC();
 #endif
-
 }
 
 

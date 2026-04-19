@@ -1,23 +1,27 @@
 #pragma once
 
-#include <inttypes.h>  //#include <stdint.h>
 
-#include "abc_common.h"
-#include "abc_ide_util.h"
-#include "abc_mem.h"
 #include "abc_blas_lapack_lib.h"
 #include "beastv2_header.h"
+
+#include <inttypes.h>  //#include <stdint.h>
 
 extern F32  GetPercentileNcp(F32PTR prob, I32 N, F32 pctile);
 
 extern void SetupPointersForCoreResults(CORESULT* coreResults, BEAST2_BASIS_PTR b, I32 NumBasis, BEAST2_RESULT* resultChain);
 
 extern void CvtKnotsToBinVec(BEAST2_BASIS_PTR b, I32 NUMBASIS, I32 N, BEAST2_YINFO_PTR yInfo);
-extern void GenarateRandomBasis(BEAST2_BASIS_PTR basis, I32 NUMBASIS, I32 N, BEAST2_RNDSTREAM* PRAND);
+
+extern void GenarateRandomBasis(BEAST2_BASIS_PTR basis, I32 NUMBASIS, I32 N, BEAST2_RNDSTREAM* PRAND, BEAST2_YINFO_PTR yInfo);
  
+
+typedef struct PREC_FUNCS  PREC_FUNCS;
+
+int BEAST2_Basis_To_XmarsXtX_XtY(BEAST2_BASIS_PTR b, I32 NUMBASIS, F32PTR Xt_mars, I32 N, F32PTR XtX, F32PTR XtY, BEAST2_YINFO_PTR  yInfo);
+
 void BEAST2_EvaluateModel(
     BEAST2_MODELDATA* curmodel, BEAST2_BASIS_PTR b, F32PTR Xt_mars, I32 N, I32 NUMBASIS,
-    BEAST2_YINFO_PTR  pyInfo, BEAST2_HyperPar* hyperPar, F32PTR precVec, VOID_PTR stream);
+    BEAST2_YINFO_PTR  pyInfo, BEAST2_HyperPar* hyperPar, PRECSTATE_PTR precState, PREC_FUNCS * precFunc);
 
 void MatxVec(BEAST2_BASESEG* SEG, I32 numSeg, F32PTR X, F32PTR Y, F32PTR XtY, I32 N);
 I32  GetInfoBandList(BEAST2_BASESEG* info,      BEAST2_MODEL_PTR model, I32 Klastcol);
@@ -26,6 +30,12 @@ I32  GetInfoBandList_post(BEAST2_BASESEG* info, BEAST2_MODEL_PTR model, I32 Ksta
 void MatxMat(BEAST2_BASESEG* infoX, I32 numBandsX, F32PTR X, BEAST2_BASESEG* infoY,
              I32 numBandsY, F32PTR Y, F32PTR XtY, I32 N, I32 Knew);
 void XtX_ByGroup(BEAST2_BASESEG* SEG, I32 numSeg, F32PTR X, F32PTR XtX, I32 N, I32 Knew);
+
+void Update_XtX_from_Xnewterm_ByGroup(F32PTR X, F32PTR Xnewterm, F32PTR XtX, F32PTR XtXnew, NEWTERM* NEW, BEAST2_MODEL* MODEL);
+void Update_XtY_from_Xnewterm_ByGroup(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYnew, NEWTERM* NEW, int q);
+
+void Update_XtX_from_Xnewterm_NoGroup(F32PTR X, F32PTR Xnewterm, F32PTR XtX, F32PTR XtXnew, NEWTERM* NEW, BEAST2_MODEL* MODEL);
+void Update_XtY_from_Xnewterm_NoGroup(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYnew, NEWTERM* new, I32 q);
 
 static INLINE int GetTotalColNumOfXmars(BEAST2_BASIS_PTR b, I32 NUM_BASIS) {
     I32 K;
@@ -58,7 +68,7 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b, I32 NUMBASIS, int startB
         }          
     }
 	/*
-	* commented out bcz currently, MAX_NUMBAIS is set to 3 (e.g., S+T+O)
+	// commented out bcz currently, MAX_NUMBAIS is set to 3 (e.g., S+T+O)
 	else if (NUMBASIS > 3)  {           
         for (rI32 i = startBasisIdx0 +1; i < MAX_NUM_BASIS; i++) {
             b[i].Kbase  = b[i-1].Kbase + b[i-1].K;
@@ -107,6 +117,7 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b, I32 NUMBASIS, int startB
 		XtY, Knew); //0.f, MEMBUF1, k1_new - 1);	
  
 }
+
 static void XtX_ByGroup_FULL(BEAST2_BASESEG* SEG, I32 numSeg,F32PTR X,F32PTR XtX,I32 N, I32 Knew) {
 	/*
 	r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
@@ -129,6 +140,4 @@ static void XtX_ByGroup_FULL(BEAST2_BASESEG* SEG, I32 numSeg,F32PTR X,F32PTR XtX
 }
 
 
-void MR_EvaluateModel(
-	BEAST2_MODELDATA* curmodel, BEAST2_BASIS_PTR b, F32PTR Xt_mars, I32 N, I32 NUMBASIS,
-	BEAST2_YINFO_PTR pyInfo, BEAST2_HyperPar* hyperPar, F32PTR precVec, VOID_PTR stream);
+ 

@@ -1,28 +1,29 @@
 #pragma once
 
-//#include <stdint.h>
-#include <inttypes.h> /* contains stdint.h*/
-#include <float.h>
 #include "abc_000_macro.h"
+#include <inttypes.h>      // contains stdint.h
+#include <float.h>         
 
-//#define FLOAT_TYPE 8  //FLOAT is double
-#define FLOAT_TYPE 4    //FLOAT is F32
+ #define FLOAT_TYPE 8       //Float is double
+//#define FLOAT_TYPE 4      //Float is F32
 
-#ifdef FLOAT
-#undef FLOAT
+#ifdef Float
+	#undef Float
 #endif
 
 #if FLOAT_TYPE==4
-	//#define FLOAT F32
-	typedef float FLOAT;
+	//#define Float F32
+	typedef float Float;
 	#define FLOAT_MAX  FLT_MAX
 	#define FLOAT_MIN (-FLT_MAX)
+#define FLOAT_SMALLEST  (FLT_MIN)
 	#define FLOAT_EPSILON FLT_EPSILON
 #elif FLOAT_TYPE==8
-	//#define FLOAT double
-	typedef double FLOAT;
+	//#define Float double
+	typedef double Float;
 	#define FLOAT_MAX  DBL_MAX
 	#define FLOAT_MIN (-DBL_MAX)
+    #define FLOAT_SMALLEST  (DBL_MIN)
 	#define FLOAT_EPSILON DBL_EPSILON
 #endif
 
@@ -33,13 +34,14 @@
 #define IsNaN(x)  (  (x) != (x))
 
 
-
 #if defined(IsInf)
     #undef IsInf	
 #endif
 #define IsInf(f)  (  ((float)f) >FLOAT_MAX || ((float)f)< FLOAT_MIN)
 
-/*------------------------------------------------------------*/
+
+
+
 
 #ifdef __cplusplus
 	extern "C" {
@@ -56,7 +58,7 @@
 	typedef int8_t    I08;
 	typedef uint8_t   U08;
 
-	#define rFLOAT		register FLOAT
+	#define rFLOAT		register Float
 	#define rF32		register float
 	#define rF64		register double
 	#define rI64		register int64_t
@@ -68,7 +70,7 @@
 	#define rI08		register int8_t
 	#define rU08		register uint8_t
 
-	typedef FLOAT* _restrict FLOATPTR;
+	typedef Float* _restrict FLOATPTR;
 	typedef float* _restrict F32PTR;
 	typedef double* _restrict F64PTR;
 	typedef int64_t* _restrict I64PTR;
@@ -120,7 +122,7 @@ enum { _False_ = 0, _True_ = 1 };
 
 
 //static INLINE F32 getNaN(void) { F32 nan = 1e38f;	nan = nan * nan * 0.f;	return nan;}
-#if defined (MSVC_COMPILER)
+#if defined (COMPILER_MSVC)
 	static INLINE float  getNaN(void) { return (float)1e38f * (float)1e38f * (float)0.f; }
 #else
 	static INLINE float  getNaN(void) { return (float)(0.0 / 0.0); }
@@ -133,13 +135,14 @@ enum { _False_ = 0, _True_ = 1 };
 #define  malloc0(n)   calloc(1L, n)
 
 
-
 #ifdef __cplusplus
 }
 #endif
 
 #define max(a,b)			(((a) > (b)) ? (a) : (b))
 #define min(a,b)			(((a) < (b)) ? (a) : (b))
+#define MyAbs(a)			(((a) < 0  ) ? -(a) : (a))
+
 // The outermost parentheses are DEFINITELY needed. If not, subtile errors
 // can creep. Here is a failing example from beastv2_func.c
 // min(Kbase + b->ke[j], Klastcol) - (Kbase + b->ks[j]) + 1
@@ -151,7 +154,6 @@ enum { _False_ = 0, _True_ = 1 };
 #define RoundTo64(N)       ((N+63)/64*64)
 #define RoundTo8(N)        ((N+7)/8*8)
  
-
 
 #define PostiveMod(i, n)  (  i%(n) + (i<0)*(n)  )
  

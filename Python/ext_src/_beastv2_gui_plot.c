@@ -1,7 +1,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 
 #include "abc_win32_demo.h"
 void BEAST2_InitGlobalData(void) {
@@ -13,11 +13,11 @@ void BEAST2_InitGlobalData(void) {
 			.sep            = 10.f,
 			.vButtonRatio   = 0.7f,
 			.vScrollRatio   = 0.5f,
-			.labelGap       = 8.f,
-			.rFig			= { 0.3, 0.7 / 2. * 2 / 3., 0.7 / 2. / 3, 0.7 / 2. * 2. / 3, 0.7 / 2. / 3 },
+			.labelGap       = 8L,
+			.rFig			= { 0.3f,   0.7f / 2.f * 2.f / 3, 0.7f / 2.f / 3, 0.7f / 2.f * 2.f / 3, 0.7f / 2.f / 3 },
 			.fractionLabel	= 0.6f,
 			.fractionEdit	= 0.5f,
-			.widthDialg		= 270.f,
+			.widthDialg		= 270L,
 	};
 	
 	memset(hBitmap,       0, sizeof(HBITMAP)* 5);
@@ -89,23 +89,23 @@ void BEAST2_GeneratePlotData(void)
 		// The average fitted curve
 		data = gData.plotData[0][0];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.s[i] + gData.t[i]);
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (int) x, x += dX, data[2 * i + 1] = (int) ( a - b * (gData.s[i] + gData.t[i]) );
 
 		// the current fitted curve
 		data = gData.plotData[0][1];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.curs[i] + gData.curt[i]);
+		for (int i = 0; i < N; i++)	data[2 * i] = (int) x, x += dX, data[2 * i + 1] = (int) (a - b * (gData.curs[i] + gData.curt[i]));
 	}
 	else { // Trend-only 
 		// The average fitted curve
 		data = gData.plotData[0][0];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.t[i]);
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (int) x, x += dX, data[2 * i + 1] = (int) ( a - b * (gData.t[i]) );
 
 		// the current fitted curve
 		data = gData.plotData[0][1];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (int i = 0; i < N; i++)	data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * (gData.curt[i] );
+		for (int i = 0; i < N; i++)	data[2 * i] = (int) x, x += dX, data[2 * i + 1] = (int) ( a - b * (gData.curt[i] ) );
 
 
 	}
@@ -118,8 +118,8 @@ void BEAST2_GeneratePlotData(void)
 	//gData.plotData[1][4] = malloc(sizeof(int)*gData.N * 4); //S_CI
 	 //Figure 2
 	if (gData.S != NULL) {
-		W = gData.w[1];
-		H = gData.h[1];
+		W = (F32) gData.w[1];
+		H = (F32) gData.h[1];
 		Ymax = gData.yMaxS;
 		Ymin = gData.yMinS;
 		dX = W / N;
@@ -127,49 +127,49 @@ void BEAST2_GeneratePlotData(void)
 		// the averaged season curve
 		data = gData.plotData[1][0];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.s[i];
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.s[i]);
 
 		// the current season curve
 		data = gData.plotData[1][1];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.curs[i];
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) ( a - b * gData.curs[i] );
 
 		// Season breakpoints
 
 		ptsPerPoly = gData.plotData[1][3];
 		data = gData.plotData[1][2];
 		for (int i = 0; i < gData.sKnotNum; i++) {
-			data[4 * i] = dX * gData.S[i];
+			data[4 * i]     = (I32) (dX * gData.S[i]);
 			data[4 * i + 1] = 0;
-			data[4 * i + 2] = dX * gData.S[i];
-			data[4 * i + 3] = H;
-			ptsPerPoly[i] = 2;
+			data[4 * i + 2] = (I32) (dX * gData.S[i]);
+			data[4 * i + 3] = (I32) H;
+			ptsPerPoly[i]   = 2;
 		}
 
 		// the season CI envelop
 		data = gData.plotData[1][4];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.sCI[i];
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) ( a - b * gData.sCI[i]);
 
 		F32PTR Y = gData.sCI + 2 * N - 1;
 		data = data + 2 * N;
 		x = dX * (N - 1);
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x -= dX, data[2 * i + 1] = a - b * Y[-i];
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x -= dX, data[2 * i + 1] = (I32) (a - b * Y[-i]);
 
 
 		//---------Figure 3------------
 
-		W = gData.w[2];
-		H = gData.h[2];
-		Ymax = 0.9;
-		Ymin = -0.02;
+		W    = (F32) gData.w[2];
+		H    = (F32) gData.h[2];
+		Ymax = 0.9f;
+		Ymin = -0.02f;
 		dX = W / N;
 
 
 		// the seasnn prob curve
 		data = gData.plotData[2][0];
 		a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-		for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.sProb[i];
+		for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.sProb[i]);
 	}
 
 
@@ -181,9 +181,9 @@ void BEAST2_GeneratePlotData(void)
 	//gData.plotData[1][2] = malloc(sizeof(int)*gData.N);     //S_bp
 	//gData.plotData[1][3] = malloc(sizeof(int)*gData.N);     //S_bp
 	//gData.plotData[1][4] = malloc(sizeof(int)*gData.N * 4); //S_CI
-
-	W = gData.w[3];
-	H = gData.h[3];
+	 
+	W    = (F32) gData.w[3];
+	H    = (F32) gData.h[3];
 	Ymax = gData.yMaxT;
 	Ymin = gData.yMinT;
 	dX   = W / N;
@@ -191,48 +191,48 @@ void BEAST2_GeneratePlotData(void)
 	// the aveagre tredn
 	data = gData.plotData[3][0];
 	a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.t[i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.t[i]);
 
 	// the current trend
 	data = gData.plotData[3][1];
 	a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) ; 	x = 0;
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.curt[i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.curt[i]);
 
 	
 	// Trend breakpoints		
 	data       = gData.plotData[3][2];
 	ptsPerPoly = gData.plotData[3][3];
 	for (int i = 0; i < gData.tKnotNum; i++) {
-		data[4 * i]     = dX * gData.T[i];
+		data[4 * i]     = (I32) (dX * gData.T[i]);
 		data[4 * i + 1] = 0;
-		data[4 * i + 2] = dX * gData.T[i];
-		data[4 * i + 3] = H;
+		data[4 * i + 2] = (I32) (dX * gData.T[i]);
+		data[4 * i + 3] = (I32) H;
 		ptsPerPoly[i] = 2;
 	}
-
+	 
 
 	// the trend CI envelop
 	data = gData.plotData[3][4];
 	a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin); 	x = 0;
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.tCI[i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.tCI[i]);
 
 	F32PTR Y = gData.tCI + 2 * N - 1;
 	data = data + 2 * N;
 	x    = dX * (N - 1);
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x -= dX, data[2 * i + 1] = a - b * Y[-i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x -= dX, data[2 * i + 1] = (I32) (a - b * Y[-i]);
 
  	//---------Figure 5-----------------
 
-	W = gData.w[4];
-	H = gData.h[4];
-	Ymax = 0.9;
-	Ymin = -0.02;
+	W = (F32) gData.w[4];
+	H = (F32) gData.h[4];
+	Ymax = 0.9f;
+	Ymin = -0.02f;
 	dX = W / N;
  
 	// the seasnn prob curve
 	data = gData.plotData[4][0];
 	a = H + H / (Ymax - Ymin) * Ymin; 	b = H / (Ymax - Ymin) / sample; 	x = 0;
-	for (I32 i = 0; i < N; i++)  data[2 * i] = x, x += dX, data[2 * i + 1] = a - b * gData.tProb[i];
+	for (I32 i = 0; i < N; i++)  data[2 * i] = (I32) x, x += dX, data[2 * i + 1] = (I32) (a - b * gData.tProb[i]);
 
 	
 }

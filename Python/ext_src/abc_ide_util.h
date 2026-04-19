@@ -2,10 +2,13 @@
 #include "abc_001_config.h"
 #include "abc_datatype.h"
 #include "abc_ts_func.h"
+#include "abc_common.h" // for word_wrap_indented
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+	extern void StdouFlush(void);
 
 	extern I08 IDE_USER_INTERRUPT;
 
@@ -15,15 +18,15 @@ extern "C" {
 		DATA_TYPE type;
 		int       ndim;
 		int       dims[5];
-		void** ptr;
+		void**   ptr;
 		int       extra; //added for extension to multivariate ts for mrbeast
 	} FIELD_ITEM;
 
 	VOID_PTR GetFieldByIdx(VOID_PTR strucVar, I32 ind);
-	void    GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char* str, int buflen);
-	void*   CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr);
-	void  * CreateNumVector(DATA_TYPE dtype, int length, VOIDPTR* data_ptr);
-	void  * CreateNumMatrix(DATA_TYPE dtype, int Nrow, int Ncol, VOIDPTR* data_ptr);
+	void  GetFieldNameByIdx(VOID_PTR strucVar, I32 ind0, char* str, int buflen);
+	void* CreateNumVar(DATA_TYPE dtype, int* dims, int ndims, VOIDPTR* data_ptr);
+	void* CreateNumVector(DATA_TYPE dtype, int length, VOIDPTR* data_ptr);
+	void* CreateNumMatrix(DATA_TYPE dtype, int Nrow, int Ncol, VOIDPTR* data_ptr);
 	void* CreateF32NumVector(int length, VOIDPTR* data_ptr);
 	void* CreateF32NumMatrix(int Nrow, int Ncol, VOIDPTR* data_ptr);
 	void* CreateF64NumVector(int length, VOIDPTR* data_ptr);
@@ -43,7 +46,7 @@ extern "C" {
 	void RemoveAttribute(VOID_PTR listVar, const char* field);
 
 	extern  I32   GetConsoleWidth(void);
-	extern  void  printProgress(F32 pct, I32 width, char* buf, I32 firstTimeRun);
+	extern  void  printProgress1(F32 pct, I32 width, char* buf, I32 firstTimeRun);
 	extern  void  printProgress2(F32 pct, F64 time, I32 width, char* buf, I32 firstTimeRun);
 
 	I32 GetCharArray(void* ptr, char* dst, int n);
@@ -161,9 +164,9 @@ extern "C" {
 #elif P_INTERFACE==1
 	//stackoverflow.com/questions/37206118/va-args-not-swallowing-comma-when-zero-args-under-c99
 	//#define  mexPrintf(output, ...) Rprintf(output, ##__VA_ARGS__) //"##" is used to swallow the preceding comma if it is empty!
-#define  r_printf(...)   printf(__VA_ARGS__)
+//#define  r_printf(...)   printf(__VA_ARGS__)
 #define  r_printf(...)   PySys_WriteStdout(__VA_ARGS__)
-#define  r_error(...)    printf(__VA_ARGS__)
+#define  r_error(...)    PySys_WriteStderr(__VA_ARGS__)    // printf(__VA_ARGS__)
 //#define  q_warning(...)  warning(__VA_ARGS__)
 #define  r_warning(...)  printf(__VA_ARGS__)
 #define  r_malloc(x)     PyMem_RawMalloc(x, char)  //from header file R_ext\RS.h
@@ -172,9 +175,10 @@ extern "C" {
 #endif
 
 // defined in globalvars.c
-	extern char GLOBAL_QUIET_MODE;
-#define q_warning(...)  { if (!GLOBAL_QUIET_MODE) {r_warning(__VA_ARGS__);}}
-#define q_printf(...)   { if (!GLOBAL_QUIET_MODE) {r_printf(__VA_ARGS__);} }
+extern char GLOBAL_PRNT_WARNING;
+#define q_warning(...)  { if (GLOBAL_PRNT_WARNING) {r_warning(__VA_ARGS__);} }
+#define q_printf(...)   { if (GLOBAL_PRNT_WARNING) {r_printf(__VA_ARGS__); } }
+      
 
 #if R_INTERFACE==1
 

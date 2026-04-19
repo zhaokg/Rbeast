@@ -2,7 +2,7 @@
 #include "abc_000_warning.h"
  
 
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 
 #include <stdio.h>   // printf
 #include <io.h>      // _open_osfhandle, _dup2
@@ -199,11 +199,12 @@ extern void BEAST2_DrawPlots(HDC hdc);
 
 
 DWORD WINAPI beast_thread(__in LPVOID dummy_GLOBAL_OPTIONS) {
+
 	#if R_INTERFACE==1
 	//mexPrintf is not thread-safe.
 	BEAST2_print_options(GLOBAL_OPTIONS);
 	#endif
-
+	
 	VOIDPTR ANS=NULL;
 	PROTECT(ANS=BEAST2_Output_AllocMEM(GLOBAL_OPTIONS));
 	beast2_main_corev4_gui();

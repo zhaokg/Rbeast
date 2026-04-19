@@ -8,7 +8,43 @@
 #include "abc_date.h"
 #include "abc_mem.h"
 #include "beastv2_io.h"
+ 
 
+static void* __BEAST2_Output_AllocMEM_MCMCSamples(A(OPTIONS_PTR)  opt) {
+
+	const BEAST2_IO_PTR      io  = &opt->io;
+	const BEAST2_RESULT_PTR  mat = io->out.result;
+	DATA_TYPE   dtype     = io->out.dtype; // DATA_FLOAT or DATA_DOUBLE                            
+	const int   N         = io->N;
+
+	I08 hasSeasonCmpnt = opt->prior.basisType[0] == SEASONID || opt->prior.basisType[0] == DUMMYID || opt->prior.basisType[0] == SVDID;
+	I08 hasDummyCmpnt  = opt->prior.basisType[0] == DUMMYID;
+	I08 hasTrendCmpnt  = 1;
+	I08 hasOutlierCmpnt = opt->prior.basisType[opt->prior.numBasis - 1] == OUTLIERID;
+ 	
+	I32 nsamples = opt->mcmc.samples;
+	I32 nchains  = opt->mcmc.chainNumber;
+	 
+	I32 q = io->q;
+	// For univariate time series, _q() is the same as _()
+	FIELD_ITEM  fieldList[] = {
+	    { "season",	  dtype, 3+ (q>1), { N,  nsamples,nchains,  q},        &mat->smcmc },
+		{ "trend",    dtype, 3+ (q > 1), { N,  nsamples, nchains, q},        &mat->tmcmc },
+		{ "outlier",  dtype, 3+ (q > 1), { N,  nsamples,nchains,  q},        &mat->omcmc }
+	};
+
+	I32 nfields = sizeof(fieldList) / sizeof(FIELD_ITEM);
+
+	if (!hasSeasonCmpnt)    fieldList[0].ptr = NULL;
+	if (!hasOutlierCmpnt)   fieldList[2].ptr = NULL;
+
+	
+	VOID_PTR  out  = PROTECT(CreateStructVar(fieldList, nfields));
+					 UNPROTECT(1L);
+	
+	return out;
+  
+}
 
 static void __RemoveFieldsGivenFlags_Trend(A(OPTIONS_PTR)  opt, FIELD_ITEM * fieldList, int nfields) {
 
@@ -28,6 +64,8 @@ static void __RemoveFieldsGivenFlags_Trend(A(OPTIONS_PTR)  opt, FIELD_ITEM * fie
 		RemoveField(fieldList, nfields, "slpSD"),			mat->tslpSD		= NULL,
 		RemoveField(fieldList, nfields, "slpSgnPosPr"),		mat->tslpSgnPosPr	= NULL,
 	    RemoveField(fieldList, nfields, "slpSgnZeroPr"),	mat->tslpSgnPosPr	= NULL;	
+	if (!flag->computeTrendSlope || !flag->computeCredible)
+		RemoveField(fieldList, nfields, "slpCI"), mat->tslpCI = NULL;
 	if (!flag->computeTrendChngpt)
 		RemoveField(fieldList, nfields, "cp"),				mat->tcp = NULL,
 		RemoveField(fieldList, nfields, "cpPr"),			mat->tcpPr = NULL,
@@ -64,7 +102,6 @@ static void __RemoveFieldsGivenFlags_Trend(A(OPTIONS_PTR)  opt, FIELD_ITEM * fie
     #undef _5
 	#undef _6
 	#undef _7
-
 
 }
 
@@ -160,7 +197,7 @@ static void __RemoveFieldsGivenFlags_Outlier(A(OPTIONS_PTR)  opt, FIELD_ITEM * f
 	if (!flag->computeCredible)		RemoveField(fieldList, nfields, "CI"), mat->oCI = NULL;
 
 	if (!flag->computeOutlierChngpt)
-		RemoveField(fieldList, nfields, "cp"),		mat->ocp = NULL,
+		RemoveField(fieldList, nfields, "cp"),		mat->ocp   = NULL,
 		RemoveField(fieldList, nfields, "cpPr"),	mat->ocpPr = NULL,
 		RemoveField(fieldList, nfields, "cpCI"),	mat->ocpCI = NULL;	
 
@@ -315,7 +352,10 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 			_q2(Y, SD,   N),
 			_q(CI,       N,2),
 
-			 _q4(slp, slpSD, slpSgnPosPr,  slpSgnZeroPr, N),
+			 _q2(slp, slpSD, N),
+			 _q1(slpCI,      N,2),
+			 _q2(slpSgnPosPr,  slpSgnZeroPr, N),
+
 
 			 // tpos_ncp, tneg_ncp, tinc_ncp, tdec_ncp,
 			 _q2(pos_ncp,    neg_ncp,      1),
@@ -338,7 +378,7 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 		RemoveSingltonDims(fieldList, nfields);
 	}
 
-	// Do nothing if io->q is 1L;  within the function, newly created lists are protected
+	// Do nothing if io->q = 1L;  within the function, newly created lists are protected
 	I32       nptr = __MR_ExtendFieldsToMultiVaraiteTS(fieldList, nfields, io->q); 
 	VOID_PTR  out  = PROTECT(CreateStructVar(fieldList, nfields));
 					 UNPROTECT(1L);
@@ -558,10 +598,11 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 	I08 hasOutlierCmpnt = opt->prior.basisType[opt->prior.numBasis - 1] == OUTLIERID;
 
 	I32       nprt  = 0;
-	VOID_PTR  trend = NULL, season=NULL, outlier=NULL;
+	VOID_PTR  trend = NULL, season = NULL, outlier = NULL, mcmc = NULL;
 	if (hasTrendCmpnt)   { trend   = PROTECT(__BEAST2_Output_AllocMEM_Trend(opt));    nprt++; }
 	if (hasSeasonCmpnt)  { season  = PROTECT(__BEAST2_Output_AllocMEM_Season(opt));   nprt++; }
 	if (hasOutlierCmpnt) { outlier = PROTECT(__BEAST2_Output_AllocMEM_Outlier(opt));  nprt++;}
+	if (opt->extra.dumpMCMCSamples) { mcmc = PROTECT(__BEAST2_Output_AllocMEM_MCMCSamples(opt));  nprt++; }
 	
 	int   ROW, COL;
 	if (io->ndim == 1 || io->ndim==2) {
@@ -599,6 +640,7 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 		{"trend",     DATA_STRUCT,	0,	 {0,},       (void**)trend},
 		{"season",    DATA_STRUCT,	0,	 {0,},       (void**)season},
 		{"outlier",   DATA_STRUCT,	0,	 {0,},       (void**)outlier},
+		//{"mcmc",      DATA_STRUCT,	0,	 {0,},       (void**)mcmc},
 		{"whichOutDimIsTime", DATA_INT32,  2,  {1,1,},   &whichDimIsTime },
 		{"nrows",             DATA_INT32,  2,  {1,1,},   &nrows },
 		{"ncols",             DATA_INT32,  2,  {1,1,},   &ncols },
@@ -623,7 +665,15 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 	I32       nptr1 = __MR_ExtendFieldsToMultiVaraiteTS(fieldList, nfields, io->q);  nprt += nptr1;
 	if (ROW * COL == 1) {
 		// No need to inclulde whichTimeDim and ncols and nrows if there is only one ts
-		out = PROTECT(CreateStructVar(fieldList, nfields-3));                    nprt++;
+		if (!opt->extra.dumpMCMCSamples) {
+			out = PROTECT(CreateStructVar(fieldList, nfields - 3));          
+			nprt++;
+		} 	else {
+			fieldList[nfields - 3 ] = (FIELD_ITEM) { "mcmc",      DATA_STRUCT,	0,	 {0,},    (void**)mcmc };
+			out = PROTECT(CreateStructVar(fieldList, nfields - 3+1)); 
+			nprt++;
+		}
+		
 	} else {
 		out = PROTECT(CreateStructVar(fieldList, nfields));                      nprt++;		
 		whichDimIsTime[0] = io->out.whichDimIsTime;
@@ -642,6 +692,8 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 		for (int i = 0; i < N; i++) {
 			mat->time[i]=FracYear_from_DateNum(io->meta.startTime+ io->meta.deltaTime*i);
 		} 
+		io->meta.startTime = mat->time[0];
+		io->meta.deltaTime = mat->time[1]- mat->time[0];
 	}	else {
 		f32_seq(mat->time, io->meta.startTime, io->meta.deltaTime, N);
 	}    
@@ -671,6 +723,8 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 	#undef _q6
 	#undef _q7
 }
+
+// Below are two functions for MEM buffer used internally in BEAST.
 
 void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPointers* _restrict MEM)
 {	
@@ -755,25 +809,26 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 
 	/////////////////////////////////////////////////////////////
 	if (opt->extra.computeCredible){
-		if (hasSeasonCmpnt)  nodes[nid++] = (MemNode){ &result->sCI,    sizeof(F32) * Nq * 2,      .align = 4 };
-		if (hasTrendCmpnt)   nodes[nid++] = (MemNode){ &result->tCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
-		if (hasOutlierCmpnt) nodes[nid++] = (MemNode){ &result->oCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (hasSeasonCmpnt)                 nodes[nid++] = (MemNode){ &result->sCI,    sizeof(F32) * Nq * 2,      .align = 4 };
+		if (hasTrendCmpnt)                  nodes[nid++] = (MemNode){ &result->tCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (hasOutlierCmpnt)                nodes[nid++] = (MemNode){ &result->oCI,    sizeof(F32) * Nq * 2,      .align = 4 }; 
+		if (opt->extra.computeTrendSlope)	nodes[nid++] = (MemNode){ &result->tslpCI,    sizeof(F32) * Nq * 2,   .align = 4 };		 
 	}
 
 
-	if (opt->extra.computeSeasonChngpt && hasSeasonCmpnt) {
+	if (!!opt->extra.computeSeasonChngpt && hasSeasonCmpnt) {
 		nodes[nid++] = (MemNode){ &result->scp,				sizeof(U32) * seasonMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->scpPr,			sizeof(U32) * seasonMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->scpAbruptChange,	sizeof(U32) * seasonMaxKnotNum * q,   .align = 4 };
 		nodes[nid++] = (MemNode){ &result->scpCI,			sizeof(U32) * seasonMaxKnotNum * 2,   .align = 4 };
   	}	
-	if (opt->extra.computeTrendChngpt && hasTrendCmpnt) {
+	if (!!opt->extra.computeTrendChngpt && hasTrendCmpnt) {
 		nodes[nid++] = (MemNode){ &result->tcp,				sizeof(U32) * trendMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tcpPr,			sizeof(U32) * trendMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tcpAbruptChange,	sizeof(U32) * trendMaxKnotNum * q,   .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tcpCI,			sizeof(U32) * trendMaxKnotNum * 2,   .align = 4 };
 	}
-	if (opt->extra.computeOutlierChngpt && hasOutlierCmpnt) {
+	if (!!opt->extra.computeOutlierChngpt && hasOutlierCmpnt) {
 		nodes[nid++] = (MemNode){ &result->ocp,				sizeof(U32) * outlierMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->ocpPr,			sizeof(U32) * outlierMaxKnotNum,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->ocpCI,			sizeof(U32) * outlierMaxKnotNum * 2,   .align = 4 };
@@ -781,7 +836,7 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 		
 	/////////////////////////////////////////////////////////////	
 
-	if (opt->extra.tallyPosNegSeasonJump && hasSeasonCmpnt) {
+	if (!!opt->extra.tallyPosNegSeasonJump && hasSeasonCmpnt) {
 		nodes[nid++] = (MemNode){ &result->spos_ncp,				sizeof(F32) * 1*q,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->sneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
 		nodes[nid++] = (MemNode){ &result->spos_ncpPr,				sizeof(I32) * (seasonMaxKnotNum + 1) * q,     .align = 4 };
@@ -801,7 +856,7 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 	}
  
 
-	if (opt->extra.tallyPosNegTrendJump && hasTrendCmpnt) {
+	if (!!opt->extra.tallyPosNegTrendJump && hasTrendCmpnt) {
 		nodes[nid++] = (MemNode){ &result->tpos_ncp,				sizeof(F32) * 1*q,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tpos_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
@@ -820,7 +875,7 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 	}
 		 
 
-	if (opt->extra.tallyIncDecTrendJump && hasTrendCmpnt) {
+	if (!!opt->extra.tallyIncDecTrendJump && hasTrendCmpnt) {
 		nodes[nid++] = (MemNode){ &result->tinc_ncp,				sizeof(F32) * 1 * q,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tdec_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
 		nodes[nid++] = (MemNode){ &result->tinc_ncpPr,				sizeof(I32) * (trendMaxKnotNum + 1) * q,     .align = 4 };
@@ -839,7 +894,7 @@ void  BEAST2_Result_AllocMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, MemPoin
 	}
   
 
-	if (opt->extra.tallyPosNegOutliers && hasOutlierCmpnt) {
+	if (!!opt->extra.tallyPosNegOutliers && hasOutlierCmpnt) {
 		nodes[nid++] = (MemNode){ &result->opos_ncp,				sizeof(F32) * 1 * q,      .align = 4 };
 		nodes[nid++] = (MemNode){ &result->oneg_ncp,				sizeof(F32) * 1 * q,     .align = 4 };
 		nodes[nid++] = (MemNode){ &result->opos_ncpPr,				sizeof(I32) * (outlierMaxKnotNum + 1) * q,     .align = 4 };
@@ -945,9 +1000,10 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
 
 	////////////////////////////////////////////
 	if (flag->computeCredible) 	{
-		if (hasSeasonCmpnt)  f32_fill_val(nan, result->sCI, 2*Nq);
-		if (hasTrendCmpnt)   f32_fill_val(nan, result->tCI, 2*Nq);
-		if (hasOutlierCmpnt) f32_fill_val(nan, result->oCI, 2*Nq);
+		if ( hasSeasonCmpnt )               f32_fill_val(nan, result->sCI,    2*Nq);
+		if ( hasTrendCmpnt  )               f32_fill_val(nan, result->tCI,    2*Nq);
+		if ( hasOutlierCmpnt)               f32_fill_val(nan, result->oCI,    2*Nq);
+		if ( opt->extra.computeTrendSlope)	f32_fill_val(nan, result->tslpCI, 2*Nq);
 	}
 
 	if (flag->computeSeasonChngpt && hasSeasonCmpnt) 	{
@@ -956,8 +1012,9 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
 		f32_fill_val(nan, result->scpAbruptChange, seasonMaxKnotNum*q);
 		f32_fill_val(nan, result->scpCI, 2*seasonMaxKnotNum); 
 	}
-
-	if (flag->computeTrendChngpt && hasTrendCmpnt) {
+	// !!x: Coarece integers to booleans. If not, reprot the warning 
+	// "use of logical '&&' with constant operand [-Wconstant-logical-operand]"	
+	if (!!flag->computeTrendChngpt && !!hasTrendCmpnt) {
 		f32_fill_val(nan, result->tcp,		trendMaxKnotNum );
 		f32_fill_val(nan, result->tcpPr,	trendMaxKnotNum );
 		f32_fill_val(nan, result->tcpAbruptChange, trendMaxKnotNum * q);
@@ -965,13 +1022,13 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
  
 	}
 
-	if (flag->computeOutlierChngpt&& hasOutlierCmpnt) {
+	if (!!flag->computeOutlierChngpt && !!hasOutlierCmpnt) {
 		f32_fill_val(nan, result->ocp,		outlierMaxKnotNum );
 		f32_fill_val(nan, result->ocpPr,	outlierMaxKnotNum );
 		f32_fill_val(nan, result->ocpCI, 2* outlierMaxKnotNum );
 	}
 
-	if (flag->tallyPosNegSeasonJump && hasSeasonCmpnt)  {
+	if (!!flag->tallyPosNegSeasonJump && !!hasSeasonCmpnt)  {
 
 		f32_fill_val(nan, result->spos_ncp, 1*q);
 		f32_fill_val(nan, result->sneg_ncp, 1 * q);
@@ -993,7 +1050,7 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
 		f32_fill_val(nan, result->sneg_cpCI, 2 * seasonMaxKnotNum * q);
 	}
 
-	if (flag->tallyPosNegTrendJump && hasTrendCmpnt) {
+	if (!!flag->tallyPosNegTrendJump && !!hasTrendCmpnt) {
 		f32_fill_val(nan, result->tpos_ncp, 1 * q);
 		f32_fill_val(nan, result->tneg_ncp, 1 * q);
 
@@ -1017,7 +1074,7 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
 	}
 
 
-	if (flag->tallyIncDecTrendJump && hasTrendCmpnt) {
+	if (!!flag->tallyIncDecTrendJump && !!hasTrendCmpnt) {
 
 		f32_fill_val(nan, result->tinc_ncp, 1 * q);
 		f32_fill_val(nan, result->tdec_ncp, 1 * q);
@@ -1040,7 +1097,7 @@ void  BEAST2_Result_FillMEM(A(RESULT_PTR)  result, A(OPTIONS_PTR)  opt, const F3
  
 	}
 
-	if (flag->tallyPosNegOutliers && hasOutlierCmpnt) {
+	if (!!flag->tallyPosNegOutliers && !!hasOutlierCmpnt) {
 		f32_fill_val(nan, result->opos_ncp, 1 * q);
 		f32_fill_val(nan, result->oneg_ncp, 1 * q);
 

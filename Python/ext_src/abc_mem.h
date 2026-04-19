@@ -8,15 +8,15 @@ typedef struct {
 	void**  addr;
 	int     size;
 	int     align;
-	I64     offset_from_origin;                        
-} MemNode;
+	I64     offset_from_origin;    
 /*
-MemNode * list;
-offset_from_origin:  No need to mannualy set and will be autommatically computed by memnodes_calc_offsets
-list[0].offset_from_origin is always 0, so it is used to store the total number of nodes 
-The last list note is a sentinel one,  so its size and algin fields are used to save the toteal required mem size and the max
-alignment required for the whoe list
+    MemNode * list;
+	offset_from_origin: Do not set it mannualy; it will be autommatically computed by memnodes_calc_offsets
+	list[0].offset_from_origin:  is always 0, so it is used to store the total number of nodes
+	The last list note is a sentinel one, so its size and algin fields are used to save the toteal required mem size
+	and the max alignment required for the whole list
 */
+} MemNode;
 
 I64    memnodes_calc_offsets(MemNode* list, int* maxAlignment);
 void   memnodes_assign_from_alignedbase(MemNode* list, VOIDPTR prawaligned);  // Assume that the buf has enough space
@@ -35,7 +35,7 @@ struct MemPointers
 	I08        checkHeader;
 
 // https: //stackoverflow.com/questions/1403890/how-do-you-implement-a-class-in-c
-//Object Oriented Programming in ANSI-C : http: //www.planetpdf.com/codecuts/pdfs/ooc.pdf
+// Object Oriented Programming in ANSI-C : http: //www.planetpdf.com/codecuts/pdfs/ooc.pdf
 	void       (*init)(     MemPointers *  self);
 	VOID_PTR   (*alloc)(    MemPointers *  self, I64 size, U08 alignment);
 	VOID_PTR   (*alloc0)(   MemPointers *  self, I64 size, U08 alignment);
@@ -43,6 +43,7 @@ struct MemPointers
 	void       (*free_all)( MemPointers *  self);
 	I32        (*verify_header)(MemPointers* self);
 };
+
  extern void  mem_init(MemPointers* _restrict self);
 
 #define MyALLOC(MEM,  numElem,type,alignment) (type *)(MEM).alloc(&(MEM), (I64) sizeof(type)* (I64)(numElem),alignment)
@@ -82,11 +83,11 @@ struct MemPointers
 		 float*   f32;
 		 double*  f64;
 	 } p;
-	 int  max_len;
-	 int  cur_len;
-	 int  elem_size;
-	 int  align;
-	 int  offset;
+	 size_t  max_len;
+	 size_t  cur_len;
+	 int     elem_size;
+	 int     align;
+	 int     offset;
  } DynAlignedBuf, * _restrict DynAlignedBufPtr;
 
  void adynbuf_init(DynAlignedBufPtr buf, int init_max_len);

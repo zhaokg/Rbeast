@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <string.h>
 
 #include "abc_000_warning.h"
 
@@ -7,17 +5,22 @@
 #include "abc_ide_util.h" // r_printf
 #include "abc_cpu.h"
 
+#include <stdio.h>
+#include <string.h>
 
+
+/*
 //https:// github.com/Mysticial/FeatureDetector
 //https:// stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set/22521619#22521619
-/*
+
 Mysticial's answer is a bit dangerous -- it explains how to detect CPU support but not OS support. You need to use _xgetbv to check
 whether the OS has enabled the required CPU extended state. See here for another source. Even gcc
 has made the same mistake. The meat of the code is:
 */
 
-//https:// insufficientlycomplicated.wordpress.com/2011/11/07/detecting-intel-advanced-vector-extensions-avx-in-visual-studio/
+
 /*
+    https://insufficientlycomplicated.wordpress.com/2011/11/07/detecting-intel-advanced-vector-extensions-avx-in-visual-studio/
     // Checking for AVX requires 3 things:
     // 1) CPUID indicates that the OS uses XSAVE and XRSTORE
     //     instructions (allowing saving YMM registers on context
@@ -36,8 +39,7 @@ has made the same mistake. The meat of the code is:
     /*********************************************/
     //        WINDOWS
      /*********************************************/
-    #if defined(MSVC_COMPILER) 
-
+    #if defined(COMPILER_MSVC) 
 
         #define WIN32_LEAN_AND_MEAN
         #include <Windows.h>
@@ -94,7 +96,7 @@ has made the same mistake. The meat of the code is:
             return 1;
         }
 
-    #elif defined (SOLARIS_OS)
+    #elif defined (OS_SOLARIS)
     
     // cpuid:  https:// docs.oracle.com/cd/E23824_01/html/821-1475/cpuid-7d.html
 
@@ -142,7 +144,7 @@ has made the same mistake. The meat of the code is:
         //#error  "No cpuid intrinsic defined for compiler."
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(ARM64_OS) || defined (POWERPC_OS)
+#elif defined(cpu_ARM64) || defined (cpu_POWERPC64)
         //https://stackoverflow.com/questions/60588765/how-to-get-cpu-brand-information-in-arm64
         //https://stackoverflow.com/questions/23934862/what-predefined-macro-can-i-use-to-detect-the-target-architecture-in-clang
         #define _XCR_XFEATURE_ENABLED_MASK  0
@@ -166,13 +168,7 @@ has made the same mistake. The meat of the code is:
 #endif
 
  
- 
-static void cpu_print(const char* label, uint8_t yes) {
-    r_printf("%s%s\n", label, (yes ? "Yes" : "No"));
-}
- 
- 
-uint8_t detect_OS_AVX(void){
+static Bool detect_OS_AVX(void){
     //  Copied from: http://stackoverflow.com/a/22521619/922184
 
     Bool avxSupported = _False_;
@@ -190,14 +186,16 @@ uint8_t detect_OS_AVX(void){
 
     return avxSupported;
 }
-Bool detect_OS_AVX512(void){
+
+static Bool detect_OS_AVX512(void){
     if (!detect_OS_AVX())
         return _False_;
 
     uint64_t xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xe6) == 0xe6;
 }
-void get_vendor_string(char * name){
+
+static void get_vendor_string(char * name){
     int32_t CPUInfo[4];
     //char name[13];
 
@@ -208,10 +206,13 @@ void get_vendor_string(char * name){
     name[12] = '\0';
 }
 
+ 
+////////////////////////////////////////////////////////////////////////////////
+static  void detect_host(struct cpu_x86* cpu) {
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-void detect_host(struct cpu_x86 *cpu){
+     if (cpu == NULL) {
+         return;
+     }
 
     memset(cpu, 0, sizeof(struct cpu_x86));
 
@@ -256,6 +257,7 @@ void detect_host(struct cpu_x86 *cpu){
 
         cpu->HW_RDRAND = (info[2] & ((uint32_t)1 << 30)) != 0;
     }
+
     if (nIds >= 0x00000007){
         cpuid(info, 0x00000007, 0);
         cpu->HW_AVX2         = (info[1] & ((int)1 <<  5)) != 0;
@@ -298,6 +300,7 @@ void detect_host(struct cpu_x86 *cpu){
         cpuid(info, 0x00000007, 1);
         cpu->HW_AVX512_BF16      = (info[0] & ((int)1 <<  5)) != 0;
     }
+
     if (nExIds >= 0x80000001){
         cpuid(info, 0x80000001, 0);
         cpu->HW_x64   = (info[3] & ((int)1 << 29)) != 0;
@@ -308,7 +311,17 @@ void detect_host(struct cpu_x86 *cpu){
     }
 }
 
-void print_cpuinfo(struct cpu_x86 *cpu) {
+
+static void cpu_print(const char* label, uint8_t yes) {
+    r_printf("%s%s\n", label, (yes ? "Yes" : "No"));
+}
+
+static void print_cpuinfo(struct cpu_x86 *cpu) {
+
+    if (cpu == NULL) {
+        return;
+    }
+   
     r_printf("CPU Vendor:\n");
     cpu_print("    AMD         = ", cpu->Vendor_AMD);
     cpu_print("    Intel       = ", cpu->Vendor_Intel);
@@ -384,13 +397,8 @@ void print_cpuinfo(struct cpu_x86 *cpu) {
     r_printf("\n");
 }
 
-void detect_print_cpu(void) {
-    struct cpu_x86 cpuinfo;
-     detect_host(&cpuinfo);
-     print_cpuinfo(&cpuinfo);
-}
 
- 
+  
 //https://stackoverflow.com/questions/12594208/c-program-to-determine-levels-size-of-cache
 /*
 To get L2 and L3 cache sizes, you need to use CPUID with EAX=4, and set ECX to 0, 1, 2, ... for
@@ -406,54 +414,52 @@ LineSize = EBX[11:0]
 Sets = ECX
 Total Size = (Ways + 1) * (Partitions + 1) * (Line_Size + 1) * (Sets + 1)
 */
-void i386_cpuid_caches (Bool quiet) {
- 
-    for (int i = 0; i < 32; i++) {
+
+static  void i386_cpuid_caches(struct cpu_cache* cpu) {
+
+    if (cpu == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < 8; i++) {
 
         // Variables to hold the contents of the 4 i386 legacy registers
-        uint32_t eax, ebx, ecx, edx; 
+        uint32_t eax, ebx, ecx, edx;
 
         eax = 4; // get cache info
         ecx = i; // cache id
 
-        #if !defined(MSVC_COMPILER) && !defined(ARM64_OS)
-            __asm__ (
-                "cpuid" // call i386 cpuid instruction
-                : "+a" (eax) // contains the cpuid command code, 4 for cache query
-                , "=b" (ebx)
-                , "+c" (ecx) // contains the cache id
-                , "=d" (edx)
-            ); // generates output in 4 registers eax, ebx, ecx and edx 
-        
-        #else
+#if !defined(COMPILER_MSVC) && !defined(cpu_ARM64) && !defined (cpu_POWERPC64)
+        __asm__(
+            "cpuid" // call i386 cpuid instruction
+            : "+a" (eax) // contains the cpuid command code, 4 for cache query
+            , "=b" (ebx)
+            , "+c" (ecx) // contains the cache id
+            , "=d" (edx)
+        ); // generates output in 4 registers eax, ebx, ecx and edx 
 
-            int32_t out[4];
-            cpuid(out, eax, ecx);
-            eax = out[0];
-            ebx = out[1];
-            ecx = out[2];
-            edx = out[3];
+#else
 
-        #endif
+        int32_t out[4];
+        cpuid(out, eax, ecx);
+        eax = out[0];
+        ebx = out[1];
+        ecx = out[2];
+        edx = out[3];
+
+#endif
 
         // See the page 3-191 of the manual.
-        int cache_type = eax & 0x1F; 
+        cpu[i].cache_type = eax & 0x1F;
 
-        if (cache_type == 0) // CODE_EOF of valid cache identifiers
+        if (cpu[i].cache_type == 0) // CODE_EOF of valid cache identifiers
             break;
 
-        char * cache_type_string;
-        switch (cache_type) {
-            case 1: cache_type_string = "Data Cache"; break;
-            case 2: cache_type_string = "Instruction Cache"; break;
-            case 3: cache_type_string = "Unified Cache"; break;
-            default: cache_type_string = "Unknown Type Cache"; break;
-        }
 
-        int cache_level = (eax >>= 5) & 0x7;
 
-        int cache_is_self_initializing = (eax >>= 3) & 0x1; // does not need SW initialization
-        int cache_is_fully_associative = (eax >>= 1) & 0x1;
+        cpu[i].cache_level = (eax >>= 5) & 0x7;
+        cpu[i].cache_is_self_initializing = (eax >>= 3) & 0x1; // does not need SW initialization
+        cpu[i].cache_is_fully_associative = (eax >>= 1) & 0x1;
 
         // See the page 3-192 of the manual.
         // ebx contains 3 integers of 10, 10 and 12 bits respectively
@@ -465,31 +471,72 @@ void i386_cpuid_caches (Bool quiet) {
         // Total cache size is the product
         size_t cache_total_size = cache_ways_of_associativity * cache_physical_line_partitions * cache_coherency_line_size * cache_sets;
 
-        if (!quiet)
-            r_printf(
-                "Cache ID %d:\n"
-                "- Level: %d\n"
-                "- Type: %s\n"
-                "- Sets: %d\n"
-                "- System Coherency Line Size: %d bytes\n"
-                "- Physical Line partitions: %d\n"
-                "- Ways of associativity: %d\n"
-                "- Total Size: %zu bytes (%zu kb)\n"
-                "- Is fully associative: %s\n"
-                "- Is Self Initializing: %s\n"
-                "\n"
-                , i
-                , cache_level
-                , cache_type_string
-                , cache_sets
-                , cache_coherency_line_size
-                , cache_physical_line_partitions
-                , cache_ways_of_associativity
-                , cache_total_size, cache_total_size >> 10
-                , cache_is_fully_associative ? "true" : "false"
-                , cache_is_self_initializing ? "true" : "false"
-            );
+        cpu[i].cache_sets = cache_sets;
+        cpu[i].cache_coherency_line_size = cache_coherency_line_size;
+        cpu[i].cache_physical_line_partitions = cache_physical_line_partitions;
+        cpu[i].cache_ways_of_associativity = cache_ways_of_associativity;
+        cpu[i].cache_total_size = cache_total_size;
     }
+}
+
+static void  print_cpucache(struct cpu_cache* cpu)  {
+
+    if (cpu == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < 8; i++) {
+
+        if (cpu[i].cache_type==0)
+            break;
+
+        char* cache_type_string;
+        switch (cpu[i].cache_type) {
+        case 1: cache_type_string = "Data Cache"; break;
+        case 2: cache_type_string = "Instruction Cache"; break;
+        case 3: cache_type_string = "Unified Cache"; break;
+        default: cache_type_string = "Unknown Type Cache"; break;
+        }
+
+        r_printf(
+            "Cache ID %d:\n"
+            "- Level: %d\n"
+            "- Type: %s\n"
+            "- Sets: %d\n"
+            "- System Coherency Line Size: %d bytes\n"
+            "- Physical Line partitions: %d\n"
+            "- Ways of associativity: %d\n"
+            "- Total Size: %zu bytes (%zu kb)\n"
+            "- Is fully associative: %s\n"
+            "- Is Self Initializing: %s\n"
+            "\n"
+            , i
+            , cpu[i].cache_level
+            , cache_type_string
+            , cpu[i].cache_sets
+            , cpu[i].cache_coherency_line_size
+            , cpu[i].cache_physical_line_partitions
+            , cpu[i].cache_ways_of_associativity
+            ,(size_t) cpu[i].cache_total_size, (size_t)(cpu[i].cache_total_size >> 10)
+            , cpu[i].cache_is_fully_associative ? "true" : "false"
+            , cpu[i].cache_is_self_initializing ? "true" : "false"
+        );
+    
+    
+    }
+
+   
+ }
+
+void cpuinfo_detect(struct cpu_x86* cpu, struct cpu_cache* caches) {
+    detect_host(cpu);
+    i386_cpuid_caches(caches);
+}
+
+void cpuinfo_print(struct cpu_x86* cpu, struct cpu_cache* caches) {
+
+    print_cpuinfo(cpu);
+    print_cpucache(caches);
 }
 
 #include "abc_000_warning.h"

@@ -1,4 +1,3 @@
-#include <math.h> //sqrtf
 #include "abc_000_macro.h" 
 #include "abc_000_warning.h"
 
@@ -6,6 +5,8 @@
 #include "abc_blas_lapack_lib.h" //r_ippsSet_32 r_cblas_scopy
 #include "abc_common.h"          // normalize_x_factor normalize
 #include "beastv2_header.h"
+
+#include <math.h> //sqrtf
 
  
 static int TT_03(F32PTR X, I32 N, BEAST2_BASESEG_PTR seg, BASIS_CONST * ptr) {

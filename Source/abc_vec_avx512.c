@@ -2421,8 +2421,8 @@ void SetupVectorFunction_AVX512() {
     f32_to_f64_inplace   = &avx512_f32_to_f64_inplace;
     f64_to_f32_inplace   = &avx512_f64_to_f32_inplace;
     
-    i32_to_f32_scaleby_inplace       = &avx512_i32_to_f32_scaleby_inplace;
-    i32_increment_bycond_inplace     = &  avx512_i32_increment_bycond_inplace; 
+    i32_to_f32_scaleby_inplace        = &avx512_i32_to_f32_scaleby_inplace;
+    i32_increment_bycond_inplace      = &avx512_i32_increment_bycond_inplace; 
     i32_increment_vec2_bycond_inplace = &avx512_i32_increment_vec2_bycond_inplace;
 
     //i08_find_nth_onebyte_binvec     = & avx512_i08_find_nth_onebyte_binvec;

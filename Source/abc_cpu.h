@@ -79,8 +79,20 @@ struct cpu_x86 {
     Bool HW_AVX512_BITALG;
 };
 
-extern void detect_print_cpu(void);
-extern void detect_host(struct cpu_x86* cpu);
-extern void i386_cpuid_caches(Bool quiet);
+struct cpu_cache {
+    char cache_level;
+    char cache_type;
+    char cache_is_fully_associative;
+    char cache_is_self_initializing;
+    unsigned int cache_sets;
+    unsigned int cache_coherency_line_size;
+    unsigned int cache_physical_line_partitions;
+    unsigned int cache_ways_of_associativity;
 
-extern void print_cpuinfo(struct cpu_x86* cpu);
+    int cache_total_size;        
+};
+
+extern void cpuinfo_detect(struct cpu_x86* cpu, struct cpu_cache* caches);
+extern void cpuinfo_print(struct cpu_x86* cpu, struct cpu_cache* caches);
+
+ 

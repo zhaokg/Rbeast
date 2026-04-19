@@ -5,6 +5,8 @@
 #include "abc_blas_lapack_lib.h"
 #include "abc_mem.h"
 
+#include "math.h"
+
 static F32 __compute_a__(F32PTR x, F32PTR m, int P) {
 	F32 xm = 0, mm = 0;
 	for (int i = 0; i < P; i++) {
@@ -250,6 +252,16 @@ void compute_seasonal_svdbasis(F32PTR y, F32PTR Yout, int  Kmax, SVDBasisMEM * m
 				F1 = -2 * F1;
 				F32 cold = cLarange;
 				cLarange = cLarange - F0 / F1;
+/*
+	 When you skip #include <math.h>, you break the compiler's "shortcut" to this built-in logic:
+	(1) Implicit Declaration : Without the header, the compiler assumes fabsf is a "normal" external function that
+	      returns an int. It stops treating it as a special math operation and starts looking for a real function 
+		  symbol named fabsf.
+	(2)Missing Symbol : In the Microsoft C Runtime(CRT), many simple math functions like fabsf do not actually exist 
+	     as standalone symbols in the.lib files because the compiler is supposed to generate the code for them inline.
+	(3)Linker Failure : Since the compiler is now looking for a physical symbol that the CRT doesn't provide
+	    (because it expects you to use the intrinsic), the linker fails with
+*/
 				F32 diff = fabsf(cold - cLarange);
 				if (diff < 1e-6) {
 					break;

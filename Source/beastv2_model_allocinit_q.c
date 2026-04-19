@@ -1,6 +1,3 @@
-#include <string.h>  //memset
-#include <math.h>    //sqrt
-
 #include "abc_000_warning.h"
 
 #include "abc_vec.h"
@@ -11,6 +8,10 @@
 #include "beastv2_header.h"
 #include "beastv2_model_allocinit.h"
 #include "beastv2_prior_precfunc.h" 
+
+#include <string.h>  //memset
+#include <math.h>    //sqrt
+
 
 extern void* Get_Propose(I08, BEAST2_OPTIONS_PTR);
 extern pfnGenTerms * Get_GenTerms(I08 id, BEAST2_PRIOR_PTR prior);
@@ -23,7 +24,7 @@ extern void* Get_AllocInitBasis(I08);
 extern void* Get_PickBasisID(I08, I08, I32PTR);
 extern void* Get_CvtKnotsToBinVec(I08 id);
 
-extern void PreCaclModelNumber(I32 minOrder, I32 maxOrder, I32 maxNumseg, I32 N, I32 minSep, F64PTR TNUM, F64PTR totalNum);
+extern void PreCaclModelNumber(I32 minOrder, I32 maxOrder, I32 maxNumseg, I32 N, I32 minSep, F64PTR TNUM, F64PTR totalNum, F64PTR nModels, int type);
 
 
 #define MODEL (*model)
@@ -32,8 +33,8 @@ extern void PreCaclModelNumber(I32 minOrder, I32 maxOrder, I32 maxNumseg, I32 N,
 void  ReInit_PrecValues(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt) {
 // Called before running a new time series to make sure the existant values of precVec have no NAN
 	I32 hasNaNsInfs = 0;
-	for (int i = 0; i < MODEL.nPrec; i++) {
-			if (IsNaN(MODEL.precVec[i]) || IsInf(MODEL.precVec[i])) {
+	for (int i = 0; i < MODEL.precState.nPrecGrp; i++) {
+			if (IsNaN(MODEL.precState.precVec[i]) || IsInf(MODEL.precState.precVec[i])) {
 				hasNaNsInfs = 1L;
 				break;
 			}				
@@ -41,8 +42,8 @@ void  ReInit_PrecValues(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt) {
 
 	if (hasNaNsInfs) {
 			F32 precValue = opt->prior.precValue;
-			r_ippsSet_32f(precValue,       MODEL.precVec,    MODEL.nPrec);
-			r_ippsSet_32f(logf(precValue), MODEL.logPrecVec, MODEL.nPrec);
+			r_ippsSet_32f(precValue,       MODEL.precState.precVec,    MODEL.precState.nPrecGrp);
+			r_ippsSet_32f(logf(precValue), MODEL.precState.logPrecVec, MODEL.precState.nPrecGrp);
 	}
  
 }
@@ -76,7 +77,7 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 		// 0: Use a constant precison value
 		// 1: Use a uniform precision value for all terms
 
-		MODEL.nPrec       = 1L;    // this number is needed to set "RNDGAMMA_END = RNDGAMMA + MAX_RAND_NUM - MODEL.nPrec-1L"
+		MODEL.precState.nPrecGrp       = 1L;    // this number is needed to set "RNDGAMMA_END = RNDGAMMA + MAX_RAND_NUM - MODEL.precState.nPrecGrp-1L"
 		nPrecGrp          = 0;
 		nPrecXtXDiag      = 0;
 
@@ -89,8 +90,8 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 	else if (precType == ComponentWise) {
 		//2: Use varying precisions values for different terms and orders
 	
-		//// MODEL.nPrec equals MODEL.NUMBASIS, which is fixed throughout the program
-		MODEL.nPrec      = MODEL.NUMBASIS;     // this number is needed to set "RNDGAMMA_END = RNDGAMMA + MAX_RAND_NUM - MODEL.nPrec-1L"
+		//// MODEL.precState.nPrecGrp equals MODEL.NUMBASIS, which is fixed throughout the program
+		MODEL.precState.nPrecGrp      = MODEL.NUMBASIS;     // this number is needed to set "RNDGAMMA_END = RNDGAMMA + MAX_RAND_NUM - MODEL.precState.nPrecGrp-1L"
 		nPrecGrp         = MODEL.NUMBASIS;
 		nPrecXtXDiag     = opt->prior.K_MAX;
 	
@@ -115,8 +116,8 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 			b->offsetPrec = cumsum;
 			cumsum		 += b->nPrec;
 		}
-		MODEL.nPrec      = cumsum;
-		nPrecGrp         = MODEL.nPrec;
+		MODEL.precState.nPrecGrp   = cumsum;
+		nPrecGrp         = MODEL.precState.nPrecGrp;
 		nPrecXtXDiag     = opt->prior.K_MAX;		
 	}
 	/*
@@ -142,16 +143,16 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 				cumsum +=2 ;
 			}			
 		}
-		MODEL.nPrec = cumsum;
+		MODEL.precState.nPrecGrp = cumsum;
 
-		MODEL.precVec    = MyALLOC(*MEM, MODEL.nPrec*2, F32, 0);
-		MODEL.logPrecVec = MODEL.precVec + MODEL.nPrec;
+		MODEL.precState.precVec    = MyALLOC(*MEM, MODEL.precState.nPrecGrp*2, F32, 0);
+		MODEL.precState.logPrecVec = MODEL.precState.precVec + MODEL.precState.nPrecGrp;
 		// Initial precision values in this vector is only used for the first chain of the first pixel
 		// and all the other subsquent chains or pixels will be using whatever existing values are left 
 		// from the previous background. This may have some unintended consequences.
 		F32 precValue = opt->prior.precValue;
-		r_ippsSet_32f(precValue,       MODEL.precVec, MODEL.nPrec);
-		r_ippsSet_32f(logf(precValue), MODEL.logPrecVec, MODEL.nPrec);
+		r_ippsSet_32f(precValue,       MODEL.precState.precVec, MODEL.precState.nPrecGrp);
+		r_ippsSet_32f(logf(precValue), MODEL.precState.logPrecVec, MODEL.precState.nPrecGrp);
 
 		MODEL.curr.nTermsPerPrecGrp  = 1;
 		MODEL.prop.nTermsPerPrecGrp = 2;
@@ -162,8 +163,8 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 	}
 	*/
 
-	nodes[nid++] = (MemNode){ &MODEL.precVec,				sizeof(F32) * MODEL.nPrec,  .align = 4 };
-	nodes[nid++] = (MemNode){ &MODEL.logPrecVec,			sizeof(F32) * MODEL.nPrec,  .align = 4 };
+	nodes[nid++] = (MemNode){ &MODEL.precState.precVec,	   sizeof(F32) * MODEL.precState.nPrecGrp,  .align = 4 };
+	nodes[nid++] = (MemNode){ &MODEL.precState.logPrecVec, sizeof(F32) * MODEL.precState.nPrecGrp,  .align = 4 };
 
 	nodes[nid++] = (MemNode){ &MODEL.curr.precXtXDiag ,		sizeof(F32) * nPrecXtXDiag,  .align = 4 }; //NULL for  ConstPrec and UniformPrec
 	nodes[nid++] = (MemNode){ &MODEL.prop.precXtXDiag ,		sizeof(F32) * nPrecXtXDiag,  .align = 4 }; //NULL for  ConstPrec and UniformPrec
@@ -182,8 +183,8 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 	if (nPrecXtXDiag == 0) {
 		//MODE.precXtXDiag and precXtXDiag_prop will be used in chol_addCol: To make a a consistent API for chol_addCol,
 		// they are pointed to model.prec when prec is a  scalar.
-		MODEL.curr.precXtXDiag = MODEL.precVec;
-		MODEL.prop.precXtXDiag = MODEL.precVec;
+		MODEL.curr.precXtXDiag = MODEL.precState.precVec;
+		MODEL.prop.precXtXDiag = MODEL.precState.precVec;
 	}
 
 	// Initial precision values in this vector is only used for the first chain of the first pixel
@@ -193,8 +194,8 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR 
 	// But the above handling is buggy if the previous pixel exited abnormally, potentially leaving NANs due to bad sig2 values
 	// That is why a new function ReInit_precvalues is created and will be called if the existing prec has NAN values 
 	F32 precValue = opt->prior.precValue;
-	r_ippsSet_32f(precValue,       MODEL.precVec,    MODEL.nPrec);
-	r_ippsSet_32f(logf(precValue), MODEL.logPrecVec, MODEL.nPrec);
+	r_ippsSet_32f(precValue,       MODEL.precState.precVec,    MODEL.precState.nPrecGrp);
+	r_ippsSet_32f(logf(precValue), MODEL.precState.logPrecVec, MODEL.precState.nPrecGrp);
 
 
 	// sig2 is intialized only once here. This default value is used only for the the first chain
@@ -264,14 +265,16 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 		{
 			MODEL.tid = i;
 			
-			basis->prior.minKnotNum = opt->prior.trendMinKnotNum;
-			basis->prior.maxKnotNum = opt->prior.trendMaxKnotNum;
-			basis->prior.minSepDist = opt->prior.trendMinSepDist;
+			basis->prior.minKnotNum  = opt->prior.trendMinKnotNum;
+			basis->prior.maxKnotNum  = opt->prior.trendMaxKnotNum;
+			basis->prior.minSepDist  = opt->prior.trendMinSepDist;
 			basis->prior.leftMargin  = opt->prior.trendLeftMargin;
 			basis->prior.rightMargin = opt->prior.trendRightMargin;
-			basis->prior.minOrder   = opt->prior.trendMinOrder;
-			basis->prior.maxOrder   = opt->prior.trendMaxOrder;
-			isComponentFixed[i]    = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
+			basis->prior.minOrder    = opt->prior.trendMinOrder;
+			basis->prior.maxOrder    = opt->prior.trendMaxOrder;
+			basis->prior.modelComplexity = opt->prior.trendComplexityFactor;
+
+			isComponentFixed[i]      = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
 
 			AllocInitBasisMEM(basis, N, K_MAX, MEM);
 
@@ -312,34 +315,25 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			else
 				preCalc_XmarsTerms_extra(TREND->COEFF_A, TREND->COEFF_B, N);
 
-		
-			/****************************************************************************/
-			//				Pre-compute the scaling factor
-			/****************************************************************************/
-			I32 tMAXNUMKNOT = basis->prior.maxKnotNum;
-			I32 tMINSEPDIST = basis->prior.minSepDist;
-			F32PTR scaleFactor = MyALLOC(*MEM, tMAXNUMKNOT + 1, F32, 0);
-			{
-				F32PTR MEMBUF1 = MODEL.curr.XtX;  //MODEL.curr.XtX used here a temp MEM buffer
-				F32PTR MEMBUF2 = MODEL.curr.XtX + (tMAXNUMKNOT + 1);
-				preCalc_scale_factor(scaleFactor, N, tMAXNUMKNOT, tMINSEPDIST, MEMBUF1, MEMBUF2);
-			}
-			basis->scalingFactor = scaleFactor;
+
 
 			/////////////////////////////////////////////////////////////
 			//TODO: the model prior adjustment factors are needed only for certain modelPriorType
 			I32 NUMSEG    = opt->prior.trendMaxKnotNum + 1;
 			I32 MINORDER  = opt->prior.trendMinOrder + 1;
 			I32 MAXORDER  = opt->prior.trendMaxOrder + 1;
+			I32 MINSEP    = opt->prior.trendMinSepDist;
 
-			if (opt->prior.modelPriorType ==4) {
-				F64PTR priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER, F64, 64);
+			if (opt->prior.modelPriorType >= 1 && opt->prior.modelPriorType <=  14) {
+				F64PTR priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER,          F64, 64);
 				F64PTR priorMat = MyALLOC(*MEM, NUMSEG * MAXORDER * NUMSEG, F64, 64);
+				F64PTR priorNModels = MyALLOC(*MEM, NUMSEG ,                F64, 64);
 
-				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, opt->prior.trendMinSepDist,	priorMat, priorVec);
+				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, MINSEP,priorMat, priorVec, priorNModels,  opt->prior.modelPriorType);
 
-				basis->priorMat = priorMat;
-				basis->priorVec = priorVec;	
+				basis->priorMat            = priorMat;
+				basis->priorVec            = priorVec;	
+				basis->priorNmodelsPerNseg = priorNModels;
 			}
 			
 		}
@@ -354,6 +348,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = opt->prior.seasonMaxOrder;
+			basis->prior.modelComplexity = opt->prior.seasonComplexityFactor;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
 
 			AllocInitBasisMEM(basis, N, K_MAX, MEM);
@@ -393,32 +388,27 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 	
 			preCalc_terms_season(SEASON->TERMS, SEASON->SQR_CSUM, SEASON->SCALE_FACTOR, N, opt->io.meta.period, sMAXORDER);
 
-			/****************************************************************************/
-			//				Pre-compute the scaling factor
-			/****************************************************************************/
-			I32 sMAXNUMKNOT = basis->prior.maxKnotNum;
-			I32 sMINSEPDIST = basis->prior.minSepDist;
-			F32PTR scaleFactor = MyALLOC(*MEM, sMAXNUMKNOT + 1, F32, 0);
-			{
-				F32PTR MEMBUF1 = MODEL.curr.XtX;  //MODEL.curr.XtX used here a temp MEM buffer
-				F32PTR MEMBUF2 = MODEL.curr.XtX + (sMAXNUMKNOT + 1);
-				preCalc_scale_factor(scaleFactor, N, sMAXNUMKNOT, sMINSEPDIST, MEMBUF1, MEMBUF2);
-			}
-			basis->scalingFactor = scaleFactor;
+	 
 
 			/////////////////////////////////////////////////////////////
 			// TODO: the model prior adjustment factors are needed only for certain modelPriorType
 			I32 NUMSEG    = opt->prior.seasonMaxKnotNum + 1;
 			I32 MINORDER  = opt->prior.seasonMinOrder;
 			I32 MAXORDER  = opt->prior.seasonMaxOrder;
+			I32 MINSEP    = opt->prior.seasonMinSepDist;
 
-			if (opt->prior.modelPriorType == 4) {
+			if (opt->prior.modelPriorType >= 1 && opt->prior.modelPriorType <= 14) {
 				F64PTR priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER, F64, 64);
 				F64PTR priorMat = MyALLOC(*MEM, NUMSEG * MAXORDER * NUMSEG, F64, 64);
-				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, opt->prior.seasonMinSepDist, priorMat, priorVec);
+				F64PTR priorNModels = MyALLOC(*MEM, NUMSEG, F64, 64);
+
+				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, MINSEP, priorMat, priorVec, priorNModels,  opt->prior.modelPriorType);
+
 				basis->priorMat = priorMat;
 				basis->priorVec = priorVec;
-			}
+				basis->priorNmodelsPerNseg = priorNModels;
+			} 
+ 
 
 		}
 		else if (type == DUMMYID)
@@ -433,6 +423,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = -1;//opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = -1;//opt->prior.seasonMaxOrder;
+			basis->prior.modelComplexity = opt->prior.seasonComplexityFactor;
+
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
 
 			AllocInitBasisMEM(basis, N, K_MAX, MEM);
@@ -477,33 +469,28 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 				preCalc_terms_season(DUMMY->TERMS, NULL, NULL, N, opt->io.meta.period, sMAXORDER);
 			}
 			
-			
-			/****************************************************************************/
-			//				Pre-compute the scaling factor
-			/****************************************************************************/
-			I32 sMAXNUMKNOT = basis->prior.maxKnotNum;
-			I32 sMINSEPDIST = basis->prior.minSepDist;
-			F32PTR scaleFactor = MyALLOC(*MEM, sMAXNUMKNOT + 1, F32, 0);
-			{
-				F32PTR MEMBUF1 = MODEL.curr.XtX;  //MODEL.curr.XtX used here a temp MEM buffer
-				F32PTR MEMBUF2 = MODEL.curr.XtX + (sMAXNUMKNOT + 1);
-				preCalc_scale_factor(scaleFactor, N, sMAXNUMKNOT, sMINSEPDIST, MEMBUF1, MEMBUF2);
-			}
-			basis->scalingFactor = scaleFactor;
+ 
 
 			/////////////////////////////////////////////////////////////
 			//TODO:::
 			I32		NUMSEG    = opt->prior.seasonMaxKnotNum + 1;
 			I32		MINORDER  = opt->prior.seasonMinOrder=1;
 			I32		MAXORDER  = opt->prior.seasonMaxOrder=2;
-			if (opt->prior.modelPriorType == 4) {
-				F64PTR	priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER, F64, 64);
-				F64PTR	priorMat = MyALLOC(*MEM, NUMSEG * MAXORDER * NUMSEG, F64, 64);
-				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, opt->prior.seasonMinSepDist, priorMat, priorVec);
+			I32     MINSEP    = opt->prior.seasonMinSepDist;
 
-				basis->priorMat = priorMat = NULL;
+			if (opt->prior.modelPriorType >= 1 && opt->prior.modelPriorType <= 14) {
+				F64PTR priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER, F64, 64);
+				F64PTR priorMat = MyALLOC(*MEM, NUMSEG * MAXORDER * NUMSEG, F64, 64);
+				F64PTR priorNModels = MyALLOC(*MEM, NUMSEG, F64, 64);
+
+				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, MINSEP, priorMat, priorVec, priorNModels,  opt->prior.modelPriorType);
+
+				basis->priorMat = priorMat =NULL;
 				basis->priorVec = priorVec = NULL;
+				basis->priorNmodelsPerNseg = priorNModels = NULL;
 			}
+
+	 
 	
 		}
 		else if (type == SVDID)
@@ -518,6 +505,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 			basis->prior.rightMargin = opt->prior.seasonRightMargin;
 			basis->prior.minOrder   = opt->prior.seasonMinOrder;
 			basis->prior.maxOrder   = opt->prior.seasonMaxOrder;
+			basis->prior.modelComplexity = opt->prior.seasonComplexityFactor;
 			isComponentFixed[i]     = basis->prior.minOrder == basis->prior.maxOrder && basis->prior.minKnotNum == 0 && basis->prior.maxKnotNum == 0;
 
 			AllocInitBasisMEM(basis, N, K_MAX, MEM);
@@ -561,38 +549,34 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR opt, MemPointe
 				} // or (rI32 order = 1; order <= maxSeasonOrder; order++)
 			}
  
-			/****************************************************************************/
-			//				Pre-compute the scaling factor
-			/****************************************************************************/
-			I32 sMAXNUMKNOT = basis->prior.maxKnotNum;
-			I32 sMINSEPDIST = basis->prior.minSepDist;
-			F32PTR scaleFactor = MyALLOC(*MEM, sMAXNUMKNOT + 1, F32, 0);
-			{
-				F32PTR MEMBUF1 = MODEL.curr.XtX;  //MODEL.curr.XtX used here a temp MEM buffer
-				F32PTR MEMBUF2 = MODEL.curr.XtX + (sMAXNUMKNOT + 1);
-				preCalc_scale_factor(scaleFactor, N, sMAXNUMKNOT, sMINSEPDIST, MEMBUF1, MEMBUF2);
-			}
-			basis->scalingFactor = scaleFactor;
+ 
 
 			/////////////////////////////////////////////////////////////
 			// TODO: the model prior adjustment factors are needed only for certain modelPriorType
 			I32 NUMSEG    = opt->prior.seasonMaxKnotNum + 1;
 			I32 MINORDER  = opt->prior.seasonMinOrder;
 			I32 MAXORDER  = opt->prior.seasonMaxOrder;
+			I32 MINSEP    = opt->prior.seasonMinSepDist;
 
-			if (opt->prior.modelPriorType == 4) {
+			if (opt->prior.modelPriorType >= 1 && opt->prior.modelPriorType <= 14) {
 				F64PTR priorVec = MyALLOC(*MEM, NUMSEG * MAXORDER, F64, 64);
 				F64PTR priorMat = MyALLOC(*MEM, NUMSEG * MAXORDER * NUMSEG, F64, 64);
-				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, opt->prior.seasonMinSepDist, priorMat, priorVec);
-				basis->priorMat = priorMat;
-				basis->priorVec = priorVec;
+				F64PTR priorNModels = MyALLOC(*MEM, NUMSEG, F64, 64);
+
+				PreCaclModelNumber(MINORDER, MAXORDER, NUMSEG, N, MINSEP, priorMat, priorVec, priorNModels,  opt->prior.modelPriorType);
+
+				basis->priorMat = priorMat ;
+				basis->priorVec = priorVec ;
+				basis->priorNmodelsPerNseg = priorNModels ;
 			}
+
 
 		}
 		else if (type == OUTLIERID) {
 
 			MODEL.oid = i;
 
+			basis->prior.minKnotNum = opt->prior.outlierMinKnotNum;
 			basis->prior.maxKnotNum = opt->prior.outlierMaxKnotNum;
 
 			isComponentFixed[i] = 0;

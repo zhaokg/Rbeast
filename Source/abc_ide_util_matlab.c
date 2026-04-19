@@ -30,18 +30,19 @@ void StdouFlush(void) {
 // Name mangling starts with __Z in MacOS and _Z in Linux
 
 #if defined(OS_WIN32) || defined(OS_WIN64)
- #if defined(COMPILER_MSVC)
-    // https://stackoverflow.com/questions/53381461/does-visual-c-provide-a-language-construct-with-the-same-functionality-as-a
-    #pragma comment(linker, "/alternatename:ioFlush=?ioFlush@@YA_NXZ")
- #else
-    extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
- #endif
+	 #if defined(COMPILER_MSVC)
+		// https://stackoverflow.com/questions/53381461/does-visual-c-provide-a-language-construct-with-the-same-functionality-as-a
+		#pragma comment(linker, "/alternatename:ioFlush=?ioFlush@@YA_NXZ")
+	 #else
+	// GNU as does document that symbol names with unusual characters are allowed when enclosed in double quotes
+		extern Bool ioFlush(void)  asm("\"?ioFlush@@YA_NXZ\"");
+	 #endif
 #elif defined(OS_MAC)
-   extern Bool ioFlush(void)  asm("__Z7ioFlushv"); 
+	 extern Bool ioFlush(void)  asm("__Z7ioFlushv");
 #elif defined(OS_LINUX)   
-   extern Bool ioFlush(void)  asm("_Z7ioFlushv");
+	 extern Bool ioFlush(void)  asm("_Z7ioFlushv");
 #else
-   // Do nothing
+	 // Do nothing
 #endif
 
 //  https://stackoverflow.com/questions/35837694/how-to-manually-mangle-names-in-visual-c
@@ -239,7 +240,7 @@ I32 GetCharVecElem(void* ptr, int idx, char* dst, int n) {
 		else {
 			int    cols = dims[1];
 			int    rows = dims[0];
-			//MATLAB uses 16-bit unsigned integer character encoding for UnicodeÂ® characters.
+			//MATLAB uses 16-bit unsigned integer character encoding for Unicode® characters.
 			mwSize   newdims[2] = {1,cols };
 			mxArray* newrow     = mxCreateCharArray(2, newdims);
 			

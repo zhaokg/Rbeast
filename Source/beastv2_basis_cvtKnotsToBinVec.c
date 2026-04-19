@@ -1,9 +1,10 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_blas_lapack_lib.h" //r_ippsSet_8u
+
 
 #include <string.h>
 #include "abc_vec.h"   // for i08_sum_binvec only
-#include "abc_blas_lapack_lib.h" //r_ippsSet_8u
 
 
 #include "beastv2_header.h"

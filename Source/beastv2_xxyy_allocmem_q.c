@@ -33,7 +33,7 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model, BEAST2_OPTIONS_PTR o
 	for (int i = 0; i < MODEL.NUMBASIS; i++) { 
 		MAX_TOTAL_SEGNUM += (MODEL.b[i].prior.maxKnotNum + 1);
 	}
-	I32 MAX_NUMELEM_SEGINFO = MAX_TOTAL_SEGNUM * (sizeof(BEAST2_BASESEG)/4);
+	I32 MAX_NUMELEM_SEGINFO = (MAX_TOTAL_SEGNUM * sizeof(BEAST2_BASESEG) +3) /4;
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -138,7 +138,7 @@ void AllocateYinfoMEM(BEAST2_YINFO_PTR yInfo, BEAST2_OPTIONS_PTR opt, MemPointer
 	nodes[nNodes++] = (MemNode){ .addr = &yInfo->rowsMissing,    .size = sizeof(U32) * MAXNUM_MISSINGROW,   .align =64,.offset_from_origin = 0 };
 
 	//added for MRBEAST and used in ComputeLik, PropseNew/__CalcAbsDeviation(compute deviaiton and extrempos)
-	//, MR_EvaluateModel,
+	//, BEAST2EvaluateModel,
 	yInfo->q               = q;
 
 	if (opt->io.meta.deseasonalize) {

@@ -1,9 +1,10 @@
-#include <math.h>
 #include "abc_000_warning.h"
-
-#include "abc_mcmc.h"
+#include "abc_001_config.h"
 #include "abc_blas_lapack_lib.h"
-#include "abc_mat.h" //f32_transpose_inplace
+#include "abc_mat.h"             //f32_transpose_inplace
+#include "abc_mcmc.h"
+
+#include <math.h>
 
 
 static void PrepareCiInfo(CI_PARAM *cinfo, U32 nSamples,  MemPointers * MEM)
@@ -139,7 +140,7 @@ void InsertNewRowToUpdateCI(CI_PARAM* _restrict info, CI_RESULT* _restrict ci)
 		r_cblas_scopy(N, newDataRow, 1, ci->CI95 + offset, 1); 
 		ci->samplesInserted++;
 
-		I32 nSamples = info->nSamples;
+		U32 nSamples = info->nSamples;
 		if (ci->samplesInserted == nSamples) {
 			r_mkl_simatcopy('C', 'T', N, nSamples, 1, ci->CI95, N, nSamples);
 			//make a copy of cred_upper into "cred_lower"

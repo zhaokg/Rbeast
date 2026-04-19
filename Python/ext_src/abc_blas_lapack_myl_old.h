@@ -6,9 +6,9 @@
 //#include <inttypes.h> //#include <stdint.h>
 #include "abc_datatype.h"
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	#define F77__CALL(x)  x
-#elif defined(CLANG_COMPILER)|| defined(GCC_COMPILER) ||defined(SOLARIS_COMPILER)  
+#elif defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS)  
 	#define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 	#define F77__CALL(x)		PRIMITIVE_CAT(x, _)
 
@@ -175,9 +175,9 @@ static  INLINE void  F77__sgemm(int transa, int transb, int m, int n, int k, F32
 /*                           C interfaces to Fortran vector math fucntions             */
 /***************************************************************************************/
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	//#define F77__CALL(x)  x
-#elif defined(CLANG_COMPILER)|| defined(GCC_COMPILER) ||defined(SOLARIS_COMPILER) 
+#elif defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS) 
 
 	//#define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 	//#define F77__CALL(x)		PRIMITIVE_CAT(x, _)

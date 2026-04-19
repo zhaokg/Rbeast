@@ -1,6 +1,9 @@
 #include "abc_000_warning.h"
+#include "abc_001_config.h"
 #include "abc_mat.h"
 
+#include <math.h>  
+#include <string.h>  
 
 static void chol(F32PTR XtX, F32PTR U, I32 K, I32 k)
 {
@@ -161,7 +164,7 @@ void chol_columwise(F32PTR A, F32PTR U, I64  N, I64 K)
 			U    = U - (col - 1) + N; //jump to the next col
 		}
 
-		Ucol[COL - 1] = sqrt( A[COL-1] - SUM_UxU);
+		Ucol[COL - 1] = (F32) sqrt( A[COL-1] - SUM_UxU);
 	}
 
 }
@@ -182,12 +185,12 @@ void chol_columwise_v2( F32PTR A, F32PTR U, I64  N, I64 K )
 				sum += U[row - 1] * Ucol[row - 1];
 
 			F64 res		    = (A[col -1]-sum) / U[col -1];
-			Ucol[col - 1]	= res;
+			Ucol[col - 1]	= (F32) res;
 			SUM_Ucol_x_Ucol += res * res;	
 
 			U += N;								 // Jump to the next col (i.e., the new j-th col)
 		}
-		Ucol[COL -1] = sqrt(A[COL -1]-SUM_Ucol_x_Ucol);
+		Ucol[COL -1] = (F32) sqrt(A[COL -1]-SUM_Ucol_x_Ucol);
 	}
 	    
 
@@ -205,7 +208,7 @@ void chol_rowwise( F32PTR A, F32PTR U, I64  N, I64 K ) {
 		A  = A_base + (ROW-1)*N ;        //go to the start  of the ROW-th column
 
 		F64 sum = 0.0; 	for (I32 row = 1; row < ROW; ++row) {sum += U[row-1]* U[row-1]; }
-		F32 Ukk     = sqrt(A[ROW-1]-sum);				
+		F32 Ukk     = (F32) sqrt(A[ROW-1]-sum);
 		F32 Ukk_inv = 1.f / Ukk;
 		U[ROW - 1] = Ukk;
 	
@@ -236,14 +239,14 @@ void chol_addCol(F32PTR A, F32PTR U, I64 N, I64 K0, I64 K1)
 			F64 sum = 0.f;
 			for (I32 row = 1; row < col; row++)	{sum += (*U++)* (*Ucol++);}			
 			F64 Uk = (A[col - 1] - sum) / (*U);
-			*Ucol  = Uk;
-			SUM   +=Uk * Uk;
+			*Ucol  = (F32) Uk;
+			SUM   += Uk * Uk;
 
 			Ucol = Ucol - (col - 1);
 			U    = U - (col - 1) + N;
 		}
 
-		Ucol[COL - 1] = sqrt(A[COL - 1] - SUM);
+		Ucol[COL - 1] = (F32) sqrt(A[COL - 1] - SUM);
 	}
 
 }
@@ -257,8 +260,8 @@ void inplace_chol(F32PTR A, I64  N, I64 K)
 		F32 Ukk_inv;
 		{	F64 sum = 0.f;
 			for (I64 row = 1; row < COL; row++) { sum += A[row - 1] * A[row - 1]; };			
-			F64  Ukk = sqrt(A[COL-1] - sum);			
-			A[COL - 1] = Ukk;
+			F64  Ukk   = sqrt(A[COL-1] - sum);			
+			A[COL - 1] = (F32) Ukk;
 			Ukk_inv    = 1.f/Ukk;
 		}		
 
@@ -1004,7 +1007,6 @@ void solve_U_as_U_invdiag_multicols(F32PTR U, F32PTR x, I64 ldu, I64 K, I32 nCol
 
 #include "abc_blas_lapack_lib.h"
 
-
 void linear_regression(F32PTR Y, F32PTR X, int ldx, int N, int K, F32PTR B,F32PTR Yfit, F32PTR Yerror, F32PTR TMP) {
 	
 	// Get XtY
@@ -1084,8 +1086,6 @@ void simple_linear_regression_nan(F32PTR Y, F32PTR X, int N, F32PTR Yfit, F32PTR
 	}
 }
 
-
-
 /*
 void f32_gemm_XtY1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F32PTR C, int ldc) 
 {
@@ -1105,165 +1105,6 @@ void f32_gemm_XtY1(int M, int N, int K, F32PTR A, int lda, F32PTR B, int ldb,  F
 	}
 }
 */
-
-void update_XtX_from_Xnewterm(F32PTR X, F32PTR Xnewterm, F32PTR XtX, F32PTR XtXnew, NEWCOLINFO * new ) {
-
-	I32 k1       = new->k1;
-	I32 k2_old   = new->k2_old;
-	I32 k2_new   = new->k2_new;
-	I32 Knewterm = new->Knewterm; // k2_new - k1 + 1L;
-	I32 KOLD     = new->KOLD;
-	I32 KNEW     = new->KNEW;
-
-	I32 N    = new->N;
-	I32 Nlda = new->Nlda;
-	/*************************************************************************/
-	//               The FIRST component:	
-	/*************************************************************************/
-	// There'sY no first component if k1_old/k1_new=1 for SEASON	
-	for (I32 i = 1; i < k1; i++) SCPY(i, XtX + (i - 1L) * KOLD, XtXnew + (i - 1L) * KNEW);
-
-	/*************************************************************************/
-	//              The SECOND component
-	/*************************************************************************/
-	// No new cols/terms if flag=ChORDER && isInsert=0:the resampled basis has a higher order than the old basis
-	if (Knewterm != 0) {
-
-		FILL0(XtXnew + (k1 - 1) * KNEW, (KNEW - k1 + 1) * KNEW); // zero out the cols from k1-th to the end
-		if (k1 > 1) {
-			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1 - 1, Knewterm, N, 1.0f,
-				X, Nlda,
-				Xnewterm, Nlda, 0.f,
-				XtXnew + (k1 - 1L) * KNEW, KNEW);
-		}
-
-
-		// Three alternative ways to compute Xnewterm'*XnewTerm. Note that the resulting matrix is symmetric
-
-		// THE FIRST WAY:
-		r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
-			Knewterm, Knewterm, N, 1.0,
-			Xnewterm, Nlda,
-			Xnewterm, Nlda, 0.f,
-			XtXnew + (k1 - 1) * KNEW + k1 - 1, KNEW);
-
-
-		//THE SECOND WAY: 
-		//sgemmt only updates the upper triangular part of the resulting matrix, which is supposed to be faster than sgemm, but it is NOT
-		//cblas_sgemmt(CblasColMajor, CblasUpper, CblasTrans, CblasNoTrans, K_newTerm, Npad, 1.0f, Xnewterm, Npad, Xnewterm, Npad, 0.f, GlobalMEMBuf_2nd, K_newTerm);
-
-		//THE THIRD WAY: 
-		//This is the fastest way when using Intel'sY MKL
-		/*
-		{  for (int i = 1; i <= K_newTerm; i++)
-		   for (int j = 1; j <= i; j++)
-		   GlobalMEMBuf_2nd[K_newTerm*(i - 1) + j - 1] = DOT(N, Xnewterm + (j - 1)*Npad, Xnewterm + (i - 1)*Npad);
-		} */
-
-		/*
-		//After obtaining Xnewterm'*Xnewterm, insert it into XtX_prop at appropriate locations
-		for (rI32 i = k1_new, j = 1; i <= k2_new; i++, j++) {
-			if (k1_new != 1) r_cblas_scopy(k1_new - 1, MEMBUF1 + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
-			r_cblas_scopy(j, MEMBUF2 + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
-		}*/
-	}
-	/*{
-	cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, k1_new - 1, K_newTerm, N, 1, X_mars, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, k1_new - 1);
-	for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
-	r_cblas_scopy(k1_new - 1, GlobalMEMBuf_1st + (j - 1)*(k1_new - 1), 1, XtX_prop + (i - 1)*KNEW, 1);
-	cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, K_newTerm, K_newTerm, N, 1, X_mars_prop + (k1_new - 1)*N, N, X_mars_prop + (k1_new - 1)*N, N, 0, GlobalMEMBuf_1st, K_newTerm);
-	for (int i = k1_new, j = 1; i <= k2_new; i++, j++)
-	r_cblas_scopy(j, GlobalMEMBuf_1st + (j - 1)*K_newTerm, 1, XtX_prop + (i - 1)*KNEW + k1_new - 1, 1);
-	}*/
-
-	/*************************************************************************/
-	//                  The THRID component: 
-	/*************************************************************************/
-	//There is no third componet if k2_old=KOLD 
-	if (k2_old != KOLD) {
-		/*for (rI32  j = 1; i <= KOLD; i++, j++) {r_cblas_scopy(K_newTerm,  MEMBUF1 + (j - 1)*K_newTerm, 1, XtX_prop + (k - 1)*KNEW + k1_new - 1, 1),					*/
-		for (I32 kold = k2_old + 1, knew = k2_new + 1; kold <= KOLD; kold++, knew++) {
-			F32PTR ColStart_old = XtX + (kold - 1) * KOLD;
-			F32PTR ColStart_new = XtXnew + (knew - 1) * KNEW;
-			SCPY(k1 - 1,       ColStart_old, ColStart_new); //the upper part of the third componet
-			SCPY(kold - k2_old, ColStart_old + (k2_old + 1) - 1, ColStart_new + (k2_new + 1) - 1); // the bottom part of the 3rd cmpnt
-		}
-
-		// If there is a MIDDLE part of the componet (i.e, Knewterm>0); this part 
-		// will be missing if flag is resmaplingOder and isInsert = 0.
-		if (Knewterm != 0) {
-			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans,
-				Knewterm, (KOLD - k2_old), N, 1.0,
-				Xnewterm, Nlda,
-				X + (k2_old + 1 - 1) * Nlda, Nlda, 0.0,
-				XtXnew + (k2_new + 1 - 1) * KNEW + k1 - 1, KNEW);
-		}
-
-	}
-
-			 
-}
-
-void update_XtY_from_Xnewterm(F32PTR Y, F32PTR Xnewterm, F32PTR XtY, F32PTR XtYnew, NEWCOLINFO* new, I32 q) {
-
-	// X and Xnewterm has a leading dimesnion of new.Nlada
-	// Y has a leading dimension of new.N
-
-	I32 k1       = new->k1;
-	I32 k2_old   = new->k2_old;
-	I32 k2_new   = new->k2_new;
-	I32 Knewterm = new->Knewterm;
-	I32 N        = new->N;
-	I32 Nlda     = new->Nlda;
-	I32 KOLD     = new->KOLD;
-	I32 KNEW     = new->KNEW;
-/*********************************************************************************/
-//                 Compute XtY_prop from XtY
-/********************************************************************************/
-	if (q == 1) {
-		// Skipped if k1_old=1 when dealing with SEASON
-		if (k1 > 1)       SCPY(k1 - 1, XtY,XtYnew);
-		// New components : XnewTemrm*Y
-		if (Knewterm > 0) { 
-				r_cblas_sgemv(CblasColMajor, CblasTrans, N, Knewterm, 1.f,
-						Xnewterm,   Nlda,
-						Y,         1L, 0.f,
-					    XtYnew + k1 - 1, 1L);
-		}
-		//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
-		if (k2_old != KOLD) SCPY(KNEW - k2_new, XtY + (k2_old + 1L) - 1L, XtYnew + (k2_new + 1) - 1);
-
-	}
-	else {
-		// FOR MrBEAST
-
-		// Skipped if k1_old=1 when dealing with SEASON
-		if (k1 > 1) {
-			for (I32 c = 0; c < q; ++c) {
-				SCPY(k1 - 1, XtY + KOLD * c, XtYnew + KNEW * c);
-			}
-		}
-		// New components : XnewTemrm*Y
-		if (Knewterm > 0) {
-			//MatxVec(NEW.SEG, NEW.numSeg, Xnewterm, yInfo.Y, MODEL.prop.XtY + NEW.k1 - 1, N);
-			r_cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, 
-				Knewterm, q, N, 1.f, 
-				Xnewterm, Nlda,
-				Y,        N, 0.f,
-				XtYnew + k1 -1, KNEW);
-		}
-
-		//this part will be skipped if k2_old=KOLD when dealing with TREND(Istrend==1)
-		if (k2_old != KOLD) {
-			for (I32 c = 0; c < q; ++c) {
-				SCPY(KNEW - k2_new, XtY + (k2_old + 1L) - 1L + KOLD * c, XtYnew + (k2_new + 1) - 1 + KNEW * c);
-			}
-		}
-
-
-	}
-}
-
 
 
 void get_parts_for_newinfo(NEWCOLINFOv2* new) {
@@ -1549,29 +1390,37 @@ void swap_elem_bands(NEWCOLINFOv2* new, void *x, void *xnew, I32 elemSize) {
 
 void shift_lastcols_within_matrix(F32PTR X, I32 N, I32 Kstart, I32 Kend, I32 Knewstart) {
 
-	if (Knewstart == Kstart) {
+	int offset = Knewstart - Kstart;
+	if (offset == 0) {
 		return;
 	}
 
-	int j = Knewstart - Kstart;
-	if (j < 0 || Knewstart > Kend) {
-		// dst(k2_new):-----123455----
-		// src(k2_old):----------123455----
+	int Kseg = Kend - Kstart + 1;
+	if ( offset>=Kseg || offset <= -Kseg) { // Not overlapping	
+		// dst(k2_new):--------------------{Knewstart]123455----  [CASE 1]
+		// src(k2_old):-----123455[Kend]----
 
-		// dst(k2_new):----------------123455----
-		// src(k2_old):-----123455----
-		r_cblas_scopy((Kend - Kstart + 1) * N, X + (Kstart - 1) * N, 1, X + (Knewstart - 1) * N, 1);
-	} else {
+		// dst(k2_new):-----123455----                            [CASE 2] 
+		// src(k2_old):---------------[Ksart]123455----
+		r_cblas_scopy(Kseg * N, X + (Kstart - 1) * N, 1, X + (Knewstart - 1) * N, 1);
+	}	
+	else if (offset < 0) { // Overlaping [ -Kseg <offset <0]
+		// Use of memcpy in this case is not safe, having undefined behavior accroding to the C standard
+		// dst(k2_new):-----123455----
+		// src(k2_old):----------123455----		
+		memmove( X+(Knewstart - 1) * N, X + (Kstart - 1) * N, Kseg * N * sizeof(F32));
+	}
+    else {  // Overlaping [ 0 <offset < Kseg]
 		// dst(k2_new):-------------123456----
 		// src(k2_old):---------123456----
 		I32 segStartIdx = Kend + 1;
 		while (_True_) {
-			segStartIdx = segStartIdx - j;
+			segStartIdx = segStartIdx -offset;
 			if (segStartIdx > Kstart) {
-				SCPY(j * N, X + (segStartIdx - 1) * N, X + ((segStartIdx + j) - 1) * N);				
+				SCPY(offset * N, X + (segStartIdx - 1) * N, X + ((segStartIdx + offset) - 1) * N);
 			} else {
-				j = (segStartIdx + j) - Kstart;
-				SCPY(j * N, X + (Kstart - 1) * N, X + (Knewstart - 1) * N);
+				int Kremaining = (segStartIdx + offset) - Kstart;
+				SCPY(Kremaining * N, X + (Kstart - 1) * N, X + (Knewstart - 1) * N);
 				break;
 			}
 		}//while (_True_)
@@ -1615,6 +1464,7 @@ void swap_cols_bands_within_matrx(NEWCOLINFOv2* new) {
 	}
 		
 }
+
 #include "abc_000_warning.h"
  
 

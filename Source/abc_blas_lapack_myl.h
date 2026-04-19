@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abc_000_macro.h"
+#include "abc_001_config.h"
 #include "abc_vec.h"
 #include "abc_mat.h"
 
@@ -220,8 +220,6 @@ static INLINE void  f32__strtrs(char uplo, char trans, char diag, int n, int nrh
 	}
 }
 
- 
- 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 #define r_ippsMaxIndx_32f(X, N, val, idx)				*(I32PTR)(idx)=f32_maxidx( X,  N, val)

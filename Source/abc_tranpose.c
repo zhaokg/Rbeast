@@ -168,7 +168,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat, U64 NROW, U64 NCOL) {
 	// rosettacode.org/wiki/Matrix_transposition#C
 	if (NROW == 1 || NCOL == 1) { return; }
 
-	I32 NfixedPoints = greatest_common_divsor(NROW - 1, NCOL - 1) + 1L;
+	I32 NfixedPoints = greatest_common_divsor((int)NROW - 1, (int)NCOL - 1) + 1L;
 	U64 Nprocessed   = NfixedPoints;
 	I08 WORKED[Nwork + 1] = { 0, };
 	U64 K            = NROW * NCOL - 1;        // use int64 t- avoid ovwerflow in PREV()
@@ -646,7 +646,7 @@ void i32_permuate_nd(I32PTR mat, int *dims, int* order, int ndim) {
 		new_index[i] = i;
 	}
 		
-	i32_QuickSortA(new_groupstart, new_index, 0, new_ndim - 1);
+	i32a_introSort_index(new_groupstart, 0, new_ndim - 1,  new_index);
 	int new_order[20];
 	int new_orgdims[20];
 	for (int i = 0; i < new_ndim; i++) {

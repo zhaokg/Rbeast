@@ -1,14 +1,17 @@
 #include "abc_000_warning.h"
 
 #include "abc_001_config.h"
+#include "abc_blas_lapack_lib.h"
  
 #include "abc_ts_func.h"
-#include "abc_vec.h"   // for f32_seq only
-#include "abc_math.h"  // for fastsqrt only
-#include "abc_date.h"  // for fastsqrt only
-#include "abc_ide_util.h"  //printf
-#include "abc_common.h" //normalize quicksort
-#include "abc_blas_lapack_lib.h"
+#include "abc_vec.h"       // for f32_seq only
+#include "abc_math.h"      // for fastsqrt only
+#include "abc_date.h"      // for fastsqrt only
+#include "abc_ide_util.h"  // printf
+#include "abc_common.h"    // normalize quicksort
+#include "abc_sort.h"
+
+#include "math.h"
 
 #if defined(PI)
 	#undef PI	
@@ -140,40 +143,7 @@ void preCalc_XmarsTerms_extra_fmt3(F32PTR COEFF_A, F32PTR COEFF_B, I32 N)
 
 }
 
-void preCalc_scale_factor(F32PTR sclFactor, I32 N, I32 maxKnotNum, I32 minSepDist, F32PTR mem1, F32PTR mem2)
-{
-	if (sclFactor == NULL) {
-		return;
-	}
-
-	F32 N_tmp, tmp1, tmp2;
-
-	for (int k = 0; k <= maxKnotNum; k++) {
-
-		N_tmp = N - (k+1)*(minSepDist - 1) - 1.f;
-
-		if (k == 0)	{
-			*mem1 = 1.0f;
-			tmp1  = logf(1.0f);
-		} else {			
-			f32_seq(mem1, (F32)1, (F32)1, k);
-			r_ippsSubC_32f_I(1.f, mem1, k);
-			r_ippsSubCRev_32f_I(N_tmp, mem1, k);
-			r_ippsLn_32f_I(mem1, k);
-			r_ippsSum_32f(mem1, k, &tmp1, ippAlgHintAccurate);
-		}
-
-		N_tmp    = N - (k + 2)*(minSepDist - 1) - 1.f;		
-		f32_seq(mem2, 1.f, 1.f, k+1);
-		r_ippsSubC_32f_I(1.f, mem2, k + 1);
-		r_ippsSubCRev_32f_I(N_tmp, mem2, k + 1);
-		r_ippsLn_32f_I(mem2, k + 1);	
-		r_ippsSum_32f(mem2, k + 1, &tmp2, ippAlgHintAccurate);
-
-		sclFactor[k] = (N - (k + 2)*minSepDist + 1) *expf(tmp1 - tmp2);
-	}	
-
-}
+ 
 
 
 void KnotList_to_Bincode(U08PTR  good, I32 N, U16 minSepDist, U16PTR knotList, I64 knotNum) {
@@ -191,7 +161,7 @@ I32  tsAggegrationPrepare_Old(F32PTR oldTime, I32 Nold, F32 dT, I32PTR *SortedTi
 	/************************************************/
 	I32PTR  SORTED_IDX = malloc(sizeof(I32)*Nold);	
 	for (I32 i = 0; i < Nold; i++) SORTED_IDX[i] = i;
-	QuickSortA(oldTime, SORTED_IDX, 0, Nold - 1);	
+	f32a_introSort_index(oldTime,  0, Nold - 1, SORTED_IDX);
 	*SortedTimeIdx = SORTED_IDX;
 	/************************************************/
 
@@ -243,7 +213,7 @@ I32  tsAggegrationPrepare(TimeVecInfo* tvec) {
 
 	// Sanity check: 
    if (tvec->isStartDeltaOnly==1 && tvec->isConvertedFromStartDeltaOnly==1) {
-		r_printf("Error: there must be someting wrong in TsAggegrationPrepare\n ");
+		r_printf("Error: there must be something wrong in TsAggegrationPrepare\n ");
 		return 0;
 	}
 

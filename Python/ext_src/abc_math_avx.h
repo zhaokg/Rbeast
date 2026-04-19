@@ -8,7 +8,7 @@ typedef __m256i v8si; // vector of 8 int   (avx)
 typedef __m128i v4si; // vector of 8 int   (avx) 
 typedef __m128  v4sf; // vector of 8 int   (avx) 
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 extern v8sf log256_ps(F32PTR x);
 extern v8sf exp256_ps(F32PTR x);
 extern v8sf sin256_ps(F32PTR x);

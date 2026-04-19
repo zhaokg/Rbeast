@@ -1,12 +1,12 @@
 #pragma once
 
-#include "abc_000_macro.h"
+#include "abc_001_config.h"
 #include "abc_vec.h"
 #include "abc_mat.h"
 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	#define F77__CALL(x)  x
-#elif defined(CLANG_COMPILER)|| defined(GCC_COMPILER) ||defined(SOLARIS_COMPILER)  
+#elif defined(COMPILER_CLANG)|| defined(COMPILER_GCC) ||defined(COMPILER_SOLARIS)  
 	#define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 	#define F77__CALL(x)		PRIMITIVE_CAT(x, _)
 
@@ -220,8 +220,6 @@ static INLINE void  f32__strtrs(char uplo, char trans, char diag, int n, int nrh
 	}
 }
 
- 
- 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 #define r_ippsMaxIndx_32f(X, N, val, idx)				*(I32PTR)(idx)=f32_maxidx( X,  N, val)

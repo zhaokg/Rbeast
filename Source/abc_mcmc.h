@@ -1,7 +1,6 @@
 #pragma once
 
 #include "abc_datatype.h"
-typedef enum  MOVETYPE { BIRTH, DEATH, MERGE, MOVE, ChORDER, NoChangeFixGlobal } MOVETYPE;
 #include "abc_mem.h"
 
 //clang complains "warning: redefinition of typedef 'MemPointers' is a C11 feature [-Wtypedef-redefinition]"

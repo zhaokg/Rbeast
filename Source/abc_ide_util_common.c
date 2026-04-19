@@ -1158,7 +1158,7 @@ static int IsRegularTS(F64PTR t, int N, F32* dt) {
 	  /************************************************/
 	  t.sorted_time_indices = quick_timevec_allocator_sortidx(tv, Nold);
 	  i32_seq(t.sorted_time_indices, 0, 1, Nold); // fill with 0 to N-1.
-	  f64_QuickSortA(oldTime, t.sorted_time_indices, 0, Nold - 1);
+	  f64a_introSort_index(oldTime, 0, Nold - 1, t.sorted_time_indices);
 	  Nold = Nold - Nbadvalues;
 	  // Now the sorted values should have all the Infs at the CODE_EOF, if any	
 	  /************************************************/
