@@ -9,8 +9,8 @@
 - time-series segmentation;
 - interrupted time-series analysis;
 - outlier detection;
-- Curve fitting and smotthing
-- Gap-filing o 1D curves
+- curve fitting and smotthing
+- gap-filing of 1D curves
 
 The algorithm is described in [Zhao et al. (2019)](https://drive.google.com/file/d/1MFZ0FpK1NwTieVSAf5jicLgl85Lm48uh/view). Examples on the use of BEAST/Rbeast across remote sensing, ecology, hydrology, public health, finance, paleoclimate, and other fields are provided in [**<ins>selected publications using BEAST/Rbeast</ins>**](#selected-publications-using-beastrbeast).
 
@@ -21,10 +21,10 @@ The algorithm is described in [Zhao et al. (2019)](https://drive.google.com/file
 - [Quick installation](#quick-installation)
 - [Quick examples](#quick-examples)
 - [Installation](#installation)
-  - [R](#r)
-  - [Python](#python)
-  - [MATLAB](#matlab)
-  - [Octave](#octave)
+  - [R](#r-id)
+  - [Python](#python-id)
+  - [MATLAB](#matlab-id)
+  - [Octave](#octave-id)
 - [Description of BEAST](#description-of-beast)
 - [Notes on computation](#notes-on-computation)
 - [Compilation from C source code](#compilation-from-c-source-code)
@@ -85,7 +85,7 @@ plot(out)
 
 # Installation
 
-## R  [![CRAN version](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)   [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)  [![CRAN Task View](https://img.shields.io/static/v1?style=plastic&logo=r&label=Rbeast&message=In%20CRAN%20Task%20Views&color=brightgreen)](https://cran.r-project.org/package=Rbeast)
+## R  <a name=r-id> </a>  [![CRAN version](https://www.r-pkg.org/badges/version/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)   [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/Rbeast?color=green)](https://cran.r-project.org/package=Rbeast)  [![CRAN Task View](https://img.shields.io/static/v1?style=plastic&logo=r&label=Rbeast&message=In%20CRAN%20Task%20Views&color=brightgreen)](https://cran.r-project.org/package=Rbeast)
 
 `Rbeast` is available from CRAN. It is also listed in several CRAN Task Views, including [Time Series Analysis](https://cran.r-project.org/web/views/TimeSeries.html#forecasting-and-univariate-modeling), [Bayesian inference](https://cran.r-project.org/web/views/Bayesian.html#time-series-models), and [Environmetrics](https://cran.r-project.org/web/views/Environmetrics.html#environmental-time-series). Install it from CRAN:
 
@@ -130,7 +130,7 @@ minesweeper()                    # if you dare to waste a few more moments of yo
 
 ---
 
-## Python  [![PyPI](https://img.shields.io/static/v1?style=plastic&logo=python&label=Python&message=pip%20install%20Rbeast&color=brightgreen)](https://pypi.org/project/Rbeast/)
+## Python   <a name=python-id></a>   [![PyPI](https://img.shields.io/static/v1?style=plastic&logo=python&label=Python&message=pip%20install%20Rbeast&color=brightgreen)](https://pypi.org/project/Rbeast/)
 
 `Rbeast` is available from PyPI at  https://pypi.org/project/Rbeast/. Install the binary wheel package using:
 
@@ -179,7 +179,7 @@ rb.plot(out)
 
 ---
 
-## MATLAB    [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-bayesian-changepoint-detection-time-series-decomposition)
+## MATLAB    <a name=matlab-id> </a>  [![View Rbeast on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72515-bayesian-changepoint-detection-time-series-decomposition)
 
 Install the MATLAB version of BEAST automatically to a local folder of your choice:
 
@@ -226,7 +226,7 @@ plotbeast(out)
 
 ---
 
-## Octave
+## Octave  <a name=octave-id> </a> 
 
 The Octave interface is similar to the MATLAB interface. Currently, the precompiled Octave version is primarily supported on Windows. For Octave on Linux or macOS, please contact Kaiguang Zhao at <zhao.1423@osu.edu> for assistance.
 
@@ -236,7 +236,7 @@ eval(webread('http://b.link/rbeast'))
 
 ---
 
-## Julia and IDL
+## Julia and IDL  
 
 Wrappers for Julia and IDL are under development. Contributions are welcome. Interested developers may contact Kaiguang Zhao at <zhao.1423@osu.edu>.
 
