@@ -5,11 +5,12 @@
 beastPath=rbeast_path();
 
 if ~isempty(beastPath)
+%% A local folder is found: Assume BEAST has been installed yet    
     fprintf("Local version:\n");
     rbeast_version;
     localVersion =rbeastGitHubVersion;
    
-    isRemoteVersionAvaiable=0;
+    isRemoteVersionAvaiable = 0;
     try
         fprintf("Github version:\n");
         eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/rbeast_version.m',weboptions('CertificateFilename','')))
@@ -19,13 +20,13 @@ if ~isempty(beastPath)
     if (isRemoteVersionAvaiable==0)
         error("Can't access Github");
     end
-    remoteVersion =rbeastGitHubVersion;
 
-    if(remoteVersion>localVersion)
+    remoteVersion =rbeastGitHubVersion;
+    if( remoteVersion > localVersion)
         strMsgBeast = sprintf('A new version v%f is available from Github. Press y to install it: \n',remoteVersion);
         answerBeast = input(strMsgBeast,'s');
         if strcmp(answerBeast,'y') 
-            hasBeastSrcFld = exist(fullfile(beastPath,'source'),'dir');
+            hasBeastSrcFld = exist(fullfile(beastPath,'source'),'dir');   % Check if the src has been downloaded yet
             rbeast_uninstall();
             eval(webread('http://b.link/rbeast',weboptions('CertificateFilename','')));
             if (hasBeastSrcFld)
@@ -37,11 +38,14 @@ if ~isempty(beastPath)
     else
         fprintf('The latest version is being used and no update is available from GitHub. \n' );
     end
-end
 
 
-if isempty(beastPath)
+elseif  isempty(beastPath)
+%% No local folder is found: Assume BEAST has not been installed yet
       eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/rbeast_install.m',weboptions('CertificateFilename','')));    
 end
+
+
+
 %%
 clearvars  rbeastGitHubVersion localVersion remoteVersion isRemoteVersionAvaiable strMsgBeast hasBeastSrcFld answerBeast
