@@ -118,6 +118,17 @@ function out = beast(y, varargin)
 %        window/segment of length tseg.rightmargin. tseg.rightmargin must be an unitless integer (the number of 
 %        time intervals/data points) so that the time window in the original unit is tseg.rightmargin*deltat. 
 %        If missing, tseg.rightmargin defaults to tseg.min.
+%   <strong>s.complexfct</strong>: 
+%        Numeric (defaulted to 0.0); a hyperprior parameter--newly added in Version 0.1.24--controlling the complexity of
+%        the seasonal curve (i.e., the model dimension or the number of seasonal changepoints). A prior of the form 
+%        "p(k) ~ exp[lambda*(k+1)]" is placed on the number of seasonal changepoints k, where lambda is s.complexfct 
+%        (i.e., prior.seasonComplexityFactor in the beast123() function). Setting lambda = 0 (i.e., s.complexfct=0) yields 
+%        a non-informative prior "p(k) ~ 1.0" where all model dimensions are equally likely a priori. Users may tune s.complexfct
+%        (for beast and beast_irreg)  or seasonComplexityFactor (for beast123) in the range of [-20, 20]} or an
+%        even wider range: Negative values (e.g., lambda = -15.9) favor fewer changepoints (simpler seasonal curves), whereas 
+%         positive values (e.g., lambda = 5.76) favor more changepoints (more complex curves).
+%   <strong>t.complexfct</strong>: 
+%         Numeric (defaulted to 0.0); analogous to s_complexfct, but for the trend component and the number of trend changepoints.
 %   <strong>method</strong>: 
 %        a string (default to 'bayes'); specify which method is used to model the posterior probability.
 %        (1) 'bayes': the full Bayesian formulation as described in Zhao et al. (2019).
@@ -331,6 +342,17 @@ function out = beast(y, varargin)
 %       o = beast(beach, 'start', [2004,1],'deltat', 1/12, 'period','12 month')
 %       o = beast(beach, 'start', [2004,1],'deltat', '1 month', 'period','365 days')
 %
+%       % "t.complexfct" or "s.complexfct" is a hyperparameter controlling the complexity of
+%       % the fitted trend or seasonal curve. Postive values for them tend to give more changepoints
+%       % and negative values give fewer changepoints. These two parameters are introduced
+%       % in Rbeast v1.24.0. In earlier values, they were not expoosed in the function
+%       % API and were simply assumed to be zeros (i.e., non-informative priors on the model dimension/the number
+%       % of changepoints). Again, postive values favor more changepoints, and negative values farvor fewer changepoints
+%       o1 = beast(beach, 'start', [2004,1],'deltat', 1/12)  't.complexfct',  2.7  )  % More changepoints than the non-informative prior
+%       o2 = beast(beach, 'start', [2004,1],'deltat', 1/12)  't.complexfct',  -3.2  ) % Fewer changepoints than the non-informative prior 
+%       plotbeast(o1)
+%       plotbeast(o2)
+%
 %       %% Monthly air co2 data since 1959: deltaTime=1/12 year
 %       load('co2.mat')     
 %       o = beast(co2, 'start', [1959,1,15], 'deltat', 1/12, 'period',1.0)
@@ -403,6 +425,9 @@ function out = beast(y, varargin)
    tseg_leftmargin = GetValueByKey(KeyList, ValList, 'tseg.leftmargin',  []); 
    tseg_rightmargin= GetValueByKey(KeyList, ValList, 'tseg.rightmargin', []); 
 
+   s_complexfct = GetValueByKey(KeyList, ValList, 's.complexfct', 0.0 ); 
+   t_complexfct = GetValueByKey(KeyList, ValList, 't.complexfct', 0.0); 
+   
    precValue       = GetValueByKey(KeyList, ValList, 'precValue',       1.5); 
    precPriorType   = GetValueByKey(KeyList, ValList, 'precPriorType',   'componentwise');    
    
@@ -474,6 +499,10 @@ function out = beast(y, varargin)
    prior.trendMinSepDist  = tseg_min;
    prior.trendLeftMargin  = tseg_leftmargin;
    prior.trendRightMargin = tseg_rightmargin;
+
+   prior.seasonModelPriorFactor = s_complexfct;
+   prior.trendComplexityFactor  = t_complexfct;   
+   
 
    if hasOutlierCmpnt
       prior.outlierMinKnotNum = ocp_minmax(1);   

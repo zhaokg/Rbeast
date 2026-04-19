@@ -194,7 +194,18 @@ function out = beast123(Y, metadata, prior, mcmc, extra, method)
 %        That is, when fitting a piecewise polynomial trend model, no changepoints are allowed in the 
 %        ending window/segment of length trendRightMargin. trendRightMargin must be an unitless integer 
 %        (the number of time intervals/data points) so that the time window in the original unit is 
-%        trendRightMargin*deltat. If missing, trendRightMargin to trendMinSepDist.%
+%        trendRightMargin*deltat. If missing, trendRightMargin to trendMinSepDist.
+%   prior.seasonComplexityFactor 
+%        Numeric (defaulted to 0.0); a hyperprior parameter--newly added in Version 0.1.24--controlling the complexity of
+%        the seasonal curve (i.e., the model dimension or the number of seasonal changepoints). A prior of the form 
+%        "p(k) ~ exp[lambda*(k+1)]" is placed on the number of seasonal changepoints k, where lambda is s.complexfct 
+%        (i.e., prior.seasonComplexityFactor in the beast123() function). Setting lambda = 0 (i.e., s.complexfct=0) yields 
+%        a non-informative prior "p(k) ~ 1.0" where all model dimensions are equally likely a priori. Users may tune s.complexfct
+%        (for beast and beast_irreg)  or seasonComplexityFactor (for beast123) in the range of [-20, 20]} or an
+%        even wider range: Negative values (e.g., lambda = -15.9) favor fewer changepoints (simpler seasonal curves), whereas 
+%         positive values (e.g., lambda = 5.76) favor more changepoints (more complex curves).
+%   prior.trendComplexityFactor 
+%         Numeric (defaulted to 0.0); analogous to s_complexfct, but for the trend component and the number of trend changepoints.
 %   prior.outlierMinKnotNum : 
 %        integer; needed only if metadata.hasOutlierCmpnt==true to specify the mininum number of outliers (i.e., 
 %        outlier-type changepoints) allowed in the time series%

@@ -19,7 +19,7 @@
 % system("gcc -shared -pthread -L/MATLAB/bin/glnxa64 -lmx -lmex -lmat -lm -lut -lmwservices *.o -o Rbeast.mexa64")
 
 % mex -v CFLAGS='$CFLAGS  -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
-% mex -v CFLAGS='-DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
+% mex -v CFLAGS='         -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
 
 % mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fpic' -lmwservices -lut *.c -output Rbeast
 % mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fPIC -O2 -Wall -std=gnu99 -march=native' -lmwservices -lut *.c -output Rbeast
@@ -94,14 +94,17 @@ end
 %%
 isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
 rpath    = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
-%%
-datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'googletrend.mat', ...
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Downloading the data files
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',  ...
+            'covid19.mat', 'googletrend.mat', ...
             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 for i=1:numel(datalist)  
-	fn    = datalist{i};                      %fn    = string(datalist{i});
+	fn    = datalist{i};                      % fn    = string(datalist{i});
     lfile = fullfile(datapath,fn);   
-	rfile = strcat(rpath, "testdata/", fn);   %rfile = rpath+"testdata/"+fn;
+	rfile = strcat(rpath, "testdata/", fn);   % rfile = rpath+"testdata/"+fn;
 	if isOctave
 		urlwrite(rfile,lfile);
 	else
@@ -110,8 +113,11 @@ for i=1:numel(datalist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-%% on the safe side, get all the mx library for all file systems
-codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', ...
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% On the safe side, get all the mx library for all file systems
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexmaca64', 'Rbeast.mexa64', ...
            'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m', 'plotbeast.m',   'printbeast.m', ...
 		   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', 'rbeast_version.m','rbeast_path.m', ...
 		   'rbeast_src_compile.m','rbeast_src_download.m','readme.md'};

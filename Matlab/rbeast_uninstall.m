@@ -27,19 +27,20 @@ srcpath   = fullfile(beastpath,'source' );
 datalist={   'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'googletrend.mat', ...
              'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
          
-codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', ...
+codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexmaca64', 'Rbeast.mexa64', ...
            'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m', 'plotbeast.m',   'printbeast.m', ...
 		   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', 'rbeast_version.m','rbeast_path.m', ...
 		   'rbeast_src_compile.m','rbeast_src_download.m','readme.txt','readme.md'};
 
 % readme.txt has be renamed to readme.md. We keep readme.txt here for the old versions.		    
 
-remove_manyfiles(datapath, datalist); % delete(file)
-remove_manyfiles(codepath, codelist); % delete(file)
+remove_manyfiles(datapath, datalist);   % delete(file)
+remove_manyfiles(codepath, codelist);  % delete(file)
 
-%'installrbeast.m' is only available online and not downloaded to local paths       
-%oldcodelist={'installbeast.m', 'uninstallbeast.m'}; 
-%remove_manyfiles(codepath, codelist);
+%'installrbeast.m' is only available online and not downloaded to local paths  
+
+% oldcodelist={'installbeast.m', 'uninstallbeast.m'}; 
+% remove_manyfiles(codepath, codelist);
  
 %% If there is a src folder, also delete everything
 allsrcFile = fullfile(srcpath, '*.*' );
@@ -49,6 +50,7 @@ if exist(srcpath,"dir")
 end
 
 %%
+
 rmpath(datapath);     % remove the path from the Matlab's search paths
 rmpath(codepath);     % remove the path from the Matlab's search paths
  
@@ -58,7 +60,7 @@ remove_emptyfolder(codepath);
 end
 
 
-%% Helper functions
+%% Helper Local functions
 
 %  remove a file and print the status
 function remove_file(localFile)        

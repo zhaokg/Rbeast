@@ -8,13 +8,14 @@ if ~isempty(beastPath)
     fprintf("Local version:\n");
     rbeast_version;
     localVersion =rbeastGitHubVersion;
+   
     isRemoteVersionAvaiable=0;
-    
     try
         fprintf("Github version:\n");
         eval(webread('https://github.com/zhaokg/Rbeast/raw/master/Matlab/rbeast_version.m',weboptions('CertificateFilename','')))
         isRemoteVersionAvaiable=1;
     end
+
     if (isRemoteVersionAvaiable==0)
         error("Can't access Github");
     end
