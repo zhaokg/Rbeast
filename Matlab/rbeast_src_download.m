@@ -157,9 +157,11 @@ for i=1:numel(fList)
     end    
     fprintf('Downloaded: %s\n', lfile);
 end
-fprintf("<strong>Dowloadiing files from GitHub: Finished</strong> ...\n" );
-fprintf("Try rbeast_src_compile to automatically complile for Rbeast,mex or \n" );
-fprintf("manuualy compile outside Matlab using a C compiler. \n" );
+
+fprintf("<strong>Dowloadiing C source files from GitHub: Finished</strong> ...\n" );
+fprintf(" - Try rbeast_src_compile to automatically complile for Rbeast.mex \n" );
+fprintf(" - Or manuualy compile outside Matlab using a C compiler. \n" );
+fprintf(" - Check the 'compiling-the-mex-binary` section at https://github.com/zhaokg/Rbeast/Matlab for more details. \n" );
 %%
 
  

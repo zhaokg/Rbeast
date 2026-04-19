@@ -143,6 +143,7 @@ addpath(datapath);
 savepath
 %%
 
+https://github.com/zhaokg/Rbeast/tree/master/Matlab
 %clc
 fprintf('\n\n');
 fprintf('*** <strong>Rbeast</strong> was installed at %s\n', beastPath);
@@ -150,12 +151,17 @@ fprintf("*** '%s' and '%s' are added to the search path. \n", beastPath, datapat
 % Not needed bcz savepath will save the searach path permanantly
 % fprintf("     Make sure to add these two paths back (e.g., addpath()) after re-starting Matlab\n");
 fprintf('\n');
+fprintf("*** <strong>Rbeast library manager functions</strong>:\n");
+fprintf("    <strong>rbeast_uninstall</strong>: remove the installed files from the harddisk\n");
+fprintf("    <strong>rbeast_update</strong>: check github and update to the latest BEAST version, if any\n");
+fprintf("    <strong>rbeast_path</strong>: return the beast installation path\n");
+fprintf("    <strong>rbeast_src_download</strong>: downlaod the C/C++ source files--needed only for building your own Mex binary library\n");
+fprintf("\n");
+
 fprintf("*** <strong>Major functions available</strong>:\n");
 fprintf("    <strong>beast</strong>: handle a single regular time series\n");
 fprintf("    <strong>beast_irreg</strong>: handle a single irregular time series\n");
 fprintf("    <strong>beast123</strong>: handle one or more time seires or stacked images \n");
-fprintf("    <strong>rbeast_uninstall</strong>: remove the installed files from the harddisk\n");
-fprintf("    <strong>rbeast_update</strong>: check github and update to the latest BEAST version, if any\n");
 fprintf("\n");
 fprintf("*** <strong>Examples</strong>\n");
 fprintf("    load('Nile.mat')             %% Nile river annual streamflow: trend-only data\n");
