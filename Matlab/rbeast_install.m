@@ -19,7 +19,7 @@
 % system("gcc -shared -pthread -L/MATLAB/bin/glnxa64 -lmx -lmex -lmat -lm -lut -lmwservices *.o -o Rbeast.mexa64")
 
 % mex -v CFLAGS='$CFLAGS  -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
-% mex -v CFLAGS='-DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
+% mex -v CFLAGS='         -DM_RELEASE -Wall -Wl,-v' -lmwservices -lut *.c -output Rbeast
 
 % mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fpic' -lmwservices -lut *.c -output Rbeast
 % mex -v CFLAGS='-DM_RELEASE -UUSE_MEX_CMD -fPIC -O2 -Wall -std=gnu99 -march=native' -lmwservices -lut *.c -output Rbeast
@@ -69,7 +69,6 @@ if isempty(beastPath)
 	disp( strcat ("BEAST installation Path: " , beastPath) );
 end
 
-
 if ~exist(beastPath,"dir")
     beast_success=mkdir(beastPath);
     if ~ beast_success
@@ -94,14 +93,17 @@ end
 %%
 isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
 rpath    = "https://github.com/zhaokg/Rbeast/raw/master/Matlab/";
-%%
-datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',   'covid19.mat', 'googletrend.mat', ...
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Downloading the data files
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+datalist={  'Nile.mat',  'ohioNDVI.mat',   'simData.mat',  ...
+            'covid19.mat', 'googletrend.mat', ...
             'imageStack.mat',   'YellowstoneNDVI.mat', 'co2.mat'};
 
 for i=1:numel(datalist)  
-	fn    = datalist{i};                      %fn    = string(datalist{i});
+	fn    = datalist{i};                      % fn    = string(datalist{i});
     lfile = fullfile(datapath,fn);   
-	rfile = strcat(rpath, "testdata/", fn);   %rfile = rpath+"testdata/"+fn;
+	rfile = strcat(rpath, "testdata/", fn);   % rfile = rpath+"testdata/"+fn;
 	if isOctave
 		urlwrite(rfile,lfile);
 	else
@@ -110,8 +112,11 @@ for i=1:numel(datalist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-%% on the safe side, get all the mx library for all file systems
-codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexa64', ...
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% On the safe side, get all the mex library for all OS systems
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+codelist={ 'Rbeast.mex', 'Rbeast.mexw64','Rbeast.mexmaci64', 'Rbeast.mexmaca64', 'Rbeast.mexa64', ...
            'beast.m',   'beast123.m',    'beast_irreg.m' , 'extractbeast.m', 'plotbeast.m',   'printbeast.m', ...
 		   'rbeast_install.m', 'rbeast_uninstall.m' , 'rbeast_update.m', 'rbeast_version.m','rbeast_path.m', ...
 		   'rbeast_src_compile.m','rbeast_src_download.m','readme.md'};
@@ -130,11 +135,40 @@ for i=1:numel(codelist)
     fprintf('Downloaded: %s\n', lfile);
 end
 
-%%
+%% Add the beastPath into Matlab's search paths
 addpath(beastPath);
 addpath(datapath);
 % addpath(genpath(beastPath) );
 savepath
+ 
+%% Not used here, but kept as a quick reminder
+% https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
+
+rbeastFile=[];
+
+if ismac()
+    arch = computer('arch');
+    if strcmp(arch, 'maca64')
+         rbeastFile='Rbeast.mexmaci64';
+    elseif strcmp(arch, 'maci64')
+         rbeastFile='Rbeast.mexmaci64';     
+    end 
+elseif isunix() % true for linux and mac
+   rbeastFile='Rbeast.mexa64';
+elseif ispc()
+   rbeastFile='Rbeast.mexw64';   
+end
+
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+if isOctave
+    rbeastFile = 'Rbeast.mex';
+end
+
+if isempty(rbeastFile)
+    fprintf("*** No precompiled Rbeast.mex available for your platform: Ccomplike it from C source files on your own.\n"  );
+else
+    fprintf("*** The beast MEX library '%s' is used for your machine\n", rbeastFile);
+end
 %%
 
 %clc
@@ -144,12 +178,17 @@ fprintf("*** '%s' and '%s' are added to the search path. \n", beastPath, datapat
 % Not needed bcz savepath will save the searach path permanantly
 % fprintf("     Make sure to add these two paths back (e.g., addpath()) after re-starting Matlab\n");
 fprintf('\n');
+fprintf("*** <strong>Rbeast library manager functions</strong>:\n");
+fprintf("    <strong>rbeast_uninstall</strong>: remove the installed files from the harddisk\n");
+fprintf("    <strong>rbeast_update</strong>: check github and update to the latest BEAST version, if any\n");
+fprintf("    <strong>rbeast_path</strong>: return the beast installation path\n");
+fprintf("    <strong>rbeast_src_download</strong>: downlaod the C/C++ source files--needed only for building your own Mex binary library\n");
+fprintf("\n");
+
 fprintf("*** <strong>Major functions available</strong>:\n");
 fprintf("    <strong>beast</strong>: handle a single regular time series\n");
 fprintf("    <strong>beast_irreg</strong>: handle a single irregular time series\n");
 fprintf("    <strong>beast123</strong>: handle one or more time seires or stacked images \n");
-fprintf("    <strong>rbeast_uninstall</strong>: remove the installed files from the harddisk\n");
-fprintf("    <strong>rbeast_update</strong>: check github and update to the latest BEAST version, if any\n");
 fprintf("\n");
 fprintf("*** <strong>Examples</strong>\n");
 fprintf("    load('Nile.mat')             %% Nile river annual streamflow: trend-only data\n");
@@ -160,14 +199,6 @@ fprintf("    plotbeast(o)\n\n");
 fprintf("*** Run <strong>'help beast'</strong>, <strong>'help beast123'</strong>, or <strong>'help beast_irreg'</strong> for usage and examples\n");
 
 
-%% Not used here, but kept as a quick reminder
-% https://stackoverflow.com/questions/24923384/how-to-get-matlab-to-determine-if-the-os-is-windows-or-mac-so-to-find-all-seri
-if ismac()
-   rbeastFile='Rbeast.mexmaci64';
-elseif isunix() % true for linux and mac
-   rbeastFile='Rbeast.mexa64';
-elseif ispc()
-   rbeastFile='Rbeast.mexw64';   
-end
+%%
 
-clearvars datapath codepath fn lfile rfile datalist codelist beast_success beast_fid beast_tmpfile rbeastFile isOctave 
+clearvars datapath codepath fn lfile rfile datalist codelist beast_success beast_fid beast_tmpfile rbeastFile isOctave arcg 
