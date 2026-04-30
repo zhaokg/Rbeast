@@ -301,7 +301,7 @@ You may report issues through the [GitHub Issues tracker](https://github.com/zha
 
 ## Acknowledgements
 
-BEAST was developed by Yang Li, Tongxi Hu, Xuesong Zhang, and Kaiguang Zhao.  Development of BEAST were partly funded by Microsoft Azure for Research (CRM0518513), a USGS 104B grant, and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. Xuesong Zhang’s contribution was supported by USDA-ARS.
+BEAST was developed by Tongxi Hu,  Yang Li, Xuesong Zhang, and Kaiguang Zhao.  Development of BEAST were partly funded by Microsoft Azure for Research (CRM0518513), a USGS 104B grant, and a Harmful Algal Bloom Research Initiative grant from the Ohio Department of Higher Education. Xuesong Zhang’s contribution was supported by USDA-ARS.
 
 ---
 
